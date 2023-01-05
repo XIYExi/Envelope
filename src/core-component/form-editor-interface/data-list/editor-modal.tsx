@@ -2,7 +2,7 @@ import React, { FC, memo, useEffect } from 'react';
 import {Store} from 'antd/lib/form/interface';
 import {TDataListDefaultTypeItem} from '../../type';
 import { Button, Form, Input, Modal, Select } from 'antd';
-import PicturesWall from '@/core-component/form-editor-interface/pictures-wall/pictures-wall';
+import PicturesWall from '../pictures-wall/pictures-wall';
 
 const {Option} = Select;
 
