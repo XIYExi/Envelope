@@ -1,7 +1,8 @@
 import React, { FC, memo, useEffect } from 'react';
 import {Store} from 'antd/lib/form/interface';
 import {TDataListDefaultTypeItem} from '../../type';
-import { Form, Select } from 'antd';
+import { Button, Form, Input, Modal, Select } from 'antd';
+import PicturesWall from '@/core-component/form-editor-interface/pictures-wall/pictures-wall';
 
 const {Option} = Select;
 
@@ -26,7 +27,14 @@ export interface EditorModalProps {
 
 const EditorModal:FC<EditorModalProps> = (props) => {
 
-  const { item, onSave, visible, onCancel, cropRate } = props;
+  const {
+    item,
+    onSave,
+    visible,
+    onCancel,
+    cropRate
+  } = props;
+
   const [form] = Form.useForm();
 
   useEffect(() => {
@@ -54,9 +62,87 @@ const EditorModal:FC<EditorModalProps> = (props) => {
       });
   };
 
+
   return (
     <React.Fragment>
+      {
+        !!item && (
+          <Modal
+            title='编辑数据源'
+            closable={false}
+            visible={visible}
+            onOk={handleOk}
+            okText='确定'
+            forceRender={true}
+            footer={
+              <Button type='primary' onClick={() => handleOk()}>确定</Button>
+            }
+            >
+            <Form
+              form={form}
+              name='form_editor_modal'
+              {...formItemLayout}
+              onFinish={onFinish}
+              initialValues={item}
+              >
 
+              <Form.Item
+                label='标题'
+                name='title'
+                rules={[{required: true, message: '请输入标题'}]}
+                >
+                <Input />
+              </Form.Item>
+
+              <Form.Item
+                label='描述'
+                name='desc'
+                >
+                <Input />
+              </Form.Item>
+
+              <Form.Item
+                label='链接地址'
+                name='link'
+              >
+                <Input />
+              </Form.Item>
+
+              {
+                // @ts-ignore
+                !!window['currentCates'] && (
+                <Form.Item
+                  label="分类"
+                  name="type"
+                  rules={[{ required: true, message: '请选择分类!' }]}
+                >
+                  <Select placeholder="请选择">
+                    {
+                      // @ts-ignore
+                      window['currentCates'].map((v, i) => {
+                      return (
+                        <Option value={i} key={i}>
+                          {v}
+                        </Option>
+                      );
+                    })}
+                  </Select>
+                </Form.Item>
+              )}
+
+              <Form.Item
+                label='上传图片'
+                name='imgUrl'
+                valuePropName='fileList'
+                getValueFromEvent={normFile}
+                >
+                <PicturesWall cropRate={cropRate} isCrop={true} />
+              </Form.Item>
+
+            </Form>
+          </Modal>
+        )
+      }
 
     </React.Fragment>
   )
