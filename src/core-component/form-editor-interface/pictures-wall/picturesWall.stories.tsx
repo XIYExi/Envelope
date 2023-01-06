@@ -1,4 +1,4 @@
-import PicturesWall from './pictures-wall';
+import PicturesWall from './index';
 import { ComponentMeta, ComponentStory } from '@storybook/react';
 //TODO...
 import 'antd/dist/antd.css';

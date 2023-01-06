@@ -281,32 +281,35 @@ const List:FC<DataListType> = (props) => {
 
 
   return connectDropTarget(
-    <ListDataList>
-      {!!(list && list.length) &&
-      list.map((item, i) => (
-        <DndItem
-          {...item}
-          onDel={() => handleDel(item.id)}
-          onEdit={() => handleEdit(item)}
-          key={i}
-          id={`${item.id}`}
-          find={find}
-          move={move}
+    // dnd不允许最外层节点被styled-components包裹，需要用一层div包裹后传递
+    <div>
+      <ListDataList>
+        {!!(list && list.length) &&
+        list.map((item, i) => (
+          <DndItem
+            {...item}
+            onDel={() => handleDel(item.id)}
+            onEdit={() => handleEdit(item)}
+            key={i}
+            id={`${item.id}`}
+            find={find}
+            move={move}
+          />
+        ))}
+        <div style={{ marginTop: '10px' }}>
+          <Button onClick={handleAdd} block>
+            添加
+          </Button>
+        </div>
+        <EditorModal
+          visible={visible}
+          onCancel={handleCancel}
+          item={curItem}
+          onSave={handleSave}
+          cropRate={cropRate}
         />
-      ))}
-      <div style={{ marginTop: '10px' }}>
-        <Button onClick={handleAdd} block>
-          添加
-        </Button>
-      </div>
-      <EditorModal
-        visible={visible}
-        onCancel={handleCancel}
-        item={curItem}
-        onSave={handleSave}
-        cropRate={cropRate}
-      />
-    </ListDataList>,
+      </ListDataList>
+    </div>,
   );
 }
 
