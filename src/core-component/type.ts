@@ -19,3 +19,10 @@ export type TDataListDefaultTypeItem = {
 
 export type TDataListDefaultType = Array<TDataListDefaultTypeItem>;
 
+export interface ICardPickerConfigType<T> {
+  key: string;
+  name: string;
+  type: 'CardPicker';
+  icons: Array<T>;
+}
+export type TCardPickerDefaultType<T> = T;
