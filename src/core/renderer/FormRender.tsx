@@ -1,8 +1,12 @@
 import React, { FC, RefObject, useEffect } from 'react';
-import { Form, Input, InputNumber, Select } from 'antd';
+import { Form, Input, InputNumber, Radio, Select, Switch } from 'antd';
 import { useForm } from 'antd/lib/form/Form';
 import { Store } from 'antd/lib/form/interface';
 import MultiText from '@/core-component/form-editor-interface/multi-text/multi-text';
+import { DataList } from '@/core-component/form-editor-interface/data-list';
+import ColorPicker from '@/core-component/form-editor-interface/color-picker';
+import PicturesWall from '@/core-component/form-editor-interface/pictures-wall/pictures-wall';
+import CardPicker from '@/core-component/form-editor-interface/card-picker/card-picker';
 const { Option } = Select;
 const { TextArea } = Input;
 
@@ -95,7 +99,82 @@ const FormEditor:FC<FormEditorProps> = (props) => {
               {
                 item.type === 'DataList' && (
                   <Form.Item label={item.name} name={item.key}>
-                    {/*<DataList cropRate={item.cropRate} />*/}
+                    <DataList cropRate={item.cropRate} />
+                  </Form.Item>
+                )
+              }
+              {
+                item.type === 'Color' && (
+                  <Form.Item label={item.name} name={item.key}>
+                    <ColorPicker />
+                  </Form.Item>
+                )
+              }
+              {
+                item.type === 'Select' && (
+                  <Form.Item label={item.name} name={item.key}>
+                    <Select placeholder="请选择">
+                      {item.range.map((v: any, i: number) => {
+                        return (
+                          <Option value={v.key} key={i}>
+                            {v.text}
+                          </Option>
+                        );
+                      })}
+                    </Select>
+                  </Form.Item>
+                )
+              }
+
+              {
+                item.type === 'Radio' && (
+                  <Form.Item label={item.name} name={item.key}>
+                    <Radio.Group>
+                      {item.range.map((v: any, i: number) => {
+                        return (
+                          <Radio value={v.key} key={i}>
+                            {v.text}
+                          </Radio>
+                        );
+                      })}
+                    </Radio.Group>
+                  </Form.Item>
+                )
+              }
+
+              {
+                item.type === 'Switch' && (
+                  <Form.Item label={item.name} name={item.key} valuePropName="checked">
+                    <Switch />
+                  </Form.Item>
+                )
+              }
+
+              {
+                item.type === 'Upload' && (
+                  <Form.Item
+                    label={item.name}
+                    name={item.key}
+                    valuePropName="fileList"
+                    getValueFromEvent={normFile}
+                  >
+                    <PicturesWall cropRate={item.cropRate} isCrop={item.isCrop} />
+                  </Form.Item>
+                )
+              }
+
+              {
+                item.type === 'CardPicker' && (
+                  <Form.Item label={item.name} name={item.key} valuePropName="type">
+                    <CardPicker icons={item.icons} type={defaultValue['type']} />
+                  </Form.Item>
+                )
+              }
+
+              {
+                item.type === 'Table' && (
+                  <Form.Item label={item.name} name={item.key} valuePropName="data">
+                    {/*<Table data={item.data} />*/}
                   </Form.Item>
                 )
               }
