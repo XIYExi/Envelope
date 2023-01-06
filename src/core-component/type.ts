@@ -18,3 +18,4 @@ export type TDataListDefaultTypeItem = {
 };
 
 export type TDataListDefaultType = Array<TDataListDefaultTypeItem>;
+
