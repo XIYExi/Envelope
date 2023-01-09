@@ -26,3 +26,17 @@ export interface ICardPickerConfigType<T> {
   icons: Array<T>;
 }
 export type TCardPickerDefaultType<T> = T;
+
+export interface IPosProps {
+  key:string;
+  name: string;
+  type: 'Pos';
+  placeObj: {
+    text: string;
+    link: string;
+  }
+}
+
+export type TPosItem = number | undefined;
+
+export type TPosType = [TPosItem, TPosItem];
