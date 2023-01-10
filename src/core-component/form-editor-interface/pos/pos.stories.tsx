@@ -11,5 +11,6 @@ const Template:ComponentStory<typeof Pos>  = (args) => (<Pos {...args} />)
 
 export const SamplePos = Template.bind({});
 SamplePos.args = {
-
+  value: [0, 0],
+  onChange:(v)=>console.log(v)
 }

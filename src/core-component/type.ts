@@ -40,3 +40,9 @@ export interface IPosProps {
 export type TPosItem = number | undefined;
 
 export type TPosType = [TPosItem, TPosItem];
+
+export type baseFormOptionsType = {
+  label: string;
+  value: string;
+};
+

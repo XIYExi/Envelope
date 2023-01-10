@@ -10,6 +10,8 @@ interface PosProps {
 
 const PosSpan = styled.span`
   margin-right: 3px;
+  font-size: inherit;
+  font-family: inherit;
 `
 
 const PosItem = styled.div`
