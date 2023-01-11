@@ -7,6 +7,8 @@ import { DataList } from '@/core-component/form-editor-interface/data-list';
 import ColorPicker from '@/core-component/form-editor-interface/color-picker';
 import PicturesWall from '@/core-component/form-editor-interface/pictures-wall/pictures-wall';
 import CardPicker from '@/core-component/form-editor-interface/card-picker/card-picker';
+import EditableTable from '@/core-component/form-editor-interface/table/table';
+import Pos from '@/core-component/form-editor-interface/pos/pos';
 const { Option } = Select;
 const { TextArea } = Input;
 
@@ -174,10 +176,20 @@ const FormEditor:FC<FormEditorProps> = (props) => {
               {
                 item.type === 'Table' && (
                   <Form.Item label={item.name} name={item.key} valuePropName="data">
-                    {/*<Table data={item.data} />*/}
+                    <EditableTable data={item.data} />
                   </Form.Item>
                 )
               }
+
+              {
+                item.type === 'Pos' && (
+                  <Form.Item label={item.name} name={item.key}>
+                    <Pos />
+                  </Form.Item>
+                )
+              }
+
+
 
             </React.Fragment>
           )
