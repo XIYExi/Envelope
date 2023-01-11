@@ -1,8 +1,8 @@
 import React, { FC, memo, useEffect, useState } from 'react';
-import styled from 'styled-components';
 import BraftEditor, { ControlType } from 'braft-editor';
 import axios from 'axios';
-import ex from 'umi/dist';
+import './x-editor.css';
+import 'braft-editor/dist/index.css';
 
 
 const controls = [

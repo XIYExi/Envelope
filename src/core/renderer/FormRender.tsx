@@ -9,6 +9,7 @@ import PicturesWall from '@/core-component/form-editor-interface/pictures-wall/p
 import CardPicker from '@/core-component/form-editor-interface/card-picker/card-picker';
 import EditableTable from '@/core-component/form-editor-interface/table/table';
 import Pos from '@/core-component/form-editor-interface/pos/pos';
+import XEditor from '@/core-component/form-editor-interface/x-editor/XEditor';
 const { Option } = Select;
 const { TextArea } = Input;
 
@@ -189,6 +190,13 @@ const FormEditor:FC<FormEditorProps> = (props) => {
                 )
               }
 
+              {
+                item.type === 'RichText' && (
+                  <Form.Item label={item.name} name={item.key} noStyle={true}>
+                    <XEditor />
+                  </Form.Item>
+                )
+              }
 
 
             </React.Fragment>
