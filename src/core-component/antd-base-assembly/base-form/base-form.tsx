@@ -7,12 +7,11 @@ import {
   baseFormTextAreaTpl, baseFormTextTipTpl,
   baseFormTextTpl,
   baseFormUnionType,
-} from '@/core-component/type';
+} from '../../type';
 import React, { ChangeEvent, useState } from 'react';
 import styled from 'styled-components';
-import { CheckboxChangeEvent } from 'antd/es/checkbox';
 import { CheckboxValueType } from 'antd/es/checkbox/Group';
-import { formatTime } from '@/core-utils/tool';
+import { formatTime } from '../../../core-utils/tool';
 
 
 type TBaseForm = {

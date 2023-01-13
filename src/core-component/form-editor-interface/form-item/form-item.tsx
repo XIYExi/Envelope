@@ -3,9 +3,11 @@ import styled from 'styled-components';
 import {uuid} from '../../../core-utils/tool';
 import EditorModal from './editor-modal';
 import { MinusCircleFilled, EditFilled, PlusOutlined} from '@ant-design/icons';
-import {Button} from 'antd';
+import { Button, List } from 'antd';
 import MyPopover from 'yh-react-popover';
 import { baseFormUnion, TFormItemsDefaultType } from '../../type';
+import BaseForm from '../../antd-base-assembly/base-form/base-form';
+import BasePopoverForm from '../../antd-base-assembly/base-popover-form/base-popover-form';
 
 
 const formTpl: TFormItemsDefaultType = [
@@ -232,12 +234,13 @@ const FormItems:FC<FormItemsProps> = (props) => {
         {
           formData.map((item: baseFormUnion, i: number) => {
             //TODO 修改完antd和semantic配置之后修改
-            //@ts-ignore
             let FormItem = BaseForm[item.type];
             return (
               <IFormItem key={i}>
                 <DisClick>
-                  <FormItem {...item} />
+                  <List>
+                    <FormItem {...item} />
+                  </List>
                 </DisClick>
                 <DeleteWrapper>
                   <OperationBtn onClick={() => handleDelItem(item)}>
@@ -260,7 +263,6 @@ const FormItems:FC<FormItemsProps> = (props) => {
                 <FormTpl style={{ color: 'red' }}>
                   {formTpl.map((item, i) => {
                     //TODO 修改完antd和semantic配置之后修改
-                    // @ts-ignore
                     let FormItem = BasePopoverForm[item.type];
                     return (
                       <IFormItem key={i} onClick={() => handleAddItem(item)}>
