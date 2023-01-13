@@ -2,14 +2,15 @@ import React, { FC, RefObject, useEffect } from 'react';
 import { Form, Input, InputNumber, Radio, Select, Switch } from 'antd';
 import { useForm } from 'antd/lib/form/Form';
 import { Store } from 'antd/lib/form/interface';
-import MultiText from '@/core-component/form-editor-interface/multi-text/multi-text';
-import { DataList } from '@/core-component/form-editor-interface/data-list';
-import ColorPicker from '@/core-component/form-editor-interface/color-picker';
-import PicturesWall from '@/core-component/form-editor-interface/pictures-wall/pictures-wall';
-import CardPicker from '@/core-component/form-editor-interface/card-picker/card-picker';
-import EditableTable from '@/core-component/form-editor-interface/table/table';
-import Pos from '@/core-component/form-editor-interface/pos/pos';
-import XEditor from '@/core-component/form-editor-interface/x-editor/XEditor';
+import MultiText from '../../core-component/form-editor-interface/multi-text/multi-text';
+import { DataList } from '../../core-component/form-editor-interface/data-list';
+import ColorPicker from '../../core-component/form-editor-interface/color-picker';
+import PicturesWall from '../../core-component/form-editor-interface/pictures-wall/pictures-wall';
+import CardPicker from '../../core-component/form-editor-interface/card-picker/card-picker';
+import EditableTable from '../../core-component/form-editor-interface/table/table';
+import Pos from '../../core-component/form-editor-interface/pos/pos';
+import XEditor from '../../core-component/form-editor-interface/x-editor/XEditor';
+import FormItems from '../../core-component/form-editor-interface/form-item/form-item';
 const { Option } = Select;
 const { TextArea } = Input;
 
@@ -186,6 +187,14 @@ const FormEditor:FC<FormEditorProps> = (props) => {
                 item.type === 'Pos' && (
                   <Form.Item label={item.name} name={item.key}>
                     <Pos />
+                  </Form.Item>
+                )
+              }
+
+              {
+                item.type === 'FormItems' && (
+                  <Form.Item name={item.key} valuePropName="formList">
+                    <FormItems data={item.data} rightPannelRef={rightPannelRef} />
                   </Form.Item>
                 )
               }
