@@ -1,8 +1,9 @@
 import styles from './index.less';
 import styled from 'styled-components';
 import 'antd/dist/antd.css';
-import AForm from '@/materials/absolute-antd/base/Form/Form';
-import schema from '@/materials/absolute-antd/base/Form/schema';
+import AImage from '@/materials/absolute-antd/base/Image/Image';
+import schema from '@/materials/absolute-antd/base/Image/schema';
+
 
 const Head = styled.h2`
   font-size: 50px;
@@ -17,7 +18,7 @@ export default function IndexPage() {
     <div style={{width:'50vmin'}}>
       <Head>dada</Head>
       <h1 className={styles.title}>Page index</h1>
-      <AForm isTpl={false} {...schema.config}/>
+      <AImage {...schema.config} />
     </div>
   );
 }
