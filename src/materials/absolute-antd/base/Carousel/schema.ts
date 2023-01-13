@@ -96,7 +96,7 @@ const Carousel: ICarouselSchema = {
     direction: 'bottom',
     effect: 'scrollx',
     round: 0,
-    autoPlay: false,
+    autoPlay: true,
     imgList: [
       {
         id: '1',

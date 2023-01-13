@@ -19,6 +19,11 @@ const PicItem = styled.div`
   }
 `
 
+const ACarouselWrapper = styled.div`
+  width: 100%;
+  overflow: hidden;
+`
+
 const ACarousel:FC<CarouselTypes> = (props) => {
   const {
     direction,
@@ -42,10 +47,10 @@ const ACarousel:FC<CarouselTypes> = (props) => {
   };
 
   return (
-    <div style={{ width: '100%', overflow: 'hidden' }}>
+    <ACarouselWrapper>
       {isTpl ? (
         <PicItem>
-          <img src={logo} alt="" />
+          <img src={logo} alt="?" />
         </PicItem>
       ) : (
         <Carousel
@@ -56,7 +61,7 @@ const ACarousel:FC<CarouselTypes> = (props) => {
           {contentRender()}
         </Carousel>
       )}
-    </div>
+    </ACarouselWrapper>
   )
 }
 

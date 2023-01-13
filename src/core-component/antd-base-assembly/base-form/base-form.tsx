@@ -67,13 +67,14 @@ const BaseForm: TBaseForm ={
   Number: (props: baseFormNumberTpl & { onChange: (v: number | string | null) => void} )=>{
     const { label, placeholder, onChange } = props;
     return(
-      <>
+      <List.Item title={label}>
         <InputNumber
           placeholder={placeholder}
           onChange={onChange}
           keyboard={true}
+          style={{width:'40%'}}
         />
-      </>
+      </List.Item>
     )
   },
   MyRadio: (props: baseFormMyRadioTpl & { onChange: (v: RadioChangeEvent) => void } ) => {
@@ -149,7 +150,7 @@ const BaseForm: TBaseForm ={
     return (
       <>
         <List.Item title={label}>
-          <Select options={options} onChange={onChange} />
+          <Select options={options} onChange={onChange} style={{ width: '40%' }}/>
         </List.Item>
       </>
     );

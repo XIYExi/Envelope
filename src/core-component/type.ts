@@ -34,6 +34,7 @@ export interface INumberConfigType {
   step?: number;
 }
 
+
 export type TCardPickerDefaultType<T> = T;
 
 export interface IPosProps {
@@ -60,6 +61,14 @@ export interface IColorConfigType {
   key: string;
   name: string;
   type: 'Color';
+}
+
+export interface IUploadConfigType {
+  key: string;
+  name: string;
+  type: 'Upload';
+  isCrop?: boolean;
+  cropRate?: number;
 }
 
 export type TColorDefaultType = string;
@@ -103,6 +112,8 @@ export interface IRadioConfigType<KeyType> {
 }
 export type TRadioDefaultType<KeyType> = KeyType;
 
+export type TTextDefaultType = string;
+
 ///////////////
 
 export interface ISwitchConfigType {
@@ -138,7 +149,7 @@ export interface IPosConfigType {
   key: string;
   name: string;
   type: 'Pos';
-  placeObj: {
+  placeObj?: {
     text: string;
     link: string;
   };
@@ -212,6 +223,17 @@ export type baseFormDateTpl = {
   placeholder: string;
 };
 
+export interface ITextConfigType {
+  key: string;
+  name: string;
+  type: 'Text';
+}
+
+export interface IFormItemsConfigType {
+  key: string;
+  name: string;
+  type: 'FormItems';
+}
 
 export type baseFormUnion =
   | baseFormTextTpl
