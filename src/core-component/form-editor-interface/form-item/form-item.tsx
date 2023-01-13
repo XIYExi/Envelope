@@ -232,7 +232,7 @@ const FormItems:FC<FormItemsProps> = (props) => {
         {
           formData.map((item: baseFormUnion, i: number) => {
             //TODO 修改完antd和semantic配置之后修改
-            // @ts-ignore
+            //@ts-ignore
             let FormItem = BaseForm[item.type];
             return (
               <IFormItem key={i}>
