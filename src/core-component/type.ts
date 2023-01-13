@@ -17,6 +17,7 @@ export type TDataListDefaultTypeItem = {
   price?: string;
 };
 
+
 export type TDataListDefaultType = Array<TDataListDefaultTypeItem>;
 
 export interface ICardPickerConfigType<T> {
@@ -25,6 +26,14 @@ export interface ICardPickerConfigType<T> {
   type: 'CardPicker';
   icons: Array<T>;
 }
+export interface INumberConfigType {
+  key: string;
+  name: string;
+  type: 'Number';
+  range?: [number, number];
+  step?: number;
+}
+
 export type TCardPickerDefaultType<T> = T;
 
 export interface IPosProps {
@@ -37,7 +46,107 @@ export interface IPosProps {
   }
 }
 
+export type TNumberDefaultType = number;
+
+export interface IDataListConfigType {
+  key: string;
+  name: string;
+  type: 'DataList';
+  cropRate?: number;
+}
+
+////////////////////
+export interface IColorConfigType {
+  key: string;
+  name: string;
+  type: 'Color';
+}
+
+export type TColorDefaultType = string;
+
+/////////////////
+export interface IRichTextConfigType {
+  key: string;
+  name: string;
+  type: 'RichText';
+}
+export type TRichTextDefaultType = string;
+
+export interface IMutiTextConfigType {
+  key: string;
+  name: string;
+  type: 'MutiText';
+}
+
+
+/////////////////////////////////
+export interface ISelectConfigType<KeyType> {
+  key: string;
+  name: string;
+  type: 'Select';
+  range: Array<{
+    key: KeyType;
+    text: string;
+  }>;
+}
+export type TSelectDefaultType<KeyType> = KeyType;
+
+/////////////////////////
+export interface IRadioConfigType<KeyType> {
+  key: string;
+  name: string;
+  type: 'Radio';
+  range: Array<{
+    key: KeyType;
+    text: string;
+  }>;
+}
+export type TRadioDefaultType<KeyType> = KeyType;
+
+///////////////
+
+export interface ISwitchConfigType {
+  key: string;
+  name: string;
+  type: 'Switch';
+}
+export type TSwitchDefaultType = boolean;
+
+/////////////////////////////
+export interface ICardPickerConfigType<T> {
+  key: string;
+  name: string;
+  type: 'CardPicker';
+  icons: Array<T>;
+}
+
+
+/////////////
+
+export interface ITableConfigType {
+  key: string;
+  name: string;
+  type: 'Table';
+}
+export type TTableDefaultType = Array<{
+  name: string;
+  value: number;
+}>;
+
+// position input control
+export interface IPosConfigType {
+  key: string;
+  name: string;
+  type: 'Pos';
+  placeObj: {
+    text: string;
+    link: string;
+  };
+}
+
 export type TPosItem = number | undefined;
+
+export type TPosDefaultType = [TPosItem, TPosItem];
 
 export type TPosType = [TPosItem, TPosItem];
 

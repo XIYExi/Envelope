@@ -280,7 +280,6 @@ const FormItems:FC<FormItemsProps> = (props) => {
                     );
                   })}
                 </FormTpl>
-                {/* <a style={{color: 'red'}} onClick={() => setFormTplVisible(false)}>Close</a> */}
               </Fragment>
             }
             directions={'LB'}
