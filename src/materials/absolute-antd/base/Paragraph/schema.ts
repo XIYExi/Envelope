@@ -1,6 +1,5 @@
 import {
   IColorConfigType,
-  IFormItemsConfigType,
   INumberConfigType,
   ISelectConfigType,
   ISwitchConfigType,
@@ -22,7 +21,6 @@ export type TLongTextEditData = Array<
   | IColorConfigType
   | ISelectConfigType<TLongTextSelectKeyType>
   | ISwitchConfigType
-  | IFormItemsConfigType
   | ITextConfigType
   >
 
