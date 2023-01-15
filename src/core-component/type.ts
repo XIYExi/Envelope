@@ -7,6 +7,14 @@ export type TUploadDefaultType = Array<{
   url: string;
 }>;
 
+export interface ITextAreaConfigType {
+  key: string;
+  name: string;
+  type: 'TextArea';
+}
+
+export type TTextAreaDefaultType = string;
+
 export type TDataListDefaultTypeItem = {
   id: string;
   title: string;

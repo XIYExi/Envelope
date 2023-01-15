@@ -1,6 +1,8 @@
 import {
-  IColorConfigType, IFormItemsConfigType,
-  INumberConfigType, ISelectConfigType,
+  IColorConfigType,
+  IFormItemsConfigType,
+  INumberConfigType,
+  ISelectConfigType,
   ITextConfigType,
   TColorDefaultType,
   TFormItemsDefaultType,
