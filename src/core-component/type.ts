@@ -1,3 +1,5 @@
+import { ReactNode } from 'react';
+
 export type TMutiTextDefaultType = Array<string>;
 
 export type TUploadDefaultType = Array<{
@@ -23,6 +25,7 @@ export type TDataListDefaultTypeItem = {
   imgUrl: TUploadDefaultType;
   type?: number;
   price?: string;
+  html?: string;
 };
 
 
