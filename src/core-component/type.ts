@@ -23,6 +23,7 @@ export type TDataListDefaultTypeItem = {
   desc: string;
   link: string;
   imgUrl: TUploadDefaultType;
+  content?: string;
   type?: number;
   price?: string;
   html?: string;

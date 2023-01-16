@@ -70,6 +70,7 @@ const BaseForm: TBaseForm ={
       <List.Item title={label}>
         <InputNumber
           placeholder={placeholder}
+          defaultValue={Number(placeholder)}
           onChange={onChange}
           keyboard={true}
           style={{width:'40%'}}
