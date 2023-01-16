@@ -27,7 +27,7 @@ const ListWrapper = styled.div<{
   transform:
     translate(${props=>props.props.baseLeft}px, ${props=>props.props.baseTop}px)
     scale(${props=>props.props.baseScale / 100})
-    rotate(${props=>props.props.baseRotate});
+    rotate(${props=>props.props.baseRotate}deg);
 `
 
 
