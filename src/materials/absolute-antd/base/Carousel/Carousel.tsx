@@ -2,7 +2,7 @@ import {Carousel} from 'antd';
 import React, {FC, memo, PropsWithChildren} from 'react';
 import styled from 'styled-components';
 import { ICarouselConfig } from './schema';
-import logo from '../../../../assets/banner.png'
+import logo from '../../../../assets/absolute/banner.png'
 
 interface CarouselTypes extends ICarouselConfig {
   isTpl: boolean;

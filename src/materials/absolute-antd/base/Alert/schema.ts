@@ -1,4 +1,4 @@
-import { ISelectConfigType, ISwitchConfigType, ITextConfigType } from '@/core-component/type';
+import { ISelectConfigType, ISwitchConfigType, ITextConfigType } from '@/engine-lib-absolute/core-component/type';
 
 
 export type TAlertSelectKeyType = 'success' | 'info' | 'warning'| 'error';

@@ -9,7 +9,7 @@ import {
   TNumberDefaultType,
   TSelectDefaultType,
   TSwitchDefaultType,
-} from '@/core-component/type';
+} from '@/engine-lib-absolute/core-component/type';
 
 
 export type TTabsSelectKeySizeType = 'small' | 'middle' | 'large';

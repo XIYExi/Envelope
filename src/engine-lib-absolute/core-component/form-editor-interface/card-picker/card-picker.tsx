@@ -1,6 +1,6 @@
 import React, { FC, memo, useEffect, useState } from 'react';
 import styled from 'styled-components';
-import { ICardPickerConfigType } from '@/core-component/type';
+import { ICardPickerConfigType } from '@/engine-lib-absolute/core-component/type';
 import { Icon, SemanticICONS } from 'semantic-ui-react';
 
 // type对应icon的类型，这里设置为string，对应semantic ui Icon中所有的名字，不规范就不渲染

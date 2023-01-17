@@ -1,7 +1,7 @@
 import { ITabsConfig } from '@/materials/absolute-antd/base/Tabs/schema';
 import React, { FC, memo, useRef } from 'react';
 import { Image, Tabs } from 'antd';
-import logo from '../../../../assets/tabs.png';
+import logo from '../../../../assets/absolute/tabs.png';
 import styled from 'styled-components';
 
 

@@ -1,9 +1,9 @@
 import React, { FC, memo, useState } from 'react';
-import Logo from '../../../../assets/Logo.png';
+import Logo from '../../../../assets/absolute/Logo.png';
 import { Avatar, Button, Image } from 'antd';
 import styled from 'styled-components';
 import { IHeaderConfig } from '@/materials/absolute-antd/base/Header/schema';
-import { TColorDefaultType, TNumberDefaultType } from '@/core-component/type';
+import { TColorDefaultType, TNumberDefaultType } from '@/engine-lib-absolute/core-component/type';
 
 
 const HeaderWrapper = styled.div`

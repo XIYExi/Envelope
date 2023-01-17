@@ -3,6 +3,7 @@ import styled from 'styled-components';
 import 'antd/dist/antd.css';
 import React from 'react';
 import { AHeader, schema } from '@/materials/absolute-antd/base/Header';
+import Demo from '../engine-lib-template/templates/template'
 
 const Head = styled.h2`
   font-size: 50px;
@@ -17,6 +18,8 @@ export default function IndexPage() {
 
       <AHeader isTpl={false}
                {...schema.config}/>
+
+      <Demo />
     </div>
   );
 }

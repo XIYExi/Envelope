@@ -1,4 +1,4 @@
-import { ITextConfigType } from '@/core-component/type';
+import { ITextConfigType } from '@/engine-lib-absolute/core-component/type';
 
 
 export type TEmptyEditData = Array<ITextConfigType>;

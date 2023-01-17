@@ -10,8 +10,8 @@ import {
   TSelectDefaultType,
   TSwitchDefaultType,
   TTextDefaultType,
-} from '@/core-component/type';
-import { baseConfig, baseDefault, ICommonBaseType } from '@/core-component/common';
+} from '@/engine-lib-absolute/core-component/type';
+import { baseConfig, baseDefault, ICommonBaseType } from '@/engine-lib-absolute/core-component/common';
 
 
 export type TListSelectKeyLayoutType = 'horizontal' | 'vertical';

@@ -1,11 +1,11 @@
-import { baseConfig, baseDefault, ICommonBaseType } from '@/core-component/common';
+import { baseConfig, baseDefault, ICommonBaseType } from '@/engine-lib-absolute/core-component/common';
 import {
   IColorConfigType, INumberConfigType, ISelectConfigType, ITextConfigType, IUploadConfigType,
   TColorDefaultType,
   TNumberDefaultType, TSelectDefaultType,
   TTextDefaultType,
   TUploadDefaultType,
-} from '@/core-component/type';
+} from '@/engine-lib-absolute/core-component/type';
 
 
 export type THeaderSelectKeySizeType = 'small' | 'default' | 'large';

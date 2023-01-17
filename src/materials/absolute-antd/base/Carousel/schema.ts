@@ -7,7 +7,7 @@ import {
   TRadioDefaultType,
   TSwitchDefaultType,
   TNumberDefaultType,
-} from '../../../../core-component/type';
+} from '../../../../engine-lib-absolute/core-component/type';
 
 export type CarouselDirectionKeyType = 'top' | 'bottom' | 'left' | 'right';
 

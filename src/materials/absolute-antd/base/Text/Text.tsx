@@ -2,8 +2,8 @@ import React, {FC, memo} from 'react';
 import { ITextConfig, TTextSelectKeyType } from '@/materials/absolute-antd/base/Text/schema';
 import styled from 'styled-components';
 import { Image, Typography } from 'antd';
-import { TColorDefaultType, TNumberDefaultType, TSelectDefaultType } from '@/core-component/type';
-import logo from '../.././../../assets/text.png';
+import { TColorDefaultType, TNumberDefaultType, TSelectDefaultType } from '@/engine-lib-absolute/core-component/type';
+import logo from '../../../../assets/absolute/text.png';
 
 
 export interface ITextConfigProps extends ITextConfig{

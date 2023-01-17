@@ -11,8 +11,8 @@ import {
   TPosDefaultType,
   TTextDefaultType,
   ITextConfigType,
-} from '../../../../core-component/type';
-import { baseConfig, baseDefault, ICommonBaseType } from '../../../../core-component/common';
+} from '../../../../engine-lib-absolute/core-component/type';
+import { baseConfig, baseDefault, ICommonBaseType } from '../../../../engine-lib-absolute/core-component/common';
 
 export type TTextSelectKeyType = 'left' | 'right' | 'center';
 export type TTextWeightSelectKeyType = '300' | '400' | '500' | '600';

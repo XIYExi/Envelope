@@ -1,10 +1,10 @@
 import React, { FC, memo, useCallback } from 'react';
 import {Button} from 'antd';
-import BaseForm from '@/core-component/antd-base-assembly/base-form/base-form';
+import BaseForm from '@/engine-lib-absolute/core-component/antd-base-assembly/base-form/base-form';
 import styled from 'styled-components';
 import {IFormConfig} from './schema';
-import { TColorDefaultType, TTextDefaultType } from '@/core-component/type';
-import logo from '../../../../assets/form.png';
+import { TColorDefaultType, TTextDefaultType } from '@/engine-lib-absolute/core-component/type';
+import logo from '../../../../assets/absolute/form.png';
 
 
 export interface IFormConfigProps extends IFormConfig {

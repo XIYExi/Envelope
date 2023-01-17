@@ -2,7 +2,7 @@ import React, { FC, memo, useEffect } from 'react';
 import { Input, Button, Popconfirm } from 'antd';
 import { MinusCircleFilled } from '@ant-design/icons';
 import styled from 'styled-components';
-import { TMutiTextDefaultType } from '@/core-component/type';
+import { TMutiTextDefaultType } from '@/engine-lib-absolute/core-component/type';
 
 
 interface MultiTextProps {

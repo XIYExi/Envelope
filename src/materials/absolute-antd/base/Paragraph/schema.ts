@@ -11,7 +11,7 @@ import {
   TSwitchDefaultType,
   TTextAreaDefaultType,
   TTextDefaultType,
-} from '@/core-component/type';
+} from '@/engine-lib-absolute/core-component/type';
 
 export type TLongTextSelectKeyType = 'left' | 'right' | 'center';
 

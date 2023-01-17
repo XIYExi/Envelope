@@ -1,9 +1,9 @@
 import React, { FC, memo, useState } from 'react';
 import { IImageConfig, TTextSelectKeyType } from './schema';
 import styled from 'styled-components';
-import { TNumberDefaultType, TPosDefaultType, TSelectDefaultType } from '@/core-component/type';
+import { TNumberDefaultType, TPosDefaultType, TSelectDefaultType } from '@/engine-lib-absolute/core-component/type';
 import { Image } from 'antd';
-import logo from '../../../../assets/img.png';
+import logo from '../../../../assets/absolute/img.png';
 
 const AImageWrapper = styled.div<{
   $baseWidth:TNumberDefaultType;

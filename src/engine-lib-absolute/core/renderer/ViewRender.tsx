@@ -1,6 +1,6 @@
 import React, {memo} from 'react';
 import ReactGridLayout, { ItemCallback } from 'react-grid-layout';
-import DynamicEngine from '@/core/DynamicEngine';
+import DynamicEngine from '@/engine-lib-absolute/core/DynamicEngine';
 import styled from 'styled-components';
 
 interface PointDataItem {

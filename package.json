@@ -58,6 +58,7 @@
     "@types/xlsx": "^0.0.36",
     "@umijs/preset-react": "1.x",
     "@umijs/test": "^3.5.36",
+    "react-redux": "^7.0.2",
     "babel-loader": "^8.3.0",
     "lint-staged": "^10.0.7",
     "prettier": "^2.2.0",

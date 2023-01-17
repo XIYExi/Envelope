@@ -6,8 +6,8 @@ import {
   TColorDefaultType,
   TNumberDefaultType,
   TSelectDefaultType
-} from '@/core-component/type';
-import logo from '../../../../assets/paragraph.png';
+} from '@/engine-lib-absolute/core-component/type';
+import logo from '../../../../assets/absolute/paragraph.png';
 
 
 export interface ILongTextProps extends ILongTextConfig{

@@ -8,7 +8,7 @@ import {
   TSelectDefaultType,
   TSwitchDefaultType,
   TTextDefaultType,
-} from '@/core-component/type';
+} from '@/engine-lib-absolute/core-component/type';
 
 export type TTextSelectKeyType = 'left' | 'right' | 'center';
 

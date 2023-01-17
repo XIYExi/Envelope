@@ -1,7 +1,7 @@
 import React, { FC, Fragment, memo } from 'react';
 import { Empty, Image } from 'antd';
 import { IEmptyConfig } from '@/materials/absolute-antd/base/Empty/schema';
-import logo from '../../../../assets/empty.png';
+import logo from '../../../../assets/absolute/empty.png';
 
 export type IEmptyProConfig = IEmptyConfig & {
   isTpl: boolean;

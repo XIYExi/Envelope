@@ -9,7 +9,7 @@ import {
   TNumberDefaultType,
   TSelectDefaultType,
   TTextDefaultType,
-} from '@/core-component/type';
+} from '@/engine-lib-absolute/core-component/type';
 
 export interface IFormConfig {
   title: TTextDefaultType;
