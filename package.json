@@ -39,6 +39,7 @@
     "semantic-ui-react": "^2.1.4",
     "styled-components": "^5.3.6",
     "umi": "^3.5.36",
+    "video-react": "^0.14.1",
     "xlsx": "^0.16.7",
     "yh-react-popover": "^0.3.0"
   },
