@@ -2,7 +2,7 @@ import React, { FC, memo } from 'react';
 import './index.css';
 import { Player, BigPlayButton } from 'video-react';
 import { IVideoConfig } from './schema';
-import logo from '../../../../assets/video.png';
+import logo from '../../../../assets/absolute/video.png';
 import { Image } from 'antd';
 
 interface IVideoProProps extends IVideoConfig {

@@ -2,7 +2,7 @@ import React, { FC, memo, useEffect, useRef, useState } from 'react';
 import { Calendar, Image } from 'antd';
 import styled from 'styled-components';
 import {ICalendarConfig} from '@/materials/absolute-antd/media/Calendar/schema';
-import logo from '../../../../assets/calend.png';
+import logo from '../../../../assets/absolute/calend.png';
 import moment, { Moment } from 'moment';
 
 interface ICalendarPropProps extends ICalendarConfig{

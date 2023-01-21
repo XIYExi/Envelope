@@ -2,7 +2,7 @@ import React,{FC,memo} from 'react';
 import {Map, Marker, Label, APILoader} from '@uiw/react-baidu-map';
 import styled from 'styled-components';
 import {IMapConfig} from './schema';
-import logo from '../../../../assets/map@2x.png';
+import logo from '../../../../assets/absolute/map@2x.png';
 import { Image } from 'antd';
 
 export interface IMapProProps extends IMapConfig{

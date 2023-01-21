@@ -1,7 +1,7 @@
 import React, { FC, memo } from 'react';
 import styled from 'styled-components';
 import { IButtonConfig } from './schema';
-import logo from '../../../../assets/richText.png';
+import logo from '../../../../assets/absolute/richText.png';
 import { Image } from 'antd';
 
 interface IProps extends IButtonConfig {

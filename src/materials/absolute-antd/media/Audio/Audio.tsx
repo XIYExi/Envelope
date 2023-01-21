@@ -1,7 +1,7 @@
 import React, { FC, memo } from 'react';
 import ReactAudioPlayer from 'react-audio-player';
 import { IAudioConfig } from './schema';
-import logo from '../../../../assets/music@2x.png';
+import logo from '../../../../assets/absolute/music@2x.png';
 import { Image } from 'antd';
 import styled from 'styled-components';
 

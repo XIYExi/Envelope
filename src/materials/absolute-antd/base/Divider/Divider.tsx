@@ -1,7 +1,7 @@
 import React,{ FC,memo } from 'react';
 import { IDividerConfig } from '@/materials/absolute-antd/base/Divider/schema';
 import { Divider, Image } from 'antd';
-import logo from '../../../../assets/Divider.svg';
+import logo from '../../../../assets/absolute/Divider.svg';
 
 interface IDividerPropProps extends IDividerConfig {
   isTpl: boolean;
