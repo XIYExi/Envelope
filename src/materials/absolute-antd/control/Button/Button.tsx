@@ -6,6 +6,7 @@ import * as Icon from '@ant-design/icons';
 
 interface IButtonProProp extends IButtonConfig {
   isTpl: boolean;
+  onClick?:(e:any)=>void;
 }
 
 const AButton:FC<IButtonProProp> = (props) => {
@@ -42,6 +43,7 @@ const AButton:FC<IButtonProProp> = (props) => {
             disabled={disabled}
             loading={loading}
             shape={shape}
+            onClick={props.onClick}
           >
             {
               icon.length > 0 && iconLocation==='left' &&

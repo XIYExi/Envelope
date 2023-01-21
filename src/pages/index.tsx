@@ -2,7 +2,7 @@ import styles from './index.less';
 import styled from 'styled-components';
 import 'antd/dist/antd.css';
 import React from 'react';
-import { ACheckBox, schema } from '@/materials/absolute-antd/control/CheckBox';
+import { ARadio, schema } from '@/materials/absolute-antd/control/Radio';
 
 const Head = styled.h2`
   font-size: 50px;
@@ -15,8 +15,10 @@ export default function IndexPage() {
       <Head>dada</Head>
       <h1 className={styles.title}>Page index</h1>
 
-      <ACheckBox isTpl={false}
-               {...schema.config}/>
+      <ARadio isTpl={false}
+               {...schema.config}
+        onChange={e=>console.log(e)}
+      />
 
     </div>
   );
