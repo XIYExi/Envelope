@@ -64,6 +64,7 @@ const ASelect:FC<ISelectProProps> = (props) => {
   } = props;
 
   const [option, setOption] = useState<string[]>([]);
+  const [value, setValue] = useState<any>();
 
 
   useEffect(()=>{
@@ -73,11 +74,10 @@ const ASelect:FC<ISelectProProps> = (props) => {
   },[options])
 
   const handleChange = (e:string[]) => {
-    console.log(`selected ${e}`);
-
+    // console.log(`selected ${e}`);
+    setValue(e);
     props.onChange && props.onChange(e);
   }
-
 
   return(
     <React.Fragment>
@@ -91,6 +91,7 @@ const ASelect:FC<ISelectProProps> = (props) => {
         !isTpl &&
           <div>
             <Select
+              value={value}
               tagRender={tagRender}
               style={{ width: '100%' }}
               placeholder={placeholder}
