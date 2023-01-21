@@ -239,6 +239,7 @@ export interface ITextConfigType {
   key: string;
   name: string;
   type: 'Text';
+  placeholder?: string;
 }
 
 export interface IFormItemsConfigType {
