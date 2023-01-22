@@ -35,7 +35,7 @@ interface ISlideSchema {
   config: ISlideConfig;
 }
 
-const Slide: ISlideSchema = {
+const Slider: ISlideSchema = {
   editData: [
     {
       key: 'allowClear',
@@ -92,15 +92,15 @@ const Slide: ISlideSchema = {
     allowClear: true,
     defaultValue: [20, 50],
     disabled: false,
-    dots: false,
+    dots: true,
     included: true,
     marks: '0-26-37-80',
     min: 0,
     max: 100,
     range: true,
     reverse: false,
-    step: 1,
+    step: 0,
   }
 }
 
-export default Slide;
+export default Slider;
