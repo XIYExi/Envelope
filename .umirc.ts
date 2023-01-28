@@ -6,6 +6,7 @@ export default defineConfig({
   },
   routes: [
     {
+      exact: false,
       path: '/',
       component: '@/layout/index',
       routes: [
