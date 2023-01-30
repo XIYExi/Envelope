@@ -1,15 +1,22 @@
 import React, { FC } from 'react';
 import styles from './index.less';
-import { Tabs, message } from 'antd';
+import { Tabs, message, Typography, Menu } from 'antd';
 import { history } from 'umi';
 import {
   MobileOutlined,
   ConsoleSqlOutlined,
   CodeOutlined,
   IdcardOutlined,
+  SettingOutlined,
+  DesktopOutlined,
+  BorderOuterOutlined,
+  CodepenCircleOutlined,
+  FieldBinaryOutlined,
+  FormOutlined,
 } from '@ant-design/icons';
+import { HomeTitle } from '@/pages/home/component/Component';
+import { AppstoreOutlined } from '@ant-design/icons';
 
-const {TabPane}  = Tabs;
 
 const Home:FC = () => {
 
@@ -23,44 +30,40 @@ const Home:FC = () => {
     }
   };
 
+
   return(
     <div className={styles.homeWrap}>
       <div className={styles.leftArea}>
-        <Tabs defaultActiveKey="1">
-          <TabPane
-            tab={
-              <span>
-                <MobileOutlined />
-                我的H5
-              </span>
-            }
-            key="1"
-          >
-            正在开发...
-          </TabPane>
-          <TabPane
-            tab={
-              <span>
-                <ConsoleSqlOutlined />
-                我的大屏
-              </span>
-            }
-            key="2"
-          >
-            正在开发...
-          </TabPane>
-          <TabPane
-            tab={
-              <span>
-                <IdcardOutlined />
-                我的可视化
-              </span>
-            }
-            key="3"
-          >
-            正在开发...
-          </TabPane>
-        </Tabs>
+        <div style={{padding: '0 40px'}}>
+          <HomeTitle level={3} copyable={false}>Envelope</HomeTitle>
+        </div>
+
+        <div>
+          <Menu mode="inline" defaultOpenKeys={['lowcode']} inlineCollapsed={false}>
+            <Menu.SubMenu key="lowcode" title="H5低代码开发" icon={<SettingOutlined />}>
+              <Menu.Item key="absolute" icon={<AppstoreOutlined />}>
+                静态布局
+              </Menu.Item>
+              <Menu.Item key="grid" icon={<BorderOuterOutlined />}>
+                栅格布局
+              </Menu.Item>
+            </Menu.SubMenu>
+            <Menu.SubMenu key='template' title='模板开发' icon={<DesktopOutlined />}>
+              <Menu.Item key='html' icon={<FormOutlined />}>
+                网站模板
+              </Menu.Item>
+            </Menu.SubMenu>
+            <Menu.SubMenu key='visual' title='可视化构建' icon={<CodepenCircleOutlined />}>
+                <Menu.Item key='math' icon={<FieldBinaryOutlined />}>
+                  数学公式
+                </Menu.Item>
+                <Menu.Item key='program' icon={<ConsoleSqlOutlined />}>
+                  可视化编程
+                </Menu.Item>
+            </Menu.SubMenu>
+          </Menu>
+        </div>
+
       </div>
 
       <div className={styles.contentArea}>
