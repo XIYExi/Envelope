@@ -4,6 +4,9 @@ export default defineConfig({
   nodeModulesTransform: {
     type: 'none',
   },
+  dva:{
+    immer: true
+  },
   routes: [
     {
       exact: false,
