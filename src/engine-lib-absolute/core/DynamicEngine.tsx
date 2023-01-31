@@ -2,13 +2,13 @@ import {dynamic} from 'umi';
 import React, { FC, memo, useMemo } from 'react';
 import { Loader } from 'semantic-ui-react';
 
-// Semantic UI React 组件类型
-export type componentsType = 'addons' |
-  'behaviors' |
-  'collections' |
-  'elements' |
-  'modules' |
-  'views';
+
+
+// Ant Design UI React 组件类型
+export type componentsType = 'base' |
+  'control' |
+  'media' |
+  'social';
 
 export interface DynamicType {
   isTpl: boolean;
@@ -24,8 +24,8 @@ const DynamicFunc = (
   ui: string = 'semantic-ui-react'
 ) => {
   return dynamic({
-    loader: async () => {
-      const { default: Graph } = await import(`${ui}/src/${componentsType}/${type}`);
+    loader: async function() {
+      const { default: Graph } = await import(`@/materials/absolute-antd/${componentsType}/${type}`);
       const Component = Graph;
       return (props: DynamicType) => {
         const { config, isTpl } = props;
