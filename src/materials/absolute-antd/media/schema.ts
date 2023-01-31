@@ -4,7 +4,7 @@ import Map from './Map/schema';
 import Progress from './Progress/schema';
 import Video from './Video/schema';
 
-const antdVideoSchema = {
+const antdMediaSchema = {
   Audio,
   Calendar,
   Map,
@@ -12,4 +12,4 @@ const antdVideoSchema = {
   Video
 }
 
-export default antdVideoSchema;
+export default antdMediaSchema;
