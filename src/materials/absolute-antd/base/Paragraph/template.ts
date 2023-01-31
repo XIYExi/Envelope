@@ -1,5 +1,5 @@
 const template = {
-  type: 'LongText',
+  type: 'Paragraph',
   h: 36,
   displayName: '长文本组件',
 };
