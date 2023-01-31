@@ -80,5 +80,3 @@ export function formatTime(fmt: string, dateObj: any) {
 
 
 
-
-

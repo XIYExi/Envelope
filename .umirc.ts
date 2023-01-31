@@ -1,9 +1,7 @@
 import { defineConfig } from 'umi';
 
 export default defineConfig({
-  nodeModulesTransform: {
-    type: 'none',
-  },
+
   dva:{
     immer: true
   },
@@ -16,7 +14,11 @@ export default defineConfig({
         {
           path: '/',
           component: '../pages/home',
-        }
+        },
+        {
+          path: '/editor',
+          component: '../pages/editor',
+        },
       ]
     },
   ],

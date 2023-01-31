@@ -5,14 +5,23 @@ import { CustomerServiceOutlined } from '@ant-design/icons';
 import Draggable from 'react-draggable';
 import styles from './index.less';
 
+import 'react-grid-layout/css/styles.css';
+import 'antd/dist/antd.css';
+
+
 
 export default function Layout(
   {children}: IRouteComponentProps
 ){
   const [modalOpen, setModalOpen] = useState<boolean>(false);
 
+  const hackCodeStyle =
+    window.location.pathname.indexOf('preview') < 0
+      ? { height: '100%' }
+      : { height: '100%', overflow: 'auto' };
+
   return(
-    <div>
+    <div style={hackCodeStyle}>
       <div
         style={{
           position: 'fixed',

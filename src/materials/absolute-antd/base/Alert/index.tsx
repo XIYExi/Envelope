@@ -1,7 +1,7 @@
 import React, {FC, memo} from 'react';
 import { IAlertConfig } from '@/materials/absolute-antd/base/Alert/schema';
 import { Alert, Image } from 'antd';
-import logo from '../../../../assets/absolute/notice.png';
+import logo from '../../../../assets/absolute/Logo.png'
 
 export type IAlertPrpConfig = IAlertConfig & {
   isTpl: boolean;

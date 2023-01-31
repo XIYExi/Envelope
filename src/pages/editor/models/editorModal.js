@@ -1,9 +1,9 @@
-import {uuid} from '../../../engine-lib-absolute/core-utils/tool';
-import key from 'keymaster';
 
+import {uuid} from '@/engine-lib-absolute/core-utils/tool';
+import key from 'keymaster';
 const pointData = localStorage.getItem('userData') || '[]';
 
-const overSave = (name, data) => {
+function overSave(name, data) {
   localStorage.setItem(name, JSON.stringify(data));
 }
 
@@ -11,44 +11,44 @@ export default {
   namespace: 'editorModal',
   state: {
     pointData: JSON.parse(pointData),
-    curPoint: null
+    curPoint: null,
   },
   reducers: {
-    addPointData(state, {payload}){
+    addPointData(state, { payload }) {
       let pointData = [...state.pointData, payload];
-      overSave('userData', pointData);
-      return{
-        ...state,
-        pointData,
-        curPoint: payload
-      }
-    },
-    modPointData(state, {payload}){
-      const {id} = payload;
-      const pointData = state.pointData.map(item => {
-        if (item.id === id)
-          return payload;
-        return {...item};
-      })
       overSave('userData', pointData);
       return {
         ...state,
         pointData,
-        curPoint: payload
-      }
+        curPoint: payload,
+      };
     },
-    importTplData(state, {payload}){
+    modPointData(state, { payload }) {
+      const { id } = payload;
+      const pointData = state.pointData.map(item => {
+        if (item.id === id) {
+          return payload;
+        }
+        return { ...item };
+      });
+      overSave('userData', pointData);
+      return {
+        ...state,
+        pointData,
+        curPoint: payload,
+      };
+    },
+    importTplData(state, { payload }) {
       overSave('userData', payload);
-      return{
+      return {
         ...state,
         pointData: payload,
-        curPoint: null
-      }
+        curPoint: null,
+      };
     },
-    copyPointData(state, {payload}){
-      const {id} = payload;
+    copyPointData(state, { payload }) {
+      const { id } = payload;
       const pointData = [];
-
       state.pointData.forEach(item => {
         pointData.push({ ...item });
         if (item.id === id) {
@@ -57,44 +57,41 @@ export default {
       });
       overSave('userData', pointData);
 
-      return{
-        ...state,
-        pointData
-      }
-    },
-    delPointData(state, {payload}){
-      const {id} = payload;
-      const pointData = state.pointData.filter(item => item.id !== id);
-      overSave('userData', pointData);
-
       return {
         ...state,
         pointData,
-        curPoint: null
-      }
+      };
     },
-    keyboardCopyPointData(state){
-      if(state.curPoint){
-        const {id} = state.curPoint;
+    delPointData(state, { payload }) {
+      const { id } = payload;
+      const pointData = state.pointData.filter(item => item.id !== id);
+      overSave('userData', pointData);
+      return {
+        ...state,
+        pointData,
+        curPoint: null,
+      };
+    },
+    keyboardCopyPointData(state) {
+      if (state.curPoint) {
+        const { id } = state.curPoint;
         const pointData = [];
         state.pointData.forEach(item => {
-          pointData.push({...item});
-          if(item.id === id)
-            pointData.push({
-              ...item,
-              id: uuid(6,16)
-            });
-        })
+          pointData.push({ ...item });
+          if (item.id === id) {
+            pointData.push({ ...item, id: uuid(6, 10) });
+          }
+        });
         overSave('userData', pointData);
 
         return {
           ...state,
-          pointData
-        }
+          pointData,
+        };
       }
       return state;
     },
-    keyboardDelPointData(state){
+    keyboardDelPointData(state) {
       if (state.curPoint) {
         const { id } = state.curPoint;
         const pointData = state.pointData.filter(item => item.id !== id);
@@ -114,9 +111,9 @@ export default {
         pointData: [],
         curPoint: null,
       };
-    }
+    },
   },
-  effects:{},
+  effects: {},
   subscriptions: {
     setup({ dispatch, history }) {
       return history.listen(({ pathname, query }) => {});
@@ -135,5 +132,5 @@ export default {
         });
       });
     },
-  }
-}
+  },
+};

@@ -37,8 +37,6 @@ const ItemWrapper = styled.div`
 
 const GridLayerWrapper = styled(ReactGridLayout)<{pageData:any}>`
   min-height: 100vh;
-  background-color: ${props=>props.pageData.bgColor};
-  background-image: ${props=>props.pageData.bgImage ? `url(${props.pageData.bgImage[0].url})` : 'initial'};
   background-size: 100%;
   background-repeat: no-repeat;
 `
@@ -57,6 +55,11 @@ const ViewRender = memo((props: ViewProps) => {
       onDragStop={dragStop}
       onResizeStop={onResizeStop}
       pageData={pageData}
+      style={{
+        backgroundColor: pageData && pageData.bgColor,
+        backgroundImage:
+          pageData && pageData.bgImage ? `url(${pageData.bgImage[0].url})` : 'initial',
+      }}
     >
       {
         pointData.map((value: PointDataItem) => {
