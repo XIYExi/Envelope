@@ -11,7 +11,6 @@ import {
 import {componentsType, DynamicEngine, FormEditor} from '@/engine-lib-absolute/core';
 import styles from './Container.less';
 import { connect } from 'dva';
-import {ACard} from '@/materials/absolute-antd/social/Card'
 
 /**
  * antd template schema
@@ -24,7 +23,6 @@ import antdSchema from '@/materials/absolute-antd/schema';
 
 import { ActionCreators, StateWithHistory } from 'redux-undo';
 import { detectMobileBrowser, getBrowserNavigatorMetaInfo, throttle } from '@/utils/tools';
-import FormRender from '@/engine-lib-absolute/core/renderer/FormRender';
 import HeaderComponent from '@/pages/editor/components/HeaderComponent';
 import CanvasControl from '@/pages/editor/components/CanvasControl';
 import Calibration from '@/engine-lib-absolute/core-component/Calibration';
@@ -92,18 +90,16 @@ const Container = (props: {
   const CpIcon = {
     base: <HighlightOutlined />,
     media: <PlayCircleOutlined />,
-    visible: <PieChartOutlined />,
-    shop: <AppstoreOutlined />,
+    control: <PieChartOutlined />,
+    social: <AppstoreOutlined />,
   };
 
   // 生成头部
   const generateHeader = useMemo(() => {
     return (type: componentsType, text: string) => {
       return(
-        <div>
-          {// @ts-ignore
-            CpIcon[type]
-          } {text}
+        <div style={{height: '10%'}}>
+          {(CpIcon as any)[type]} {text}
         </div>
       )
     }
@@ -210,7 +206,7 @@ const Container = (props: {
             pointData.length && curPoint ? (
               <React.Fragment>
                 <div className={styles.tit}>属性设置</div>
-                <FormRender
+                <FormEditor
                   uid={curPoint.id}
                   onSave={handleFormSave}
                   onDel={handleDel}
@@ -270,6 +266,7 @@ const Container = (props: {
               })
             }
           </TabPane>
+
           <TabPane tab={generateHeader('control', '')} key='2'>
             <div className={styles.ctitle}>交互组件</div>
             {
