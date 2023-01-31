@@ -38,6 +38,11 @@ body {
 .react-grid-item{
   overflow: hidden;
 }
+
+.ant-tabs-nav-wrap{
+  display: block!important;
+}
+
 .ant-tabs-left.editorTabclass
 .ant-tabs-nav , .ant-tabs-left.editorTabclass .ant-tabs-nav-list{
   width: 40px!important;

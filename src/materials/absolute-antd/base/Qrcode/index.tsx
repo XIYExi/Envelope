@@ -1,9 +1,10 @@
 import React, { FC, memo } from 'react';
 import { IQrcodeConfig } from './schema';
-import logo from '../../../../assets/qrcode.png';
+import logo from '../../../../assets/absolute/Logo.png';
 import { Image } from 'antd';
 import styled from 'styled-components';
 import { TColorDefaultType, TNumberDefaultType } from '@/engine-lib-absolute/core-component/type';
+
 
 
 const QrCodeWrapper = styled.div`

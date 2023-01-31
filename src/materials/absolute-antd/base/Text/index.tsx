@@ -56,4 +56,5 @@ const AText:FC<ITextConfigProps> = (props: ITextConfigProps) => {
     </>
   );
 }
+
 export default memo(AText);

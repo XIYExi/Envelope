@@ -50,7 +50,7 @@ const H1 = styled.h1<{
   font-size: ${props=>props.$fontSize};
 `
 
-const Header = styled.header<{props: IHeaderConfig}>`
+const Index = styled.header<{props: IHeaderConfig}>`
   box-sizing: content-box;
   padding: 3px 12px;
   display: flex;
@@ -121,7 +121,7 @@ export const AHeader:FC<IHeaderProProps> = (props) => {
       }
       {
         !isTpl &&
-          <Header props={props}>
+          <Index props={props}>
             <HeaderWrapper>
               <div style={{display: 'flex'}}>
                 <Svg >
@@ -153,7 +153,7 @@ export const AHeader:FC<IHeaderProProps> = (props) => {
                 )}
               </div>
             </HeaderWrapper>
-          </Header>
+          </Index>
       }
     </React.Fragment>
   )

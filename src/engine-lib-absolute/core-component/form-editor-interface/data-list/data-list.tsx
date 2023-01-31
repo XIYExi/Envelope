@@ -103,24 +103,26 @@ const ListItem:FC<ListItemProps> = (props) => {
     // 列表项本身作为 Drop 对象
     connectDragPreview(
       // 整个列表项作为跟随拖动的影像
-      <DragListItem style={Object.assign({}, { opacity })}>
-        <DragTit>{title}</DragTit>
-        <DragDesc>{desc}</DragDesc>
-        <DragActionBar>
-          <DragAction onClick={() => onEdit()}>
-            <EditOutlined />
-          </DragAction>
-          <DragAction onClick={() => onDel()}>
-            <MinusCircleOutlined />
-          </DragAction>
-          {connectDragSource(
-            <DragAction>
-              <MenuOutlined />
-            </DragAction>,
-          ) // 拖动图标作为 Drag 对象
-          }
-        </DragActionBar>
-      </DragListItem>,
+      <div>
+        <DragListItem style={Object.assign({}, { opacity })}>
+          <DragTit>{title}</DragTit>
+          <DragDesc>{desc}</DragDesc>
+          <DragActionBar>
+            <DragAction onClick={() => onEdit()}>
+              <EditOutlined />
+            </DragAction>
+            <DragAction onClick={() => onDel()}>
+              <MinusCircleOutlined />
+            </DragAction>
+            {connectDragSource(
+              <DragAction>
+                <MenuOutlined />
+              </DragAction>,
+            ) // 拖动图标作为 Drag 对象
+            }
+          </DragActionBar>
+        </DragListItem>
+      </div>,
     ),
   );
 }
