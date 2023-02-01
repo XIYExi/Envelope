@@ -50,12 +50,14 @@ const FormEditor:FC<FormEditorProps> = (props) => {
   };
 
   useEffect(()=>{
+    console.log(form.getFieldsValue())
     return () => {
       form.resetFields();
     };
   },[uid, form]);
 
   const handleChange = () => {
+    console.log(form.getFieldsValue())
     onFinish(form.getFieldsValue());
   }
 
@@ -216,4 +218,4 @@ const FormEditor:FC<FormEditorProps> = (props) => {
   )
 }
 
-export default FormEditor;
+export default React.memo(FormEditor);

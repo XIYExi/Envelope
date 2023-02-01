@@ -14,6 +14,7 @@ import {
   ConnectDragSource,
   ConnectDragPreview,
 } from 'react-dnd';
+import styles from './index.less';
 import { HTML5Backend } from 'react-dnd-html5-backend';
 import EditorModal from './editor-modal';
 import {uuid} from '../../../core-utils/tool';
@@ -103,25 +104,23 @@ const ListItem:FC<ListItemProps> = (props) => {
     // 列表项本身作为 Drop 对象
     connectDragPreview(
       // 整个列表项作为跟随拖动的影像
-      <div>
-        <DragListItem style={Object.assign({}, { opacity })}>
-          <DragTit>{title}</DragTit>
-          <DragDesc>{desc}</DragDesc>
-          <DragActionBar>
-            <DragAction onClick={() => onEdit()}>
-              <EditOutlined />
-            </DragAction>
-            <DragAction onClick={() => onDel()}>
-              <MinusCircleOutlined />
-            </DragAction>
-            {connectDragSource(
-              <DragAction>
-                <MenuOutlined />
-              </DragAction>,
-            ) // 拖动图标作为 Drag 对象
-            }
-          </DragActionBar>
-        </DragListItem>
+      <div className={styles.listItem} style={Object.assign({}, { opacity })}>
+        <div className={styles.tit}>{title}</div>
+        <div className={styles.desc}>{desc}</div>
+        <div className={styles.actionBar}>
+          <span className={styles.action} onClick={() => onEdit()}>
+            <EditOutlined />
+          </span>
+          <span className={styles.action} onClick={() => onDel()}>
+            <MinusCircleOutlined />
+          </span>
+          {connectDragSource(
+            <span className={styles.action}>
+              <MenuOutlined />
+            </span>,
+          ) // 拖动图标作为 Drag 对象
+          }
+        </div>
       </div>,
     ),
   );
@@ -288,15 +287,17 @@ const List:FC<DataListType> = (props) => {
       <ListDataList>
         {!!(list && list.length) &&
         list.map((item, i) => (
-          <DndItem
-            {...item}
-            onDel={() => handleDel(item.id)}
-            onEdit={() => handleEdit(item)}
-            key={i}
-            id={`${item.id}`}
-            find={find}
-            move={move}
-          />
+          <div>
+            <DndItem
+              {...item}
+              onDel={() => handleDel(item.id)}
+              onEdit={() => handleEdit(item)}
+              key={i}
+              id={`${item.id}`}
+              find={find}
+              move={move}
+            />
+          </div>
         ))}
         <div style={{ marginTop: '10px' }}>
           <Button onClick={handleAdd} block>
