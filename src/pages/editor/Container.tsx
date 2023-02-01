@@ -270,7 +270,7 @@ const Container = (props: {
           <TabPane tab={generateHeader('control', '')} key='2'>
             <div className={styles.ctitle}>交互组件</div>
             {
-              antdBaseTemplate.map((value, i) => {
+              antdControlTemplate.map((value, i) => {
                 return(
                   <TargetBox item={value} key={i} canvasId={canvasId}>
                     <DynamicEngine
@@ -288,7 +288,7 @@ const Container = (props: {
           <TabPane tab={generateHeader('media', '')} key='3'>
             <div className={styles.ctitle}>媒体组件</div>
             {
-              antdBaseTemplate.map((value, i) => {
+              antdMediaTemplate.map((value, i) => {
                 return(
                   <TargetBox item={value} key={i} canvasId={canvasId}>
                     <DynamicEngine
@@ -306,7 +306,7 @@ const Container = (props: {
           <TabPane tab={generateHeader('social', '')} key='4'>
             <div className={styles.ctitle}>展示组件</div>
             {
-              antdBaseTemplate.map((value, i) => {
+              antdSocialTemplate.map((value, i) => {
                 return(
                   <TargetBox item={value} key={i} canvasId={canvasId}>
                     <DynamicEngine

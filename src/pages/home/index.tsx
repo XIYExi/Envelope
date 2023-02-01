@@ -30,15 +30,16 @@ const Home:FC = () => {
     }
   };
 
-  const handleOk = async () => {
+  // Test
+/*  const handleOk = async () => {
     const { default: Graph } = await import('@/materials/absolute-antd/base/Alert');
     const Component = Graph;
     console.log(Component)
-  }
+  }*/
 
   return(
     <div className={styles.homeWrap}>
-      <button onClick={handleOk}>ok</button>
+
       <div className={styles.leftArea}>
         <div style={{padding: '0 40px'}}>
           <HomeTitle level={3} copyable={false}>Envelope</HomeTitle>
