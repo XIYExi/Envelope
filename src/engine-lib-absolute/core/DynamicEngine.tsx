@@ -34,7 +34,7 @@ const DynamicFunc = (
     },
     loading: () => (
       <div>
-        <Loader active inline='centered' />
+        <Loader active inline='centered' >a</Loader>
       </div>
     ),
   })
