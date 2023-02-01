@@ -54,6 +54,7 @@ const Container = (props: {
     start: { x: 0, y: 0 },
     move: false,
   });
+  const [tabsKey, setTabsKey] = useState<string>('1');
 
   const { pstate, cstate, dispatch } = props;
   const pointData = pstate ? pstate.pointData : [];
@@ -237,18 +238,18 @@ const Container = (props: {
   const tabRender = useMemo(()=>{
     if(collapsed){
       return (
-        <React.Fragment>
+        <>
           <TabPane tab={generateHeader('base', '')} key="1"></TabPane>
           <TabPane tab={generateHeader('control', '')} key="2"></TabPane>
           <TabPane tab={generateHeader('media', '')} key="3"></TabPane>
           <TabPane tab={generateHeader('social', '')} key="4"></TabPane>
-        </React.Fragment>
+        </>
       )
     }
     else{
       return(
-        <React.Fragment>
-          <TabPane tab={generateHeader('base', '')} key="1">
+        <>
+          <TabPane tab={generateHeader('base', '')} key='1'>
             <div className={styles.ctitle}>基础组件</div>
             {
               antdBaseTemplate.map((value, i) => {
@@ -285,6 +286,7 @@ const Container = (props: {
               })
             }
           </TabPane>
+
           <TabPane tab={generateHeader('media', '')} key='3'>
             <div className={styles.ctitle}>媒体组件</div>
             {
@@ -303,6 +305,7 @@ const Container = (props: {
               })
             }
           </TabPane>
+
           <TabPane tab={generateHeader('social', '')} key='4'>
             <div className={styles.ctitle}>展示组件</div>
             {
@@ -321,11 +324,16 @@ const Container = (props: {
               })
             }
           </TabPane>
-        </React.Fragment>
+        </>
       )
     }
   }, [canvasId, collapsed, generateHeader,
     antdBaseTemplate, antdControlTemplate, antdSocialTemplate, antdMediaTemplate, antdSchema])
+
+  const handleTabsChange = useCallback((e)=>{
+    console.log(String(e))
+    setTabsKey(String(e));
+  },[])
 
   const mousedownfn = useMemo(() => {
     return (e: React.MouseEvent<HTMLDivElement>) => {
@@ -425,8 +433,9 @@ const Container = (props: {
             <Tabs
               className="editorTabclass"
               onTabClick={() => changeCollapse(false)}
-              defaultActiveKey="1"
+              activeKey={tabsKey}
               tabPosition={'left'}
+              onChange={e=>handleTabsChange(e)}
             >
               {tabRender}
             </Tabs>
