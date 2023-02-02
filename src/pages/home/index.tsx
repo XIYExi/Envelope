@@ -1,6 +1,6 @@
-import React, { FC, useEffect } from 'react';
+import React, { FC, useEffect, useState } from 'react';
 import styles from './index.less';
-import { Tabs, message, Typography, Menu } from 'antd';
+import { Tabs, message, Typography, Menu, MenuProps, Steps, Button } from 'antd';
 import { history } from 'umi';
 import {
   MobileOutlined,
@@ -16,6 +16,22 @@ import {
 } from '@ant-design/icons';
 import { HomeTitle } from '@/pages/home/component/Component';
 import { AppstoreOutlined } from '@ant-design/icons';
+import UISystem from '@/pages/home/component/UISystem';
+import styled from 'styled-components';
+import TemplateSystem from '@/pages/home/component/TemplateSystem';
+import ConfirmSystem from '@/pages/home/component/ConfirmSystem';
+
+const StepsContent = styled.div`
+  min-height: 200px;
+  margin-top: 16px;
+  padding-top: 40px;
+  padding-bottom: 40px;
+  text-align: center;
+  background-color: #fafafa;
+  border: 1px dashed #e9e9e9;
+  border-radius: 2px;
+
+`
 
 
 const Home:FC = () => {
@@ -37,6 +53,35 @@ const Home:FC = () => {
     console.log(Component)
   }*/
 
+  const [current, setCurrent] = useState('lowcode');
+
+  const onClick: MenuProps['onClick'] = e => {
+    //console.log('click ', e);
+    setCurrent(e.key);
+  };
+
+  const [ui, setUI] = useState<string>('antd')
+  const chooseUI = (e:string) => {
+    console.log(e)
+    setUI(e);
+  }
+
+  const [stepCurrent, setStepCurrent] = useState<number>(0);
+  const nextStep = () => {
+    setStepCurrent(stepCurrent + 1);
+  };
+  const prevStep = () => {
+    setStepCurrent(stepCurrent - 1);
+  };
+
+  const [template, setTemplate] = useState<string>('empty')
+  const chooseTemplate = (e:string) => {
+    console.log(e)
+    setTemplate(e);
+  }
+
+
+
   return(
     <div className={styles.homeWrap}>
 
@@ -46,18 +91,23 @@ const Home:FC = () => {
         </div>
 
         <div>
-          <Menu mode="inline" defaultOpenKeys={['lowcode']} inlineCollapsed={false}>
-            <Menu.SubMenu key="lowcode" title="H5低代码开发" icon={<SettingOutlined />}>
+          <Menu
+            onClick={onClick}
+            mode="inline"
+            selectedKeys={[current]}
+            inlineCollapsed={false}
+          >
+            <Menu.SubMenu key="lowcode" title="低代码开发" icon={<SettingOutlined />}>
               <Menu.Item key="absolute" icon={<AppstoreOutlined />}>
-                静态布局
+                手机H5搭建
               </Menu.Item>
               <Menu.Item key="grid" icon={<BorderOuterOutlined />}>
-                栅格布局
+                响应式搭建
               </Menu.Item>
             </Menu.SubMenu>
             <Menu.SubMenu key='template' title='模板开发' icon={<DesktopOutlined />}>
               <Menu.Item key='html' icon={<FormOutlined />}>
-                网站模板
+                React模板搭建
               </Menu.Item>
             </Menu.SubMenu>
             <Menu.SubMenu key='visual' title='可视化构建' icon={<CodepenCircleOutlined />}>
@@ -74,35 +124,72 @@ const Home:FC = () => {
       </div>
 
       <div className={styles.contentArea}>
-
-        <div className={styles.logoTip}>
-          <div className={styles.logo}>
+        {
+          current === 'absolute' && (
+            <>
+              <div className={styles.logoTip}>
+                <div className={styles.logo}>
             <span className={styles.logoText} title="H5-Dooring可视化编辑器">
               H5-Dooring
             </span>
-            可视化编辑器
-          </div>
-          <p style={{ display: 'inline-block', width: '520px', fontSize: '16px', lineHeight: '2' }}>
-            H5-Dooring是一款功能强大，开源免费的H5可视化页面配置解决方案，
-            致力于提供一套简单方便、专业可靠、无限可能的H5落地页最佳实践。 技术栈以react为主，
-            后台采用nodejs开发。
-          </p>
-        </div>
+                  可视化编辑器
+                </div>
+                <p style={{ display: 'inline-block', width: '520px', fontSize: '16px', lineHeight: '2' }}>
+                  H5-Dooring是一款功能强大，开源免费的H5可视化页面配置解决方案，
+                  致力于提供一套简单方便、专业可靠、无限可能的H5落地页最佳实践。 技术栈以react为主，
+                  后台采用nodejs开发。
+                </p>
+              </div>
 
-        <div className={styles.operation}>
-          <div className={styles.card} onClick={() => handleGo('H5')}>
-            <MobileOutlined />
-            <div>制作H5页面</div>
-          </div>
-          <div className={styles.card} onClick={() => handleGo('online')}>
-            <CodeOutlined />
-            <div>在线编程</div>
-          </div>
-          <div className={styles.card} onClick={() => handleGo('PC')}>
-            <ConsoleSqlOutlined />
-            <div>制作可视化大屏</div>
-          </div>
-        </div>
+              <Steps current={stepCurrent} items={[
+                {
+                  title: 'UI system',
+                  description: '选择UI系统'
+                },
+                {
+                  title: 'Template',
+                  description: '选择模板'
+                },
+                {
+                  title: 'Confirm',
+                  description: '确认信息'
+                }
+              ]} />
+              <StepsContent>
+                {
+                  stepCurrent === 0 &&
+                  <UISystem ui={ui} chooseUI={chooseUI}/>
+                }
+                {
+                  stepCurrent === 1 &&
+                    <TemplateSystem template={template} chooseTemplate={chooseTemplate}/>
+                }
+                {
+                  stepCurrent === 2 &&
+                    <ConfirmSystem ui={ui} template={template}/>
+                }
+              </StepsContent>
+              <div className="steps-action">
+                {stepCurrent < 2 && (
+                  <Button type="primary" onClick={() => nextStep()}>
+                    Next
+                  </Button>
+                )}
+                {stepCurrent === 2 && (
+                  <Button type="primary" onClick={() => message.success('Processing complete!')}>
+                    Done
+                  </Button>
+                )}
+                {stepCurrent > 0 && (
+                  <Button style={{ margin: '0 8px' }} onClick={() => prevStep()}>
+                    Previous
+                  </Button>
+                )}
+              </div>
+            </>
+          )
+        }
+
 
         <footer className={styles.footer}>
           <div style={{ display: 'flex', justifyContent: 'center' }}>

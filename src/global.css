@@ -1,7 +1,8 @@
 
 html, body, #root {
   height: 100%;
-  overflow: hidden;
+  /* overflow 可能对低代码页面造成影响，如果后续无法修改就再打开*/
+  /*overflow: hidden;*/
 }
 
 body {
