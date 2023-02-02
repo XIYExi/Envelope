@@ -1,12 +1,14 @@
 import React,{FC} from 'react';
-import { Typography } from 'antd';
+import { Button, Typography } from 'antd';
 
 const ConfirmSystem:FC<{
   ui: string;
   template: string;
+  done: () => void;
+  prev: () => void;
 }> = props => {
 
-  const {ui, template} = props;
+  const {ui, template, done, prev} = props;
 
   return(
     <div>
@@ -41,6 +43,26 @@ const ConfirmSystem:FC<{
           </Typography.Text>
         </Typography.Paragraph>
       </Typography>
+
+      <Typography.Paragraph>
+        <Button
+          size={'large'}
+          style={{width: '120px',
+            borderRadius: '20px',
+            marginTop: '50px',
+            marginRight: '30px'
+          }}
+          onClick={()=>prev()}
+        >Previous</Button>
+
+        <Button
+          type={'primary'}
+          size={'large'}
+          style={{width: '120px', borderRadius: '20px', marginTop: '50px'}}
+          onClick={()=>done()}
+        >Next</Button>
+      </Typography.Paragraph>
+
     </div>
   )
 }
