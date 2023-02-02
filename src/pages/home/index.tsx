@@ -1,6 +1,6 @@
 import React, { FC, useEffect, useState } from 'react';
 import styles from './index.less';
-import { Tabs, message, Typography, Menu, MenuProps, Steps, Button } from 'antd';
+import { Tabs, message, Typography, Menu, MenuProps, Steps, Button, Divider } from 'antd';
 import { history } from 'umi';
 import {
   MobileOutlined,
@@ -12,7 +12,7 @@ import {
   BorderOuterOutlined,
   CodepenCircleOutlined,
   FieldBinaryOutlined,
-  FormOutlined,
+  FormOutlined, SearchOutlined, GithubOutlined,
 } from '@ant-design/icons';
 import { HomeTitle } from '@/pages/home/component/Component';
 import { AppstoreOutlined } from '@ant-design/icons';
@@ -37,6 +37,7 @@ const StepsContent = styled.div`
 const Home:FC = () => {
 
   const handleGo = (type: string) => {
+    setCurrent('');//current置为空，出来的时候会跳转到起步页面
     if (type === 'H5') {
       history.push('/editor?tid=123456');
     } else if (type === 'PC') {
@@ -97,6 +98,9 @@ const Home:FC = () => {
             selectedKeys={[current]}
             inlineCollapsed={false}
           >
+            <Menu.Item key="home">
+              起步
+            </Menu.Item>
             <Menu.SubMenu key="lowcode" title="低代码开发" icon={<SettingOutlined />}>
               <Menu.Item key="absolute" icon={<AppstoreOutlined />}>
                 手机H5搭建
@@ -125,21 +129,37 @@ const Home:FC = () => {
 
       <div className={styles.contentArea}>
         {
+          current === '' && (
+            <React.Fragment>
+
+
+            </React.Fragment>
+          )
+        }
+
+        {
           current === 'absolute' && (
             <>
-              <div className={styles.logoTip}>
-                <div className={styles.logo}>
-            <span className={styles.logoText} title="H5-Dooring可视化编辑器">
-              H5-Dooring
-            </span>
-                  可视化编辑器
+                <div style={{
+
+                  width: '100%',
+                  marginTop:'25px',
+                }}>
+                  <Typography.Title level={3}>Envelope H5 配置</Typography.Title>
+                  <Typography.Paragraph style={{color: 'gray'}}>通过简单配置启动编辑器</Typography.Paragraph>
+                  <Button
+                    style={{
+                      float: 'right',
+                      marginRight: '20px',
+                      marginBottom: '10px',
+                      width: '50px',
+                      borderRadius: '8px'
+                    }}
+                    icon={<GithubOutlined />}
+                    href={'https://github.com/XIYExi/Envelope'}
+                  />
+                  <Divider />
                 </div>
-                <p style={{ display: 'inline-block', width: '520px', fontSize: '16px', lineHeight: '2' }}>
-                  H5-Dooring是一款功能强大，开源免费的H5可视化页面配置解决方案，
-                  致力于提供一套简单方便、专业可靠、无限可能的H5落地页最佳实践。 技术栈以react为主，
-                  后台采用nodejs开发。
-                </p>
-              </div>
 
               <Steps current={stepCurrent} items={[
                 {
@@ -174,7 +194,7 @@ const Home:FC = () => {
                     <ConfirmSystem
                       ui={ui}
                       template={template}
-                      done={() => message.success('Processing complete!')}
+                      done={() => handleGo('H5')}
                       prev={prevStep}
                     />
                 }

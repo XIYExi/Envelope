@@ -60,7 +60,7 @@ const ConfirmSystem:FC<{
           size={'large'}
           style={{width: '120px', borderRadius: '20px', marginTop: '50px'}}
           onClick={()=>done()}
-        >Next</Button>
+        >Done</Button>
       </Typography.Paragraph>
 
     </div>
