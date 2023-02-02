@@ -158,34 +158,28 @@ const Home:FC = () => {
               <StepsContent>
                 {
                   stepCurrent === 0 &&
-                  <UISystem ui={ui} chooseUI={chooseUI}/>
+                  <UISystem ui={ui} chooseUI={chooseUI} nextStep={nextStep}/>
                 }
                 {
                   stepCurrent === 1 &&
-                    <TemplateSystem template={template} chooseTemplate={chooseTemplate}/>
+                    <TemplateSystem
+                      template={template}
+                      chooseTemplate={chooseTemplate}
+                      prevStep={prevStep}
+                      nextStep={nextStep}
+                    />
                 }
                 {
                   stepCurrent === 2 &&
-                    <ConfirmSystem ui={ui} template={template}/>
+                    <ConfirmSystem
+                      ui={ui}
+                      template={template}
+                      done={() => message.success('Processing complete!')}
+                      prev={prevStep}
+                    />
                 }
               </StepsContent>
-              <div className="steps-action">
-                {stepCurrent < 2 && (
-                  <Button type="primary" onClick={() => nextStep()}>
-                    Next
-                  </Button>
-                )}
-                {stepCurrent === 2 && (
-                  <Button type="primary" onClick={() => message.success('Processing complete!')}>
-                    Done
-                  </Button>
-                )}
-                {stepCurrent > 0 && (
-                  <Button style={{ margin: '0 8px' }} onClick={() => prevStep()}>
-                    Previous
-                  </Button>
-                )}
-              </div>
+
             </>
           )
         }
