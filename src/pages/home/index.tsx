@@ -131,13 +131,13 @@ const Home:FC = () => {
         {
           current === '' && (
             <React.Fragment>
-
-
+              {/*TODO 起步页面展示*/}
             </React.Fragment>
           )
         }
 
         {
+          /*TODO H5编辑器页面*/
           current === 'absolute' && (
             <>
                 <div style={{
@@ -201,6 +201,24 @@ const Home:FC = () => {
               </StepsContent>
 
             </>
+          )
+        }
+
+        {
+          /*TODO lowcode-engine整合*/
+          current === 'grid' && (
+            <React.Fragment>
+
+            </React.Fragment>
+          )
+        }
+
+        {
+          /*TODO 模板开发页面整合*/
+          current === 'template' && (
+            <React.Fragment>
+              
+            </React.Fragment>
           )
         }
 

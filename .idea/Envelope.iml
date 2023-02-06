@@ -9,5 +9,16 @@
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
     <orderEntry type="library" name="spinkit" level="application" />
+    <orderEntry type="library" name="variables" level="application" />
+    <orderEntry type="library" name="next.var" level="application" />
+    <orderEntry type="library" name="engine-core" level="application" />
+    <orderEntry type="library" name="engine-ext" level="application" />
+    <orderEntry type="library" name="react.production" level="application" />
+    <orderEntry type="library" name="prop-types" level="application" />
+    <orderEntry type="library" name="index" level="application" />
+    <orderEntry type="library" name="lodash" level="application" />
+    <orderEntry type="library" name="moment" level="application" />
+    <orderEntry type="library" name="next" level="application" />
+    <orderEntry type="library" name="react-dom.production" level="application" />
   </component>
 </module>

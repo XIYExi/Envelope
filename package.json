@@ -22,6 +22,8 @@
     ]
   },
   "dependencies": {
+    "@alilc/lowcode-engine": "^1.0.5",
+    "@alilc/lowcode-engine-ext": "^1.0.5",
     "@ant-design/icons": "^4.8.0",
     "@ant-design/pro-layout": "^6.5.0",
     "@uiw/react-baidu-map": "^2.5.5",
@@ -51,6 +53,20 @@
     "yh-react-popover": "^0.3.0"
   },
   "devDependencies": {
+    "@umijs/plugin-sass": "^1.1.1",
+    "@alilc/lowcode-plugin-code-editor": "^1.0.1",
+    "@alilc/lowcode-plugin-code-generator": "^1.0.2",
+    "@alilc/lowcode-plugin-components-pane": "^1.0.3",
+    "@alilc/lowcode-plugin-datasource-pane": "^1.0.3",
+    "@alilc/lowcode-plugin-inject": "^1.0.0",
+    "@alilc/lowcode-plugin-manual": "^1.0.2",
+    "@alilc/lowcode-plugin-schema": "^1.0.0",
+    "@alilc/lowcode-plugin-simulator-select": "^1.0.0",
+    "@alilc/lowcode-plugin-undo-redo": "^1.0.0",
+    "@alilc/lowcode-plugin-zh-en": "^1.0.0",
+    "@alilc/lowcode-react-renderer": "^1.0.0",
+    "@alilc/lowcode-setter-behavior": "^1.0.0",
+    "@alilc/lowcode-setter-title": "^1.0.2",
     "@babel/core": "^7.20.12",
     "@storybook/addon-actions": "^6.5.15",
     "@storybook/addon-essentials": "^6.5.15",
@@ -69,6 +85,7 @@
     "@types/react-grid-layout": "^1.3.2",
     "@types/redux-logger": "^3.0.8",
     "@types/styled-components": "^5.1.26",
+    "@types/uuid": "^9.0.0",
     "@types/video-react": "^0.15.1",
     "@types/xlsx": "^0.0.36",
     "@umijs/plugin-esbuild": "^1.0.1",
