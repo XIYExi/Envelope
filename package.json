@@ -22,6 +22,8 @@
     ]
   },
   "dependencies": {
+    "@alilc/lowcode-engine": "^1.0.5",
+    "@alilc/lowcode-engine-ext": "^1.0.0",
     "@ant-design/icons": "^4.8.0",
     "@ant-design/pro-layout": "^6.5.0",
     "@uiw/react-baidu-map": "^2.5.5",
@@ -83,6 +85,18 @@
     "redux-logger": "^3.0.6",
     "redux-undo": "^1.0.1",
     "typescript": "^4.1.2",
-    "yorkie": "^2.0.0"
+    "yorkie": "^2.0.0",
+    "@alilc/lowcode-react-renderer": "^1.0.0",
+    "@alilc/lowcode-plugin-components-pane": "^1.0.3",
+    "@alilc/lowcode-plugin-zh-en": "^1.0.0",
+    "@alilc/lowcode-plugin-code-generator": "^1.0.2",
+    "@alilc/lowcode-plugin-datasource-pane": "^1.0.3",
+    "@alilc/lowcode-plugin-schema": "^1.0.0",
+    "@alilc/lowcode-plugin-code-editor": "^1.0.1",
+    "@alilc/lowcode-plugin-manual": "^1.0.2",
+    "@alilc/lowcode-plugin-inject": "^1.0.0",
+    "@alilc/lowcode-plugin-simulator-select": "^1.0.0",
+    "@alilc/lowcode-setter-behavior": "^1.0.0",
+    "@alilc/lowcode-setter-title": "^1.0.2"
   }
 }

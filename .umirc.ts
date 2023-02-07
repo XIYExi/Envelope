@@ -2,8 +2,8 @@ import { defineConfig } from 'umi';
 
 export default defineConfig({
   dynamicImport: {},
-  dva:{
-    immer: true
+  dva: {
+    immer: true,
   },
   routes: [
     {
@@ -19,7 +19,11 @@ export default defineConfig({
           path: '/editor',
           component: '../pages/editor',
         },
-      ]
+        {
+          path: './lowcode',
+          component: '../pages/lowcode',
+        },
+      ],
     },
   ],
   fastRefresh: {},
