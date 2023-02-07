@@ -33,7 +33,6 @@
     "braft-editor": "^2.3.9",
     "dva": "^2.4.1",
     "moment": "^2.29.4",
-    "@babel/core": "^7.16.7",
     "node-sass": "^7.0.1",
     "rc-select": "^14.2.0",
     "react": "^16.12.0",
@@ -56,6 +55,7 @@
   },
   "resolutions": {
     "@babel/core": "~7.16.7",
+    "@babel/generator": "~7.16.7",
     "@babel/parser": "~7.16.7",
     "@babel/preset-env": "~7.16.7",
     "@babel/preset-react": "~7.16.7",
@@ -100,7 +100,6 @@
     "@umijs/plugin-sass": "^1.1.1",
     "@umijs/preset-react": "1.x",
     "@umijs/test": "^3.5.36",
-    "babel-loader": "^8.3.0",
     "file-saver": "^2.0.2",
     "keymaster": "^1.6.2",
     "lint-staged": "^10.0.7",
