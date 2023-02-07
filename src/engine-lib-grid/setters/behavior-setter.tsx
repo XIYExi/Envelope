@@ -2,7 +2,7 @@ import * as React from 'react';
 import BehaviorSetter from '@alilc/lowcode-setter-behavior';
 
 const defaultExtraBehaviorActions: any[] = [];
-class LocalBehaviorSetter extends React.Component {
+class LocalBehaviorSetter extends React.Component<any> {
   render() {
     // ignore url && responseFormatter props, use default ones
     const {
@@ -12,8 +12,8 @@ class LocalBehaviorSetter extends React.Component {
       ...otherProps
     } = this.props;
     const url = 'https://hn.algolia.com/api/v1/search?query';
-    const responseFormatter = (response) =>
-      response.hits.map((item) => ({
+    const responseFormatter = (response: any) =>
+      response.hits.map((item: any) => ({
         label: item.title,
         value: item.author,
       }));
