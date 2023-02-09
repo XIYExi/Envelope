@@ -3,7 +3,11 @@ import { defineConfig } from 'umi';
 export default defineConfig({
   dynamicImport: {},
   dva: {
-    immer: true
+    immer: true,
+  },
+  ignoreMomentLocale: true,
+  manifest: {
+    basePath: '/',
   },
   routes: [
     {
@@ -23,14 +27,13 @@ export default defineConfig({
           path: '/lowcode',
           component: '../pages/lowcode',
         },
-        {
-          path: '/lowcodePreview',
-          component: '../pages/lowcodePreview',
-        },
-      ]
+      ],
     },
   ],
   fastRefresh: {},
+  nodeModulesTransform: { type: 'none' },
+  webpack5: {},
+  exportStatic: {},
   externals: {
     react: 'var window.React',
     'react-dom': 'var window.ReactDOM',
@@ -46,6 +49,6 @@ export default defineConfig({
     '@alilc/lowcode-engine-ext': 'var window.AliLowCodeEngineExt',
     '@ali/lowcode-engine': 'var window.AliLowCodeEngine',
     moment: 'var window.moment',
-    lodash: 'var window._'
-  }
+    lodash: 'var window._',
+  },
 });
