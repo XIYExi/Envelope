@@ -169,6 +169,7 @@ export default async function registerPlugins() {
             width: 80,
           },
           content: (
+            /*@ts-ignore*/
             <Button onClick={loadIncrementalAssets}>异步加载资源</Button>
           ),
         });
@@ -192,6 +193,7 @@ export default async function registerPlugins() {
           props: {
             align: 'right',
           },
+          /*@ts-ignore*/
           content: <Button onClick={() => saveSchema()}>保存到本地</Button>,
         });
         skeleton.add({
@@ -201,6 +203,7 @@ export default async function registerPlugins() {
           props: {
             align: 'right',
           },
+          /*@ts-ignore*/
           content: <Button onClick={() => resetSchema()}>重置页面</Button>,
         });
         hotkey.bind('command+s', (e) => {
@@ -236,6 +239,7 @@ export default async function registerPlugins() {
             align: 'right',
           },
           content: (
+            /*@ts-ignore*/
             <Button type="primary" onClick={() => preview()}>
               预览
             </Button>

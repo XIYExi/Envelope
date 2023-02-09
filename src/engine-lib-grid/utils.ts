@@ -236,6 +236,7 @@ export const resetSchema = async (scenarioName: string = 'index') => {
     }),
   );
 
+  /*@ts-ignore*/
   project.getCurrentDocument()?.importSchema(schema);
   project.simulatorHost?.rerender();
   Message.success('成功重置页面');
