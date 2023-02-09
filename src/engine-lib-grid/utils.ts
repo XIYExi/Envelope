@@ -216,7 +216,9 @@ export const resetSchema = async (scenarioName: string = 'index') => {
 
   let schema;
   try {
-    schema = await request('./schema.json');
+    const { default: json } = await import('./schema.json');
+    /*schema = await request('./schema.json');*/
+    schema = json;
   } catch (err) {
     schema = {
       componentName: 'Page',
@@ -293,8 +295,9 @@ export const getPageSchema = async (scenarioName: string = 'index') => {
     return pageSchema;
   }
 
-  /*return await request('./schema.json');*/
+  const { default: json } = await import('./schema.json');
   return json;
+  /*return await request('./schema.json');*/
 };
 
 function request(
@@ -374,117 +377,3 @@ function request(
       });
   });
 }
-
-const json = {
-  componentName: 'Page',
-  id: 'node_dockcviv8fo1',
-  props: {
-    ref: 'outerView',
-    style: {
-      height: '100%',
-    },
-  },
-  fileName: '/',
-  dataSource: {
-    list: [
-      {
-        type: 'fetch',
-        isInit: true,
-        options: {
-          params: {},
-          method: 'GET',
-          isCors: true,
-          timeout: 5000,
-          headers: {},
-          uri: 'mock/info.json',
-        },
-        id: 'info',
-      },
-    ],
-  },
-  state: {
-    text: {
-      type: 'JSExpression',
-      value: '"outer"',
-    },
-    isShowDialog: {
-      type: 'JSExpression',
-      value: 'false',
-    },
-  },
-  css: 'body {\n  font-size: 12px;\n}\n\n.button {\n  width: 100px;\n  color: #ff00ff\n}',
-  lifeCycles: {
-    componentDidMount: {
-      type: 'JSFunction',
-      value: "function componentDidMount() {\n  console.log('did mount');\n}",
-    },
-    componentWillUnmount: {
-      type: 'JSFunction',
-      value:
-        "function componentWillUnmount() {\n  console.log('will unmount');\n}",
-    },
-  },
-  methods: {
-    testFunc: {
-      type: 'JSFunction',
-      value: "function testFunc() {\n  console.log('test func');\n}",
-    },
-    onClick: {
-      type: 'JSFunction',
-      value:
-        'function onClick() {\n  this.setState({\n    isShowDialog: true\n  });\n}',
-    },
-    closeDialog: {
-      type: 'JSFunction',
-      value:
-        'function closeDialog() {\n  this.setState({\n    isShowDialog: false\n  });\n}',
-    },
-  },
-  originCode:
-    'class LowcodeComponent extends Component {\n  state = {\n    "text": "outer",\n    "isShowDialog": false\n  }\n  componentDidMount() {\n    console.log(\'did mount\');\n  }\n  componentWillUnmount() {\n    console.log(\'will unmount\');\n  }\n  testFunc() {\n    console.log(\'test func\');\n  }\n  onClick() {\n    this.setState({\n      isShowDialog: true\n    })\n  }\n  closeDialog() {\n    this.setState({\n      isShowDialog: false\n    })\n  }\n}',
-  hidden: false,
-  title: '',
-  isLocked: false,
-  condition: true,
-  conditionGroup: '',
-  children: [
-    {
-      componentName: 'Button',
-      id: 'node_ocl1ytxsx57',
-      props: {
-        type: 'primary',
-        children: '主按钮',
-        htmlType: 'button',
-        size: 'middle',
-        shape: 'default',
-        icon: {
-          type: 'JSSlot',
-          value: [
-            {
-              componentName: 'Icon',
-              id: 'node_ocl1ytxsx59',
-              props: {
-                type: 'SearchOutlined',
-                size: 14,
-              },
-              hidden: false,
-              title: '',
-              isLocked: false,
-              condition: true,
-              conditionGroup: '',
-            },
-          ],
-        },
-        block: false,
-        danger: false,
-        ghost: false,
-        disabled: false,
-      },
-      hidden: false,
-      title: '',
-      isLocked: false,
-      condition: true,
-      conditionGroup: '',
-    },
-  ],
-};
