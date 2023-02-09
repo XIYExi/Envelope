@@ -1,5 +1,5 @@
 import { material, project } from '@alilc/lowcode-engine';
-import { filterPackages } from '@alilc/lowcode-plugin-inject'
+import { filterPackages } from '@alilc/lowcode-plugin-inject';
 import { Message, Dialog } from '@alifd/next';
 import { TransformStage } from '@alilc/lowcode-types';
 
@@ -8,11 +8,10 @@ export const loadIncrementalAssets = () => {
     Message.success('[MCBreadcrumb] 物料加载成功');
   });
 
-
   material.loadIncrementalAssets({
     packages: [
       {
-        // @ts-ignore
+        //@ts-ignore
         title: 'MCBreadcrumb',
         package: 'mc-breadcrumb',
         version: '1.0.0',
@@ -156,7 +155,9 @@ export const loadIncrementalAssets = () => {
 export const preview = (scenarioName: string = 'index') => {
   saveSchema(scenarioName);
   setTimeout(() => {
-    const search = location.search ? `${location.search}&scenarioName=${scenarioName}` : `?scenarioName=${scenarioName}`;
+    const search = location.search
+      ? `${location.search}&scenarioName=${scenarioName}`
+      : `?scenarioName=${scenarioName}`;
     window.open(`./preview${search}`);
   }, 500);
 };
@@ -186,12 +187,12 @@ export const resetSchema = async (scenarioName: string = 'index') => {
           resolve();
         },
         onCancel: () => {
-          reject()
+          reject();
         },
-      })
-    })
-  } catch(err) {
-    return
+      });
+    });
+  } catch (err) {
+    return;
   }
 
   // 除了「综合场景」，其他场景没有默认 schema.json，这里构造空页面
@@ -203,9 +204,11 @@ export const resetSchema = async (scenarioName: string = 'index') => {
         componentsMap: material.componentsMap,
         version: '1.0.0',
         i18n: {},
-      })
+      }),
     );
-    project.getCurrentDocument()?.importSchema({ componentName: 'Page', fileName: 'sample' });
+    project
+      .getCurrentDocument()
+      ?.importSchema({ componentName: 'Page', fileName: 'sample' });
     project.simulatorHost?.rerender();
     Message.success('成功重置页面');
     return;
@@ -213,12 +216,12 @@ export const resetSchema = async (scenarioName: string = 'index') => {
 
   let schema;
   try {
-    schema = await request('./schema.json')
-  } catch(err) {
+    schema = await request('./schema.json');
+  } catch (err) {
     schema = {
       componentName: 'Page',
       fileName: 'sample',
-    }
+    };
   }
 
   window.localStorage.setItem(
@@ -228,23 +231,26 @@ export const resetSchema = async (scenarioName: string = 'index') => {
       componentsMap: material.componentsMap,
       version: '1.0.0',
       i18n: {},
-    })
+    }),
   );
 
   project.getCurrentDocument()?.importSchema(schema);
   project.simulatorHost?.rerender();
   Message.success('成功重置页面');
-}
+};
 
-const getLSName = (scenarioName: string, ns: string = 'projectSchema') => `${scenarioName}:${ns}`;
+const getLSName = (scenarioName: string, ns: string = 'projectSchema') =>
+  `${scenarioName}:${ns}`;
 
 export const getProjectSchemaFromLocalStorage = (scenarioName: string) => {
   if (!scenarioName) {
     console.error('scenarioName is required!');
     return;
   }
-  return JSON.parse(window.localStorage.getItem(getLSName(scenarioName)) || '{}');
-}
+  return JSON.parse(
+    window.localStorage.getItem(getLSName(scenarioName)) || '{}',
+  );
+};
 
 const setProjectSchemaToLocalStorage = (scenarioName: string) => {
   if (!scenarioName) {
@@ -253,9 +259,9 @@ const setProjectSchemaToLocalStorage = (scenarioName: string) => {
   }
   window.localStorage.setItem(
     getLSName(scenarioName),
-    JSON.stringify(project.exportSchema(TransformStage.Save))
+    JSON.stringify(project.exportSchema(TransformStage.Save)),
   );
-}
+};
 
 const setPackgesToLocalStorage = async (scenarioName: string) => {
   if (!scenarioName) {
@@ -267,24 +273,28 @@ const setPackgesToLocalStorage = async (scenarioName: string) => {
     getLSName(scenarioName, 'packages'),
     JSON.stringify(packages),
   );
-}
+};
 
 export const getPackagesFromLocalStorage = (scenarioName: string) => {
   if (!scenarioName) {
     console.error('scenarioName is required!');
     return;
   }
-  return JSON.parse(window.localStorage.getItem(getLSName(scenarioName, 'packages')) || '{}');
-}
+  return JSON.parse(
+    window.localStorage.getItem(getLSName(scenarioName, 'packages')) || '{}',
+  );
+};
 
 export const getPageSchema = async (scenarioName: string = 'index') => {
-  const pageSchema = getProjectSchemaFromLocalStorage(scenarioName).componentsTree?.[0]
+  const pageSchema =
+    getProjectSchemaFromLocalStorage(scenarioName).componentsTree?.[0];
 
   if (pageSchema) {
     return pageSchema;
   }
 
-  return await request('./schema.json');
+  /*return await request('./schema.json');*/
+  return json;
 };
 
 function request(
@@ -364,3 +374,117 @@ function request(
       });
   });
 }
+
+const json = {
+  componentName: 'Page',
+  id: 'node_dockcviv8fo1',
+  props: {
+    ref: 'outerView',
+    style: {
+      height: '100%',
+    },
+  },
+  fileName: '/',
+  dataSource: {
+    list: [
+      {
+        type: 'fetch',
+        isInit: true,
+        options: {
+          params: {},
+          method: 'GET',
+          isCors: true,
+          timeout: 5000,
+          headers: {},
+          uri: 'mock/info.json',
+        },
+        id: 'info',
+      },
+    ],
+  },
+  state: {
+    text: {
+      type: 'JSExpression',
+      value: '"outer"',
+    },
+    isShowDialog: {
+      type: 'JSExpression',
+      value: 'false',
+    },
+  },
+  css: 'body {\n  font-size: 12px;\n}\n\n.button {\n  width: 100px;\n  color: #ff00ff\n}',
+  lifeCycles: {
+    componentDidMount: {
+      type: 'JSFunction',
+      value: "function componentDidMount() {\n  console.log('did mount');\n}",
+    },
+    componentWillUnmount: {
+      type: 'JSFunction',
+      value:
+        "function componentWillUnmount() {\n  console.log('will unmount');\n}",
+    },
+  },
+  methods: {
+    testFunc: {
+      type: 'JSFunction',
+      value: "function testFunc() {\n  console.log('test func');\n}",
+    },
+    onClick: {
+      type: 'JSFunction',
+      value:
+        'function onClick() {\n  this.setState({\n    isShowDialog: true\n  });\n}',
+    },
+    closeDialog: {
+      type: 'JSFunction',
+      value:
+        'function closeDialog() {\n  this.setState({\n    isShowDialog: false\n  });\n}',
+    },
+  },
+  originCode:
+    'class LowcodeComponent extends Component {\n  state = {\n    "text": "outer",\n    "isShowDialog": false\n  }\n  componentDidMount() {\n    console.log(\'did mount\');\n  }\n  componentWillUnmount() {\n    console.log(\'will unmount\');\n  }\n  testFunc() {\n    console.log(\'test func\');\n  }\n  onClick() {\n    this.setState({\n      isShowDialog: true\n    })\n  }\n  closeDialog() {\n    this.setState({\n      isShowDialog: false\n    })\n  }\n}',
+  hidden: false,
+  title: '',
+  isLocked: false,
+  condition: true,
+  conditionGroup: '',
+  children: [
+    {
+      componentName: 'Button',
+      id: 'node_ocl1ytxsx57',
+      props: {
+        type: 'primary',
+        children: '主按钮',
+        htmlType: 'button',
+        size: 'middle',
+        shape: 'default',
+        icon: {
+          type: 'JSSlot',
+          value: [
+            {
+              componentName: 'Icon',
+              id: 'node_ocl1ytxsx59',
+              props: {
+                type: 'SearchOutlined',
+                size: 14,
+              },
+              hidden: false,
+              title: '',
+              isLocked: false,
+              condition: true,
+              conditionGroup: '',
+            },
+          ],
+        },
+        block: false,
+        danger: false,
+        ghost: false,
+        disabled: false,
+      },
+      hidden: false,
+      title: '',
+      isLocked: false,
+      condition: true,
+      conditionGroup: '',
+    },
+  ],
+};
