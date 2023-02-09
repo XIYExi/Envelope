@@ -9,8 +9,11 @@
   }
   .contentArea {
     flex: 1;
-    margin-right: 60px;
-    margin-left: 60px;
+    /*使用padding使得滚动条在边缘*/
+    padding-left: 30px;
+    padding-right: 30px;
+    /*只显示垂直，禁用水平滚动条*/
+    overflow-y: scroll !important;
     .logoTip {
       padding-top: 50px;
       text-align: center;
@@ -37,7 +40,7 @@
         flex-direction: row;
         justify-content: center;
 
-        background: #FCFCFD;
+        background: #fcfcfd;
 
         width: 420px;
         height: 88px;
@@ -71,8 +74,8 @@
   }
 }
 
-.steps-action{
-  & button{
+.steps-action {
+  & button {
     margin: auto;
   }
 }
