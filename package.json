@@ -52,6 +52,16 @@
     "xlsx": "^0.16.7",
     "yh-react-popover": "^0.3.0"
   },
+  "resolutions": {
+    "@babel/core": "~7.16.7",
+    "@babel/generator": "~7.16.7",
+    "@babel/parser": "~7.16.7",
+    "@babel/preset-env": "~7.16.7",
+    "@babel/preset-react": "~7.16.7",
+    "@babel/standalone": "~7.16.7",
+    "@babel/traverse": "~7.16.7",
+    "@babel/types": "~7.16.7"
+  },
   "devDependencies": {
     "@umijs/plugin-sass": "^1.1.1",
     "@alilc/lowcode-plugin-code-editor": "^1.0.1",
