@@ -1,17 +1,28 @@
 import ReactDOM from 'react-dom';
 import React, { useState } from 'react';
 import { Loading } from '@alifd/next';
-import { buildComponents, assetBundle, AssetLevel, AssetLoader } from '@alilc/lowcode-utils';
+import {
+  buildComponents,
+  assetBundle,
+  AssetLevel,
+  AssetLoader,
+} from '@alilc/lowcode-utils';
 import ReactRenderer from '@alilc/lowcode-react-renderer';
 import { injectComponents } from '@alilc/lowcode-plugin-inject';
-import { getProjectSchemaFromLocalStorage, getPackagesFromLocalStorage } from '@/engine-lib-grid/utils';
+import {
+  getProjectSchemaFromLocalStorage,
+  getPackagesFromLocalStorage,
+} from '@/engine-lib-grid/utils';
 
-const getScenarioName = function() {
+const getScenarioName = function () {
   if (location.search) {
-    return new URLSearchParams(location.search.slice(1)).get('scenarioName') || 'index'
+    return (
+      new URLSearchParams(location.search.slice(1)).get('scenarioName') ||
+      'index'
+    );
   }
   return 'index';
-}
+};
 
 const SamplePreview = () => {
   const [data, setData] = useState({});
@@ -27,16 +38,18 @@ const SamplePreview = () => {
     });
     const schema = componentsTree[0];
 
-    const libraryMap:any = {};
-    const libraryAsset:any[] = [];
-    packages.forEach(({ package: _package, library, urls, renderUrls }: any) => {
-      libraryMap[_package] = library;
-      if (renderUrls) {
-        libraryAsset.push(renderUrls);
-      } else if (urls) {
-        libraryAsset.push(urls);
-      }
-    });
+    const libraryMap: any = {};
+    const libraryAsset: any[] = [];
+    packages.forEach(
+      ({ package: _package, library, urls, renderUrls }: any) => {
+        libraryMap[_package] = library;
+        if (renderUrls) {
+          libraryAsset.push(renderUrls);
+        } else if (urls) {
+          libraryAsset.push(urls);
+        }
+      },
+    );
 
     const vendors = [assetBundle(libraryAsset, AssetLevel.Library)];
 
@@ -44,7 +57,9 @@ const SamplePreview = () => {
     const assetLoader = new AssetLoader();
     await assetLoader.load(libraryAsset);
     // @ts-ignore
-    const components = await injectComponents(buildComponents(libraryMap, componentsMap));
+    const components = await injectComponents(
+      buildComponents(libraryMap, componentsMap),
+    );
 
     setData({
       schema,
@@ -52,10 +67,11 @@ const SamplePreview = () => {
     });
   }
 
-  const { schema, components }:any = data;
+  const { schema, components }: any = data;
 
   if (!schema || !components) {
     init();
+    // @ts-ignore
     return <Loading fullScreen />;
   }
 

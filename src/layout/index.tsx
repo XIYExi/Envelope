@@ -8,11 +8,7 @@ import styles from './index.less';
 import 'react-grid-layout/css/styles.css';
 import 'antd/dist/antd.css';
 
-
-
-export default function Layout(
-  {children}: IRouteComponentProps
-){
+export default function Layout({ children }: IRouteComponentProps) {
   const [modalOpen, setModalOpen] = useState<boolean>(false);
 
   const hackCodeStyle =
@@ -20,7 +16,8 @@ export default function Layout(
       ? { height: '100%' }
       : { height: '100%', overflow: 'auto' };
 
-  return(
+  // @ts-ignore
+  return (
     <div style={hackCodeStyle}>
       <div
         style={{
@@ -41,18 +38,17 @@ export default function Layout(
       </div>
       {/*TODO 添加 modal*/}
       {children}
-      {
-        window.location.pathname.indexOf('editor') > -1 && (
-          <Draggable>
-            <div className={styles.dragPay}>
-              <div className={styles.crouseBtn}>搭建技巧(可拖动)</div>
-              <div className={styles.mask} >
-                {/*<img src={Dooring} alt="sda" />*/}
-              </div>
+      {window.location.pathname.indexOf('editor') > -1 && (
+        /*@ts-ignore*/
+        <Draggable>
+          <div className={styles.dragPay}>
+            <div className={styles.crouseBtn}>搭建技巧(可拖动)</div>
+            <div className={styles.mask}>
+              {/*<img src={Dooring} alt="sda" />*/}
             </div>
-          </Draggable>
-        )
-      }
+          </div>
+        </Draggable>
+      )}
     </div>
-  )
+  );
 }
