@@ -45,12 +45,7 @@ const fastMenu = (
 );
 
 const CanvasControl = (props: CanvasControlProps) => {
-
-  const {
-    scaleNum,
-    handleSlider,
-    backSize
-  } = props;
+  const { scaleNum, handleSlider, backSize } = props;
 
   const [visible, setVisible] = useState(true);
 
@@ -61,6 +56,7 @@ const CanvasControl = (props: CanvasControlProps) => {
   }, []);
 
   return (
+    // @ts-ignore
     <Draggable>
       <div className={styles.sliderWrap}>
         <Tooltip title="支持自由拖拽啦" visible={visible}>
@@ -80,13 +76,22 @@ const CanvasControl = (props: CanvasControlProps) => {
         <span>{Math.floor(scaleNum * 10) * 10}%</span>
         <span
           className={styles.sliderBtn}
-          style={scaleNum === 0.5 ? { pointerEvents: 'none' } : { display: 'initial' }}
+          style={
+            scaleNum === 0.5
+              ? { pointerEvents: 'none' }
+              : { display: 'initial' }
+          }
           onClick={handleSlider.bind(this, 0)}
         >
           -
         </span>
         <span className={styles.backSize}>
-          <Popover placement="bottom" title={null} content={fastMenu} trigger="hover">
+          <Popover
+            placement="bottom"
+            title={null}
+            content={fastMenu}
+            trigger="hover"
+          >
             <InsertRowBelowOutlined />
           </Popover>
         </span>
