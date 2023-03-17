@@ -9,6 +9,8 @@ interface ISlideProProps extends ISlideConfig {
 }
 
 const ASlider: FC<ISlideProProps> = (props) => {
+  const { isTpl, ...restProps } = props;
+
   const {
     allowClear,
     defaultValue,
@@ -21,8 +23,7 @@ const ASlider: FC<ISlideProProps> = (props) => {
     range,
     reverse,
     step,
-    isTpl,
-  } = props;
+  } = restProps;
 
   const [value, setValue] = useState<number | [number, number]>();
   const [mark, setMark] = useState<{ [key: number]: string }>();
