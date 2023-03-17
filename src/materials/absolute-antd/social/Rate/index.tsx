@@ -1,17 +1,19 @@
 import React, { FC, memo, useState } from 'react';
-import {Image, Rate} from 'antd';
-import {IRateConfig} from '@/materials/absolute-antd/social/Rate/schema';
+import { Image, Rate } from 'antd';
+import { IRateConfig } from '@/materials/absolute-antd/social/Rate/schema';
 import * as Icon from '@ant-design/icons';
 import logo from '../../../../assets/absolute/Rate.svg';
 
 type IRateProps = IRateConfig & {
   isTpl: boolean;
-  onChange?: (e:any)=>void;
-}
+  onChange?: (e: any) => void;
+};
 
-const ARate:FC<IRateProps> = (props) => {
+const ARate: FC<IRateProps> = (props) => {
+  const { isTpl, ...restProps } = props;
 
   const {
+    onChange,
     allowClear,
     allowHalf,
     autoFocus,
@@ -19,48 +21,41 @@ const ARate:FC<IRateProps> = (props) => {
     count,
     defaultValue,
     disabled,
-    isTpl,
-    onChange
-  } = props;
+  } = restProps;
 
   const [value, setValue] = useState<number>(defaultValue);
-
 
   const handleChange = (e: any) => {
     //console.log(e)
     setValue(e);
 
     onChange && onChange(e);
-  }
+  };
 
-
-  return(
+  return (
     <React.Fragment>
-      {
-        isTpl &&
-          <div>
-            <Image preview={false} src={logo} alt={''}/>
-          </div>
-      }
-      {
-        !isTpl &&
-          <div>
-            <Rate
-              allowClear={allowClear}
-              allowHalf={allowHalf}
-              autoFocus={autoFocus}
-              // @ts-ignore
-              character={React.createElement(Icon[character])}
-              count={count}
-              value={value}
-              disabled={disabled}
-              onChange={e=>handleChange(e)}
-            />
-          </div>
-      }
-
+      {isTpl && (
+        <div>
+          <Image preview={false} src={logo} alt={''} />
+        </div>
+      )}
+      {!isTpl && (
+        <div>
+          <Rate
+            allowClear={allowClear}
+            allowHalf={allowHalf}
+            autoFocus={autoFocus}
+            // @ts-ignore
+            character={React.createElement(Icon[character])}
+            count={count}
+            value={value}
+            disabled={disabled}
+            onChange={(e) => handleChange(e)}
+          />
+        </div>
+      )}
     </React.Fragment>
-  )
-}
+  );
+};
 
 export default memo(ARate);

@@ -4,56 +4,48 @@ import { Image, Comment, Avatar } from 'antd';
 import { ICommentConfig } from '@/materials/absolute-antd/social/Comment/schema';
 import * as Icon from '@ant-design/icons';
 
-interface ICommentProProps extends ICommentConfig{
-  isTpl:boolean;
+interface ICommentProProps extends ICommentConfig {
+  isTpl: boolean;
 }
 
-const AComment:FC<ICommentProProps> = props => {
-  const {
-    actions,
-    author,
-    avatar,
-    content,
-    datetime,
-    isTpl
-  } = props;
+const AComment: FC<ICommentProProps> = (props) => {
+  const { isTpl, ...restProps } = props;
+
+  const { actions, author, avatar, content, datetime } = restProps;
 
   const [action, setAction] = useState<ReactNode[]>();
 
-  useEffect(()=>{
+  useEffect(() => {
     const arr = actions.split('-');
-    const icons:ReactNode[] = [];
-    arr.map(item=>{
+    const icons: ReactNode[] = [];
+    arr.map((item) => {
       // @ts-ignore
       icons.push(React.createElement(Icon[item]));
-    })
+    });
     //console.log(icons)
     setAction(icons);
-  },[actions])
+  }, [actions]);
 
-
-  return(
+  return (
     <React.Fragment>
-      {
-        isTpl &&
-          <div>
-            <Image preview={false} src={logo} alt={''}/>
-          </div>
-      }
-      {
-        !isTpl &&
-          <div>
-            <Comment
-              content={<p>{content}</p>}
-              actions={action}
-              author={author}
-              avatar={<Avatar src={avatar} />}
-              datetime={datetime}
-              />
-          </div>
-      }
+      {isTpl && (
+        <div>
+          <Image preview={false} src={logo} alt={''} />
+        </div>
+      )}
+      {!isTpl && (
+        <div>
+          <Comment
+            content={<p>{content}</p>}
+            actions={action}
+            author={author}
+            avatar={<Avatar src={avatar} />}
+            datetime={datetime}
+          />
+        </div>
+      )}
     </React.Fragment>
-  )
-}
+  );
+};
 
 export default memo(AComment);

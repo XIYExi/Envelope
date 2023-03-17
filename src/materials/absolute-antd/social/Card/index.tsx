@@ -1,16 +1,18 @@
 import React, { FC, memo, ReactNode, useEffect, useState } from 'react';
 import logo from '../../../../assets/absolute/Card.svg';
 import { Image, Card, Avatar } from 'antd';
-import {ICardConfig} from '@/materials/absolute-antd/social/Card/schema';
+import { ICardConfig } from '@/materials/absolute-antd/social/Card/schema';
 import * as Icon from '@ant-design/icons';
 
-const {Meta} = Card;
+const { Meta } = Card;
 
 interface ICardProProps extends ICardConfig {
   isTpl: boolean;
 }
 
-const ACard:FC<ICardProProps> = props => {
+const ACard: FC<ICardProProps> = (props) => {
+  const { isTpl, ...restProps } = props;
+
   const {
     actions,
     width,
@@ -21,55 +23,48 @@ const ACard:FC<ICardProProps> = props => {
     title,
     avatarUrl,
     description,
-    isTpl
-  } = props;
+  } = restProps;
 
-  const [action,setAction] = useState<ReactNode[]>();
+  const [action, setAction] = useState<ReactNode[]>();
 
-  useEffect(()=>{
+  useEffect(() => {
     const arr = actions.split('-');
-    const icons:ReactNode[] = [];
+    const icons: ReactNode[] = [];
 
-    arr.map(item => {
+    arr.map((item) => {
       // @ts-ignore
       icons.push(React.createElement(Icon[item]));
-    })
+    });
     setAction(icons);
-  },[])
+  }, []);
 
-  return(
+  return (
     <React.Fragment>
-      {
-        isTpl &&
-          <div>
-            <Image preview={false} src={logo} alt={''}/>
-          </div>
-      }
-      {
-        !isTpl &&
-          <div>
-            <Card
-              actions={action}
-              hoverable={hoverable}
-              loading={loading}
-              bordered={bordered}
-              style={{width: width}}
-              cover={
-                <img alt={''}
-                     src={coverUrl}/>
-              }
-            >
-              <Meta
-                title={title}
-                description={description}
-                avatar={<Avatar src={avatarUrl}/>}
-              />
-            </Card>
-          </div>
-      }
+      {isTpl && (
+        <div>
+          <Image preview={false} src={logo} alt={''} />
+        </div>
+      )}
+      {!isTpl && (
+        <div>
+          <Card
+            actions={action}
+            hoverable={hoverable}
+            loading={loading}
+            bordered={bordered}
+            style={{ width: width }}
+            cover={<img alt={''} src={coverUrl} />}
+          >
+            <Meta
+              title={title}
+              description={description}
+              avatar={<Avatar src={avatarUrl} />}
+            />
+          </Card>
+        </div>
+      )}
     </React.Fragment>
-  )
-
-}
+  );
+};
 
 export default memo(ACard);

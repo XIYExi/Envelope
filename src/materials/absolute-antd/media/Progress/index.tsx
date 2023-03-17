@@ -1,16 +1,16 @@
 import React, { FC, memo, useCallback, useState } from 'react';
 import logo from '../../../../assets/absolute/Progress.svg';
-import {Image,Progress} from 'antd';
+import { Image, Progress } from 'antd';
 import { IProgressConfig } from '@/materials/absolute-antd/media/Progress/schema';
 
-interface IProgressProProps extends IProgressConfig{
+interface IProgressProProps extends IProgressConfig {
   isTpl: boolean;
 }
 
-const AProgress:FC<IProgressProProps> = (props) => {
+const AProgress: FC<IProgressProProps> = (props) => {
+  const { isTpl, ...restProps } = props;
 
   const {
-    isTpl,
     percent,
     text,
     showInfo,
@@ -24,42 +24,38 @@ const AProgress:FC<IProgressProProps> = (props) => {
     circleWidth,
     gapDegree,
     gapPosition,
-    dashboardWidth
-  } = props;
+    dashboardWidth,
+  } = restProps;
 
-
-  return(
+  return (
     <React.Fragment>
-      {
-        isTpl &&
-          <div>
-            <Image preview={false} src={logo} alt={''}/>
-          </div>
-      }
-      {
-        !isTpl && type === 'line' &&
-          <div>
-            <Progress
-              percent={percent}
-              type='line'
-              format={(percent)=>`${percent} ${text}`}
-              showInfo={showInfo}
-              status={status}
-              strokeLinecap={strokeLinecap}
-              strokeColor={strokeColor}
-              trailColor={trailColor}
-              steps={steps}
-              strokeWidth={strokeWidth}
-            />
-          </div>
-      }
-      {
-        !isTpl && type === 'circle' &&
+      {isTpl && (
+        <div>
+          <Image preview={false} src={logo} alt={''} />
+        </div>
+      )}
+      {!isTpl && type === 'line' && (
         <div>
           <Progress
             percent={percent}
-            type='circle'
-            format={(percent)=>`${percent} ${text}`}
+            type="line"
+            format={(percent) => `${percent} ${text}`}
+            showInfo={showInfo}
+            status={status}
+            strokeLinecap={strokeLinecap}
+            strokeColor={strokeColor}
+            trailColor={trailColor}
+            steps={steps}
+            strokeWidth={strokeWidth}
+          />
+        </div>
+      )}
+      {!isTpl && type === 'circle' && (
+        <div>
+          <Progress
+            percent={percent}
+            type="circle"
+            format={(percent) => `${percent} ${text}`}
             showInfo={showInfo}
             strokeLinecap={strokeLinecap}
             strokeColor={strokeColor}
@@ -68,14 +64,13 @@ const AProgress:FC<IProgressProProps> = (props) => {
             width={circleWidth}
           />
         </div>
-      }
-      {
-        !isTpl && type === 'dashboard' &&
+      )}
+      {!isTpl && type === 'dashboard' && (
         <div>
           <Progress
             percent={percent}
-            type='dashboard'
-            format={(percent)=>`${percent} ${text}`}
+            type="dashboard"
+            format={(percent) => `${percent} ${text}`}
             showInfo={showInfo}
             strokeLinecap={strokeLinecap}
             strokeColor={strokeColor}
@@ -86,10 +81,9 @@ const AProgress:FC<IProgressProProps> = (props) => {
             width={dashboardWidth}
           />
         </div>
-      }
-
+      )}
     </React.Fragment>
-  )
-}
+  );
+};
 
 export default memo(AProgress);
