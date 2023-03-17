@@ -4,21 +4,19 @@ import {
   TTextDefaultType,
   TUploadDefaultType,
 } from '@/engine-lib-absolute/core-component/type';
+import templateStr from '!raw-loader!./index';
 
-export type TVideoEditData = Array<
-  IUploadConfigType
-  | ITextConfigType
-  >
+export type TVideoEditData = Array<IUploadConfigType | ITextConfigType>;
 
 export interface IVideoConfig {
   poster: TUploadDefaultType;
   url: TTextDefaultType;
 }
 
-
 interface IVideoSchema {
   editData: TVideoEditData;
   config: IVideoConfig;
+  [key: string]: any;
 }
 
 const Video: IVideoSchema = {
@@ -26,15 +24,15 @@ const Video: IVideoSchema = {
     {
       key: 'poster',
       name: '视频封面',
-      type: 'Upload'
+      type: 'Upload',
     },
     {
       key: 'url',
       name: '视频链接',
-      type: 'Text'
-    }
+      type: 'Text',
+    },
   ],
-  config:{
+  config: {
     poster: [
       {
         uid: '001',
@@ -44,7 +42,8 @@ const Video: IVideoSchema = {
       },
     ],
     url: '',
-  }
-}
+  },
+  templateStr,
+};
 
 export default Video;

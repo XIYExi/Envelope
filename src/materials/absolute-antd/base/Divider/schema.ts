@@ -6,7 +6,7 @@ import {
   TSwitchDefaultType,
   TTextDefaultType,
 } from '@/engine-lib-absolute/core-component/type';
-
+import templateStr from '!raw-loader!./index';
 
 export type TDividerOrientationType = 'left' | 'center' | 'right';
 
@@ -14,9 +14,7 @@ type TDividerEditData = Array<
   | ITextConfigType
   | ISwitchConfigType
   | ISelectConfigType<TDividerOrientationType>
-  >
-
-
+>;
 
 export interface IDividerConfig {
   title: TTextDefaultType;
@@ -25,10 +23,10 @@ export interface IDividerConfig {
   plain: TSwitchDefaultType;
 }
 
-
 interface IDividerSchema {
   editData: TDividerEditData;
   config: IDividerConfig;
+  [key: string]: any;
 }
 
 const Divider: IDividerSchema = {
@@ -36,12 +34,12 @@ const Divider: IDividerSchema = {
     {
       key: 'title',
       name: '嵌套的标题',
-      type: 'Text'
+      type: 'Text',
     },
     {
       key: 'dashed',
       name: '是否为虚线',
-      type: 'Switch'
+      type: 'Switch',
     },
     {
       key: 'orientation',
@@ -50,30 +48,31 @@ const Divider: IDividerSchema = {
       range: [
         {
           key: 'left',
-          text: '左侧'
+          text: '左侧',
         },
         {
           key: 'center',
-          text:'居中'
+          text: '居中',
         },
         {
           key: 'right',
-          text: '右侧'
-        }
-      ]
+          text: '右侧',
+        },
+      ],
     },
     {
       key: 'plain',
       name: '文字是否为普通正文样式',
-      type: 'Switch'
-    }
+      type: 'Switch',
+    },
   ],
   config: {
     title: '嵌套的标题',
     dashed: false,
     orientation: 'center',
-    plain: false
-  }
-}
+    plain: false,
+  },
+  templateStr,
+};
 
 export default Divider;

@@ -8,13 +8,11 @@ import {
   TSwitchDefaultType,
   TTextDefaultType,
 } from '@/engine-lib-absolute/core-component/type';
+import templateStr from '!raw-loader!./index';
 
 type TCalendarEditData = Array<
-  | IColorConfigType
-  | ITextConfigType
-  | INumberConfigType
-  | ISwitchConfigType
-  >
+  IColorConfigType | ITextConfigType | INumberConfigType | ISwitchConfigType
+>;
 
 export interface ICalendarConfig {
   time: TTextDefaultType;
@@ -26,13 +24,11 @@ export interface ICalendarConfig {
   round: TNumberDefaultType;
 }
 
-
-
 interface ICalendarSchema {
   editData: TCalendarEditData;
   config: ICalendarConfig;
+  [key: string]: any;
 }
-
 
 const Calendar: ICalendarSchema = {
   editData: [
@@ -40,7 +36,7 @@ const Calendar: ICalendarSchema = {
       key: 'time',
       name: '日历时间',
       type: 'Text',
-      placeholder: '格式为2023-01-01 或 2023-12-30'
+      placeholder: '格式为2023-01-01 或 2023-12-30',
     },
     {
       key: 'range',
@@ -51,12 +47,12 @@ const Calendar: ICalendarSchema = {
     {
       key: 'width',
       name: '宽度',
-      type: 'Number'
+      type: 'Number',
     },
     {
       key: 'color',
       name: '文本颜色',
-      type: 'Color'
+      type: 'Color',
     },
     {
       key: 'selectedColor',
@@ -66,13 +62,13 @@ const Calendar: ICalendarSchema = {
     {
       key: 'fullscreen',
       name: '全屏显示',
-      type: 'Switch'
+      type: 'Switch',
     },
     {
       key: 'round',
       name: '圆角',
-      type: 'Number'
-    }
+      type: 'Number',
+    },
   ],
   config: {
     time: '2023-01-21',
@@ -81,8 +77,9 @@ const Calendar: ICalendarSchema = {
     color: 'rgba(0,0,0,1)',
     selectedColor: 'rgba(22,40,212,1)',
     fullscreen: false,
-    round: 10
-  }
-}
+    round: 10,
+  },
+  templateStr,
+};
 
 export default Calendar;

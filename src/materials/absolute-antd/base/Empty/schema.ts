@@ -1,5 +1,5 @@
 import { ITextConfigType } from '@/engine-lib-absolute/core-component/type';
-
+import templateStr from '!raw-loader!./index';
 
 export type TEmptyEditData = Array<ITextConfigType>;
 
@@ -11,6 +11,7 @@ export interface IEmptyConfig {
 export interface IEmptySchema {
   editData: TEmptyEditData;
   config: IEmptyConfig;
+  [key: string]: any;
 }
 
 const Empty: IEmptySchema = {
@@ -18,18 +19,19 @@ const Empty: IEmptySchema = {
     {
       key: 'description',
       name: '内容描述',
-      type: 'Text'
+      type: 'Text',
     },
     {
       key: 'image',
       name: '设置显示图片',
-      type: 'Text'
-    }
+      type: 'Text',
+    },
   ],
   config: {
     description: '暂无数据',
     image: 'https://s1.ax1x.com/2023/01/15/pSQdf8U.png',
-  }
-}
+  },
+  templateStr,
+};
 
 export default Empty;

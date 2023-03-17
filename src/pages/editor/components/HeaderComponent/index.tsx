@@ -22,8 +22,7 @@ import { saveAs } from 'file-saver';
 import { uuid } from '@/engine-lib-absolute/core-utils/tool';
 import logo from '@/assets/absolute/Card.svg';
 
-
-const {confirm} = Modal;
+const { confirm } = Modal;
 // TODO 测试用
 const isDev = true;
 
@@ -36,15 +35,14 @@ interface HeaderComponentProps {
   importTpl: any;
 }
 
-const HeaderComponent = memo((props: HeaderComponentProps)=>{
-
+const HeaderComponent = memo((props: HeaderComponentProps) => {
   const {
     pointData,
     location,
     clearData,
     undohandler,
     redohandler,
-    importTpl
+    importTpl,
   } = props;
 
   const [faceUrl, setFaceUrl] = useState('');
@@ -70,14 +68,15 @@ const HeaderComponent = memo((props: HeaderComponentProps)=>{
     }, 600);
   };
 
-  const toOnlineCoding = () => {
-    window.open('/ide');
+  const toCodeDownLoading = () => {
+    console.log(pointData);
+
+    //window.open('/ide');
   };
 
   const toVipLogin = () => {
     window.open('/login');
   };
-
 
   const generateFace = (type: number) => {
     // 自定义生成封面逻辑, 可以采用html2canvas 或 dom-to-image
@@ -118,7 +117,7 @@ const HeaderComponent = memo((props: HeaderComponentProps)=>{
         // @ts-ignore
         let name = iptRef.current.value;
         // TODO 存数据库
-        console.log('生成封面',  { name, tpl: pointData })
+        console.log('生成封面', { name, tpl: pointData });
         /*req.post('/visible/tpl/save', { name, tpl: pointData }).then(res => {
           console.log(res);
         });*/
@@ -187,7 +186,7 @@ const HeaderComponent = memo((props: HeaderComponentProps)=>{
       beforeUpload(file: File) {
         // 解析并提取excel数据
         let reader = new FileReader();
-        reader.onload = function(e: Event) {
+        reader.onload = function (e: Event) {
           let data = (e as any).target.result;
           importTpl && importTpl(JSON.parse(data));
         };
@@ -215,7 +214,12 @@ const HeaderComponent = memo((props: HeaderComponentProps)=>{
       title: '该功能正在升级，可以关注下方公众号实时查看动态',
       content: (
         <div style={{ textAlign: 'center' }}>
-          <Image preview={false} src={logo} alt="趣谈前端" style={{ width: '180px' }} />
+          <Image
+            preview={false}
+            src={logo}
+            alt="趣谈前端"
+            style={{ width: '180px' }}
+          />
         </div>
       ),
       okText: '客官知道啦',
@@ -224,9 +228,7 @@ const HeaderComponent = memo((props: HeaderComponentProps)=>{
 
   const content = () => {
     const { tid } = location.query || '';
-    return (
-      <div>Test</div>
-    );
+    return <div>Test</div>;
   };
 
   return (
@@ -238,7 +240,11 @@ const HeaderComponent = memo((props: HeaderComponentProps)=>{
         <div className={styles.logo}></div>
       </div>
       <div className={styles.controlArea}>
-        <Button type="primary" style={{ marginRight: '9px' }} onClick={useTemplate}>
+        <Button
+          type="primary"
+          style={{ marginRight: '9px' }}
+          onClick={useTemplate}
+        >
           模版库
         </Button>
         <Button
@@ -308,7 +314,12 @@ const HeaderComponent = memo((props: HeaderComponentProps)=>{
         >
           <UndoOutlined />
         </Button>
-        <Button type="link" style={{ marginRight: '9px' }} title="重做" onClick={redohandler}>
+        <Button
+          type="link"
+          style={{ marginRight: '9px' }}
+          title="重做"
+          onClick={redohandler}
+        >
           <RedoOutlined />
         </Button>
         <Tooltip placement="bottom" title="一键生成海报分享图">
@@ -337,11 +348,19 @@ const HeaderComponent = memo((props: HeaderComponentProps)=>{
         </Button>
       </div>
       <div className={styles.btnArea}>
-        <Button type="primary" ghost onClick={toOnlineCoding} style={{ marginRight: '12px' }}>
+        <Button
+          type="primary"
+          onClick={toCodeDownLoading}
+          style={{ marginRight: '12px' }}
+        >
           <CodeOutlined />
-          在线编程
+          代码导出
         </Button>
-        <Button type="primary" ghost onClick={toVipLogin} style={{ marginRight: '12px' }}>
+        <Button
+          type="primary"
+          onClick={toVipLogin}
+          style={{ marginRight: '12px' }}
+        >
           <SketchOutlined />
           会员登录
         </Button>
@@ -374,7 +393,6 @@ const HeaderComponent = memo((props: HeaderComponentProps)=>{
       </Modal>
     </div>
   );
-
-})
+});
 
 export default HeaderComponent;

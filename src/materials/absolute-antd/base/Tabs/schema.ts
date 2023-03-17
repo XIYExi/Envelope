@@ -10,7 +10,7 @@ import {
   TSelectDefaultType,
   TSwitchDefaultType,
 } from '@/engine-lib-absolute/core-component/type';
-
+import templateStr from '!raw-loader!./index';
 
 export type TTabsSelectKeySizeType = 'small' | 'middle' | 'large';
 
@@ -26,7 +26,7 @@ export type TTabsEditData = Array<
   | ISelectConfigType<TTabsSelectKeySizeType>
   | ISelectConfigType<TTabsSelectKeyTabPositionType>
   | ISelectConfigType<TTabsSelectKeyTypeType>
-  >
+>;
 
 export interface ITabsConfig {
   tabs: TMutiTextDefaultType;
@@ -43,20 +43,20 @@ export interface ITabsConfig {
 export interface ITabsSchema {
   editData: TTabsEditData;
   config: ITabsConfig;
+  [key: string]: any;
 }
-
 
 const Tabs: ITabsSchema = {
   editData: [
     {
       key: 'tabs',
       name: '项目类别',
-      type: 'MutiText'
+      type: 'MutiText',
     },
     {
       key: 'centered',
       name: '标签居中展示',
-      type: 'Switch'
+      type: 'Switch',
     },
     {
       key: 'size',
@@ -65,22 +65,22 @@ const Tabs: ITabsSchema = {
       range: [
         {
           key: 'small',
-          text: '小号'
+          text: '小号',
         },
         {
           key: 'middle',
-          text: '中等'
+          text: '中等',
         },
         {
           key: 'large',
-          text: '大号'
-        }
-      ]
+          text: '大号',
+        },
+      ],
     },
     {
       key: 'tabBarGutter',
       name: 'tabs 之间的间隙',
-      type: 'Number'
+      type: 'Number',
     },
     {
       key: 'tabPosition',
@@ -89,26 +89,26 @@ const Tabs: ITabsSchema = {
       range: [
         {
           key: 'top',
-          text: '顶部'
+          text: '顶部',
         },
         {
           key: 'right',
-          text: '右侧'
+          text: '右侧',
         },
         {
           key: 'left',
-          text: '左侧'
+          text: '左侧',
         },
         {
           key: 'bottom',
-          text: '底部'
-        }
-      ]
+          text: '底部',
+        },
+      ],
     },
     {
       key: 'destroyInactiveTabPane',
       name: '被隐藏时是否销毁 DOM 结构',
-      type: 'Switch'
+      type: 'Switch',
     },
     {
       key: 'type',
@@ -117,22 +117,22 @@ const Tabs: ITabsSchema = {
       range: [
         {
           key: 'line',
-          text: 'line'
+          text: 'line',
         },
         {
           key: 'card',
-          text: 'card'
+          text: 'card',
         },
         {
           key: 'editable-card',
-          text: 'editable-card'
-        }
-      ]
+          text: 'editable-card',
+        },
+      ],
     },
     {
       key: 'hideAdd',
       name: 'type="editable-card"下是否隐藏加号图标',
-      type: 'Switch'
+      type: 'Switch',
     },
     {
       key: 'sourceData',
@@ -194,12 +194,11 @@ const Tabs: ITabsSchema = {
             url: 'https://s1.ax1x.com/2023/01/15/pSQdf8U.png',
           },
         ],
-        html: `<button>Button</button>`
-      }
-    ]
-
-  }
-
-}
+        html: `<button>Button</button>`,
+      },
+    ],
+  },
+  templateStr,
+};
 
 export default Tabs;

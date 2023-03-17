@@ -7,13 +7,11 @@ import {
   TNumberDefaultType,
   TRichTextDefaultType,
 } from '@/engine-lib-absolute/core-component/type';
+import templateStr from '!raw-loader!./index';
 
 export type TRicheTextEditData = Array<
-  | ITextConfigType
-  | IColorConfigType
-  | INumberConfigType
-  | IRichTextConfigType
-  >;
+  ITextConfigType | IColorConfigType | INumberConfigType | IRichTextConfigType
+>;
 
 export interface IRichTextConfig {
   round: TNumberDefaultType;
@@ -26,6 +24,7 @@ export interface IRichTextConfig {
 export interface IRichTextSchema {
   editData: TRicheTextEditData;
   config: IRichTextConfig;
+  [key: string]: any;
 }
 const RichText: IRichTextSchema = {
   editData: [
@@ -62,5 +61,6 @@ const RichText: IRichTextSchema = {
     padding: 0,
     content: '',
   },
+  templateStr,
 };
 export default RichText;

@@ -12,6 +12,7 @@ import {
   TTextAreaDefaultType,
   TTextDefaultType,
 } from '@/engine-lib-absolute/core-component/type';
+import templateStr from '!raw-loader!./index';
 
 export type TLongTextSelectKeyType = 'left' | 'right' | 'center';
 
@@ -22,7 +23,7 @@ export type TLongTextEditData = Array<
   | ISelectConfigType<TLongTextSelectKeyType>
   | ISwitchConfigType
   | ITextConfigType
-  >
+>;
 
 export interface ILongTextConfig {
   text: TTextAreaDefaultType;
@@ -46,10 +47,10 @@ export interface ILongTextConfig {
   symbol: TTextDefaultType;
 }
 
-
 export interface ILongTextSchema {
   editData: TLongTextEditData;
   config: ILongTextConfig;
+  [key: string]: any;
 }
 
 const Paragraph: ILongTextSchema = {
@@ -57,62 +58,62 @@ const Paragraph: ILongTextSchema = {
     {
       key: 'text',
       name: '文字',
-      type: 'TextArea'
+      type: 'TextArea',
     },
     {
       key: 'disabled',
       name: '禁用文本',
-      type: 'Switch'
+      type: 'Switch',
     },
     {
       key: 'code',
       name: '添加代码样式',
-      type: 'Switch'
+      type: 'Switch',
     },
     {
       key: 'delete',
       name: '删除线样式',
-      type: 'Switch'
+      type: 'Switch',
     },
     {
       key: 'strong',
       name: '加粗',
-      type: 'Switch'
+      type: 'Switch',
     },
     {
       key: 'italic',
       name: '斜体',
-      type: 'Switch'
+      type: 'Switch',
     },
     {
       key: 'mark',
       name: '添加标记',
-      type: 'Switch'
+      type: 'Switch',
     },
     {
       key: 'underline',
       name: '下划线',
-      type: 'Switch'
+      type: 'Switch',
     },
     {
       key: 'color',
       name: '颜色',
-      type: 'Color'
+      type: 'Color',
     },
     {
       key: 'fontSize',
       name: '字体大小',
-      type: 'Number'
+      type: 'Number',
     },
     {
       key: 'indent',
       name: '首行缩进',
-      type: 'Number'
+      type: 'Number',
     },
     {
       key: 'lineHeight',
       name: '行高',
-      type: 'Number'
+      type: 'Number',
     },
     {
       key: 'textAlign',
@@ -121,51 +122,52 @@ const Paragraph: ILongTextSchema = {
       range: [
         {
           key: 'left',
-          text: '左对齐'
+          text: '左对齐',
         },
         {
           key: 'right',
-          text: '右对齐'
+          text: '右对齐',
         },
         {
           key: 'center',
-          text: '居中'
-        }
-      ]
+          text: '居中',
+        },
+      ],
     },
     {
       key: 'bgColor',
       name: '背景颜色',
-      type: 'Color'
+      type: 'Color',
     },
     {
       key: 'padding',
       name: '填充间距',
-      type: 'Number'
+      type: 'Number',
     },
     {
       key: 'radius',
       name: '背景圆角',
-      type: 'Number'
+      type: 'Number',
     },
     {
       key: 'rows',
       name: '最大行数',
-      type: 'Number'
+      type: 'Number',
     },
     {
       key: 'expendable',
       name: '是否可展开',
-      type: 'Switch'
+      type: 'Switch',
     },
     {
       key: 'symbol',
       name: '展开标志',
-      type: 'Text'
-    }
+      type: 'Text',
+    },
   ],
   config: {
-    text: 'Ant Design, a design language for background applications, is refined by Ant UED Team. Ant\n' +
+    text:
+      'Ant Design, a design language for background applications, is refined by Ant UED Team. Ant\n' +
       '        Design, a design language for background applications, is refined by Ant UED Team. Ant\n' +
       '        Design, a design language for background applications, is refined by Ant UED Team. Ant\n' +
       '        Design, a design language for background applications, is refined by Ant UED Team. Ant\n' +
@@ -188,8 +190,9 @@ const Paragraph: ILongTextSchema = {
     radius: 0,
     rows: 2,
     expendable: true,
-    symbol: 'more'
-  }
-}
+    symbol: 'more',
+  },
+  templateStr,
+};
 
 export default Paragraph;

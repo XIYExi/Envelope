@@ -6,17 +6,15 @@ import {
   TSwitchDefaultType,
   TTextDefaultType,
 } from '@/engine-lib-absolute/core-component/type';
+import templateStr from '!raw-loader!./index';
 
 type TRateEditData = Array<
-  | ITextConfigType
-  | INumberConfigType
-  | ISwitchConfigType
-  >
+  ITextConfigType | INumberConfigType | ISwitchConfigType
+>;
 
-
-export interface IRateConfig{
+export interface IRateConfig {
   allowClear: TSwitchDefaultType;
-  allowHalf:TSwitchDefaultType;
+  allowHalf: TSwitchDefaultType;
   autoFocus: TSwitchDefaultType;
   character: TTextDefaultType;
   count: TNumberDefaultType;
@@ -24,9 +22,10 @@ export interface IRateConfig{
   disabled: TSwitchDefaultType;
 }
 
-interface IRateSchema{
+interface IRateSchema {
   editData: TRateEditData;
   config: IRateConfig;
+  [key: string]: any;
 }
 
 const Rate: IRateSchema = {
@@ -34,40 +33,40 @@ const Rate: IRateSchema = {
     {
       key: 'allowClear',
       name: '再次点击允许清除',
-      type: 'Switch'
+      type: 'Switch',
     },
     {
       key: 'allowHalf',
       name: '允许半选',
-      type: 'Switch'
+      type: 'Switch',
     },
     {
       key: 'autoFocus',
       name: '自动聚焦',
-      type: 'Switch'
+      type: 'Switch',
     },
     {
       key: 'character',
       name: '自定义字符',
-      type: 'Text'
+      type: 'Text',
     },
     {
       key: 'count',
       name: '数量',
-      type: 'Number'
+      type: 'Number',
     },
     {
       key: 'defaultValue',
       name: '默认分数',
-      type: 'Number'
+      type: 'Number',
     },
     {
       key: 'disabled',
       name: '禁用',
-      type: 'Switch'
-    }
+      type: 'Switch',
+    },
   ],
-  config:{
+  config: {
     allowClear: false,
     allowHalf: false,
     autoFocus: false,
@@ -75,7 +74,8 @@ const Rate: IRateSchema = {
     count: 5,
     defaultValue: 0,
     disabled: false,
-  }
-}
+  },
+  templateStr,
+};
 
 export default Rate;

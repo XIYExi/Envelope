@@ -10,6 +10,7 @@ import {
   TSelectDefaultType,
   TTextDefaultType,
 } from '@/engine-lib-absolute/core-component/type';
+import templateStr from '!raw-loader!./index';
 
 export interface IFormConfig {
   title: TTextDefaultType;
@@ -31,11 +32,12 @@ export type TFormEditData = Array<
   | IColorConfigType
   | ISelectConfigType<TTextWeightSelectKeyType>
   | IFormItemsConfigType
-  >
+>;
 
 export interface IFormSchema {
   editData: TFormEditData;
   config: IFormConfig;
+  [key: string]: any;
 }
 
 const Form: IFormSchema = {
@@ -43,17 +45,17 @@ const Form: IFormSchema = {
     {
       key: 'title',
       name: '标题',
-      type: 'Text'
+      type: 'Text',
     },
     {
       key: 'fontSize',
       name: '标题大小',
-      type: 'Number'
+      type: 'Number',
     },
     {
       key: 'titColor',
       name: '标题颜色',
-      type: 'Color'
+      type: 'Color',
     },
     {
       key: 'titWeight',
@@ -75,8 +77,8 @@ const Form: IFormSchema = {
         {
           key: '600',
           text: '600 x 600',
-        }
-      ]
+        },
+      ],
     },
     {
       key: 'bgColor',
@@ -102,7 +104,7 @@ const Form: IFormSchema = {
       key: 'formControls',
       name: '表单控件',
       type: 'FormItems',
-    }
+    },
   ],
   config: {
     title: '表单定制组件',
@@ -134,10 +136,11 @@ const Form: IFormSchema = {
           { label: '篮球', value: '1' },
           { label: '乒乓球', value: '2' },
           { label: '健身', value: '3' },
-        ]
-      }
-    ]
-  }
-}
+        ],
+      },
+    ],
+  },
+  templateStr,
+};
 
 export default Form;

@@ -1,12 +1,14 @@
 import {
   INumberConfigType,
   IRadioConfigType,
-  ISwitchConfigType, ITextConfigType,
+  ISwitchConfigType,
+  ITextConfigType,
   TNumberDefaultType,
   TRadioDefaultType,
   TSwitchDefaultType,
   TTextDefaultType,
 } from '@/engine-lib-absolute/core-component/type';
+import templateStr from '!raw-loader!./index';
 
 type TStatisticValueType = 'string' | 'number';
 
@@ -15,11 +17,11 @@ type TStatisticEditData = Array<
   | ITextConfigType
   | IRadioConfigType<TStatisticValueType>
   | INumberConfigType
-  >
+>;
 
-export interface IStatisticConfig{
+export interface IStatisticConfig {
   title: TTextDefaultType;
-  valueType: TRadioDefaultType<TStatisticValueType>
+  valueType: TRadioDefaultType<TStatisticValueType>;
   value: TTextDefaultType;
   decimalSeparator: TTextDefaultType;
   groupSeparator: TTextDefaultType;
@@ -31,6 +33,7 @@ export interface IStatisticConfig{
 interface IStatisticSchema {
   editData: TStatisticEditData;
   config: IStatisticConfig;
+  [key: string]: any;
 }
 
 const Statistic: IStatisticSchema = {
@@ -38,7 +41,7 @@ const Statistic: IStatisticSchema = {
     {
       key: 'title',
       name: '标题',
-      type: 'Text'
+      type: 'Text',
     },
     {
       key: 'valueType',
@@ -47,44 +50,44 @@ const Statistic: IStatisticSchema = {
       range: [
         {
           key: 'string',
-          text: 'string'
+          text: 'string',
         },
         {
           key: 'number',
-          text:'number'
-        }
-      ]
+          text: 'number',
+        },
+      ],
     },
     {
       key: 'value',
       name: '数值内容',
-      type: 'Text'
+      type: 'Text',
     },
     {
       key: 'decimalSeparator',
       name: '设置小数点',
-      type: 'Text'
+      type: 'Text',
     },
     {
       key: 'groupSeparator',
       name: '设置千分位标识符',
-      type: 'Text'
+      type: 'Text',
     },
     {
       key: 'loading',
       name: '数值是否加载',
-      type: 'Switch'
+      type: 'Switch',
     },
     {
       key: 'precision',
       name: '数值精度',
-      type: 'Number'
+      type: 'Number',
     },
     {
       key: 'prefix',
       name: '前缀',
-      type: 'Text'
-    }
+      type: 'Text',
+    },
   ],
   config: {
     title: 'Feedback',
@@ -95,7 +98,8 @@ const Statistic: IStatisticSchema = {
     loading: false,
     precision: 4,
     prefix: 'LikeOutlined',
-  }
-}
+  },
+  templateStr,
+};
 
 export default Statistic;

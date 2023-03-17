@@ -3,8 +3,11 @@ import {
   ISelectConfigType,
   ISwitchConfigType,
   ITextAreaConfigType,
-  TSelectDefaultType, TSwitchDefaultType, TTextAreaDefaultType,
+  TSelectDefaultType,
+  TSwitchDefaultType,
+  TTextAreaDefaultType,
 } from '@/engine-lib-absolute/core-component/type';
+import templateStr from '!raw-loader!./index';
 
 type TRadioTypeType = 'default' | 'button';
 
@@ -15,7 +18,7 @@ type TRadioEditData = Array<
   | ISelectConfigType<TRadioTypeType>
   | ISelectConfigType<TRadioButtonStyleType>
   | ISwitchConfigType
-  >
+>;
 
 export interface IRadioConfig {
   type: TSelectDefaultType<TRadioTypeType>;
@@ -28,10 +31,11 @@ export interface IRadioConfig {
 interface IRadioSchema {
   editData: TRadioEditData;
   config: IRadioConfig;
+  [key: string]: any;
 }
 
 const Radio: IRadioSchema = {
-  editData:[
+  editData: [
     {
       key: 'type',
       name: '选项类型',
@@ -39,13 +43,13 @@ const Radio: IRadioSchema = {
       range: [
         {
           key: 'default',
-          text: '默认'
+          text: '默认',
         },
         {
           key: 'button',
-          text: '按钮'
-        }
-      ]
+          text: '按钮',
+        },
+      ],
     },
     {
       key: 'buttonStyle',
@@ -54,36 +58,37 @@ const Radio: IRadioSchema = {
       range: [
         {
           key: 'outline',
-          text: '边框'
+          text: '边框',
         },
         {
           key: 'solid',
-          text: '流线'
-        }
-      ]
+          text: '流线',
+        },
+      ],
     },
     {
       key: 'disabled',
       name: '禁用',
-      type: 'Switch'
+      type: 'Switch',
     },
     {
       key: 'options',
       name: '选项',
-      type: 'TextArea'
+      type: 'TextArea',
     },
     {
       key: 'autoFocus',
       name: '自动聚焦',
-      type: 'Switch'
-    }
+      type: 'Switch',
+    },
   ],
-  config:{
+  config: {
     type: 'default',
     buttonStyle: 'outline',
     disabled: false,
     options: 'a-b-c-d-e',
     autoFocus: false,
-  }
-}
+  },
+  templateStr,
+};
 export default Radio;

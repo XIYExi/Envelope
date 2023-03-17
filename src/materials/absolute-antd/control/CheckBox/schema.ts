@@ -4,10 +4,11 @@ import {
   TSwitchDefaultType,
   TTextDefaultType,
 } from '@/engine-lib-absolute/core-component/type';
+import templateStr from '!raw-loader!./index';
 
-type TCheckBoxEditData = Array< ITextConfigType | ISwitchConfigType >
+type TCheckBoxEditData = Array<ITextConfigType | ISwitchConfigType>;
 
-export interface ICheckBoxConfig{
+export interface ICheckBoxConfig {
   text: TTextDefaultType;
   autoFocus: TSwitchDefaultType;
   defaultChecked: TSwitchDefaultType;
@@ -17,38 +18,39 @@ export interface ICheckBoxConfig{
 interface ICheckBoxSchema {
   editData: TCheckBoxEditData;
   config: ICheckBoxConfig;
+  [key: string]: any;
 }
-
 
 const CheckBox: ICheckBoxSchema = {
   editData: [
     {
       key: 'text',
       name: '文本',
-      type: 'Text'
+      type: 'Text',
     },
     {
       key: 'autoFocus',
-      name:'自动获得焦点',
-      type:'Switch'
+      name: '自动获得焦点',
+      type: 'Switch',
     },
     {
       key: 'defaultChecked',
       name: '默认状态',
-      type:'Switch'
+      type: 'Switch',
     },
     {
       key: 'disabled',
       name: '禁用',
-      type:'Switch'
-    }
+      type: 'Switch',
+    },
   ],
   config: {
     text: 'checkbox',
     autoFocus: false,
     defaultChecked: false,
-    disabled: false
-  }
-}
+    disabled: false,
+  },
+  templateStr,
+};
 
 export default CheckBox;

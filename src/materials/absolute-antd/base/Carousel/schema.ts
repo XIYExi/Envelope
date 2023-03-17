@@ -8,9 +8,9 @@ import {
   TSwitchDefaultType,
   TNumberDefaultType,
 } from '../../../../engine-lib-absolute/core-component/type';
+import templateStr from '!raw-loader!./index';
 
 export type CarouselDirectionKeyType = 'top' | 'bottom' | 'left' | 'right';
-
 
 export type CarouselEffectType = 'scrollx' | 'fade';
 
@@ -20,7 +20,7 @@ export type TCarouselEditData = Array<
   | IDataListConfigType
   | ISwitchConfigType
   | INumberConfigType
-  >;
+>;
 
 export interface ICarouselConfig {
   direction: TRadioDefaultType<CarouselDirectionKeyType>;
@@ -34,6 +34,7 @@ export interface ICarouselConfig {
 export interface ICarouselSchema {
   editData: TCarouselEditData;
   config: ICarouselConfig;
+  [key: string]: any;
 }
 
 const Carousel: ICarouselSchema = {
@@ -68,13 +69,13 @@ const Carousel: ICarouselSchema = {
       range: [
         {
           key: 'scrollx',
-          text: '滑动'
+          text: '滑动',
         },
         {
           key: 'fade',
-          text: '消失'
-        }
-      ]
+          text: '消失',
+        },
+      ],
     },
     {
       key: 'round',
@@ -129,8 +130,6 @@ const Carousel: ICarouselSchema = {
     ],
     tplImg: 'http://h5.dooring.cn/uploads/1_1740bd7c3dc.png',
   },
+  templateStr,
 };
 export default Carousel;
-
-
-

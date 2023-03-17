@@ -1,5 +1,6 @@
 import {
-  INumberConfigType, IPosConfigType,
+  INumberConfigType,
+  IPosConfigType,
   ISwitchConfigType,
   ITextConfigType,
   TNumberDefaultType,
@@ -7,14 +8,11 @@ import {
   TSwitchDefaultType,
   TTextDefaultType,
 } from '@/engine-lib-absolute/core-component/type';
+import templateStr from '!raw-loader!./index';
 
 type TSlideEditData = Array<
-  | ITextConfigType
-  | ISwitchConfigType
-  | INumberConfigType
-  | IPosConfigType
-  >
-
+  ITextConfigType | ISwitchConfigType | INumberConfigType | IPosConfigType
+>;
 
 export interface ISlideConfig {
   allowClear: TSwitchDefaultType;
@@ -33,6 +31,7 @@ export interface ISlideConfig {
 interface ISlideSchema {
   editData: TSlideEditData;
   config: ISlideConfig;
+  [key: string]: any;
 }
 
 const Slider: ISlideSchema = {
@@ -40,55 +39,55 @@ const Slider: ISlideSchema = {
     {
       key: 'allowClear',
       name: '支持清除',
-      type: 'Switch'
+      type: 'Switch',
     },
     {
       key: 'defaultValue',
       name: '默认值',
-      type: 'Pos'
+      type: 'Pos',
     },
     {
       key: 'disabled',
       name: '禁用',
-      type: 'Switch'
+      type: 'Switch',
     },
     {
       key: 'dots',
       name: '是否只能拖拽到刻度上',
-      type: 'Switch'
+      type: 'Switch',
     },
     {
       key: 'included',
       name: '是否为包含关系',
-      type: 'Switch'
+      type: 'Switch',
     },
     {
       key: 'min',
       name: '最小值',
-      type: 'Number'
+      type: 'Number',
     },
     {
       key: 'max',
       name: '最大值',
-      type: 'Number'
+      type: 'Number',
     },
     {
       key: 'range',
       name: '双滑块模式',
-      type: 'Switch'
+      type: 'Switch',
     },
     {
       key: 'reverse',
       name: '反转坐标系',
-      type: 'Switch'
+      type: 'Switch',
     },
     {
       key: 'step',
       name: '步长',
-      type: 'Number'
+      type: 'Number',
     },
   ],
-  config:{
+  config: {
     allowClear: true,
     defaultValue: [20, 50],
     disabled: false,
@@ -100,7 +99,8 @@ const Slider: ISlideSchema = {
     range: true,
     reverse: false,
     step: 0,
-  }
-}
+  },
+  templateStr,
+};
 
 export default Slider;

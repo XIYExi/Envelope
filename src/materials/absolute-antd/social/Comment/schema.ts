@@ -4,57 +4,61 @@ import {
   TTextAreaDefaultType,
   TTextDefaultType,
 } from '@/engine-lib-absolute/core-component/type';
+import templateStr from '!raw-loader!./index';
 
-type TCommentEditData = Array<ITextConfigType | ITextAreaConfigType>
+type TCommentEditData = Array<ITextConfigType | ITextAreaConfigType>;
 
-export interface ICommentConfig{
+export interface ICommentConfig {
   actions: TTextAreaDefaultType;
   author: TTextDefaultType;
   avatar: TTextDefaultType;
-  content:  TTextAreaDefaultType
+  content: TTextAreaDefaultType;
   datetime: TTextDefaultType;
 }
 
 interface ICommentSchema {
   editData: TCommentEditData;
   config: ICommentConfig;
+  [key: string]: any;
 }
 
-const Comment: ICommentSchema ={
+const Comment: ICommentSchema = {
   editData: [
     {
       key: 'actions',
       name: '操作图标',
-      type: 'TextArea'
+      type: 'TextArea',
     },
     {
       key: 'author',
       name: '作者',
-      type: 'Text'
+      type: 'Text',
     },
     {
       key: 'avatar',
       name: '头像url',
-      type: 'Text'
+      type: 'Text',
     },
     {
       key: 'content',
-      name:'内容',
-      type: 'TextArea'
+      name: '内容',
+      type: 'TextArea',
     },
     {
       key: 'datetime',
       name: '时间',
-      type:'Text'
-    }
+      type: 'Text',
+    },
   ],
-  config:{
+  config: {
     actions: 'LikeFilled-DislikeFilled',
     author: 'xiye',
     avatar: 'https://s1.ax1x.com/2023/01/15/pSQ7EKH.png',
-    content: 'We supply a series of design principles, practical patterns and high quality design resources (Sketch and Axure).',
-    datetime: '8 hours ago'
-  }
-}
+    content:
+      'We supply a series of design principles, practical patterns and high quality design resources (Sketch and Axure).',
+    datetime: '8 hours ago',
+  },
+  templateStr,
+};
 
 export default Comment;

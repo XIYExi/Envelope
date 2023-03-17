@@ -2,13 +2,15 @@ import {
   IColorConfigType,
   INumberConfigType,
   ISelectConfigType,
-  ISwitchConfigType, ITextConfigType,
+  ISwitchConfigType,
+  ITextConfigType,
   TColorDefaultType,
   TNumberDefaultType,
   TSelectDefaultType,
-  TSwitchDefaultType, TTextDefaultType,
+  TSwitchDefaultType,
+  TTextDefaultType,
 } from '@/engine-lib-absolute/core-component/type';
-
+import templateStr from '!raw-loader!./index';
 
 type TProgressTypeType = 'line' | 'circle' | 'dashboard';
 
@@ -27,10 +29,9 @@ type TProgressEditData = Array<
   | ISelectConfigType<TProgressGapPositionType>
   | ISwitchConfigType
   | ITextConfigType
-  >
+>;
 
-
-export interface IProgressConfig{
+export interface IProgressConfig {
   text: TTextDefaultType;
   percent: TNumberDefaultType;
   showInfo: TSwitchDefaultType;
@@ -47,10 +48,10 @@ export interface IProgressConfig{
   dashboardWidth: TNumberDefaultType;
 }
 
-
 interface IProgressSchema {
   editData: TProgressEditData;
   config: IProgressConfig;
+  [key: string]: any;
 }
 
 const Progress: IProgressSchema = {
@@ -58,17 +59,17 @@ const Progress: IProgressSchema = {
     {
       key: 'text',
       name: '文本',
-      type: 'Text'
+      type: 'Text',
     },
     {
       key: 'percent',
       name: '当前百分比',
-      type: 'Number'
+      type: 'Number',
     },
     {
-      key:'showInfo',
+      key: 'showInfo',
       name: '是否显示进度数值或状态图标',
-      type: 'Switch'
+      type: 'Switch',
     },
     {
       key: 'type',
@@ -77,17 +78,17 @@ const Progress: IProgressSchema = {
       range: [
         {
           key: 'line',
-          text: '线条'
+          text: '线条',
         },
         {
           key: 'circle',
-          text: '圆形'
+          text: '圆形',
         },
         {
           key: 'dashboard',
-          text: '仪表盘'
-        }
-      ]
+          text: '仪表盘',
+        },
+      ],
     },
     {
       key: 'status',
@@ -96,26 +97,26 @@ const Progress: IProgressSchema = {
       range: [
         {
           key: 'success',
-          text: 'success'
+          text: 'success',
         },
         {
           key: 'exception',
-          text: 'exception'
+          text: 'exception',
         },
         {
           key: 'normal',
-          text: 'normal'
+          text: 'normal',
         },
         {
           key: 'active',
-          text: 'active'
-        }
-      ]
+          text: 'active',
+        },
+      ],
     },
     {
       key: 'strokeColor',
       name: '进度条的色彩',
-      type: 'Color'
+      type: 'Color',
     },
     {
       key: 'strokeLinecap',
@@ -124,42 +125,42 @@ const Progress: IProgressSchema = {
       range: [
         {
           key: 'round',
-          text: 'round'
+          text: 'round',
         },
         {
           key: 'butt',
-          text: 'butt'
+          text: 'butt',
         },
         {
           key: 'square',
-          text: 'square'
-        }
-      ]
+          text: 'square',
+        },
+      ],
     },
     {
       key: 'trailColor',
       name: '未完成的分段的颜色',
-      type: 'Color'
+      type: 'Color',
     },
     {
       key: 'strokeWidth',
       name: '进度条线的宽度',
-      type: 'Number'
+      type: 'Number',
     },
     {
       key: 'steps',
       name: 'line状态下进度条总共步数',
-      type: 'Number'
+      type: 'Number',
     },
     {
       key: 'circleWidth',
       name: 'circle状态下画布宽度',
-      type: 'Number'
+      type: 'Number',
     },
     {
       key: 'gapDegree',
       name: 'dashboard进度条缺口角度',
-      type: 'Number'
+      type: 'Number',
     },
     {
       key: 'gapPosition',
@@ -168,29 +169,29 @@ const Progress: IProgressSchema = {
       range: [
         {
           key: 'top',
-          text: '顶部'
+          text: '顶部',
         },
         {
           key: 'bottom',
-          text: '底部'
+          text: '底部',
         },
         {
           key: 'left',
-          text:'左侧'
+          text: '左侧',
         },
         {
           key: 'right',
-          text:'右侧'
-        }
-      ]
+          text: '右侧',
+        },
+      ],
     },
     {
       key: 'dashboardWidth',
       name: 'dashboard状态下画布宽度',
-      type: 'Number'
-    }
+      type: 'Number',
+    },
   ],
-  config:{
+  config: {
     text: '%',
     percent: 20,
     showInfo: true,
@@ -205,7 +206,8 @@ const Progress: IProgressSchema = {
     gapDegree: 75,
     gapPosition: 'bottom',
     dashboardWidth: 132,
-  }
-}
+  },
+  templateStr,
+};
 
 export default Progress;

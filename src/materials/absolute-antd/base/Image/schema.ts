@@ -12,7 +12,12 @@ import {
   TTextDefaultType,
   ITextConfigType,
 } from '../../../../engine-lib-absolute/core-component/type';
-import { baseConfig, baseDefault, ICommonBaseType } from '../../../../engine-lib-absolute/core-component/common';
+import {
+  baseConfig,
+  baseDefault,
+  ICommonBaseType,
+} from '../../../../engine-lib-absolute/core-component/common';
+import templateStr from '!raw-loader!./index';
 
 export type TTextSelectKeyType = 'left' | 'right' | 'center';
 export type TTextWeightSelectKeyType = '300' | '400' | '500' | '600';
@@ -24,7 +29,7 @@ export type TImageEditData = Array<
   | ISelectConfigType<TTextSelectKeyType | TTextWeightSelectKeyType>
   | IColorConfigType
   | ITextConfigType
-  >;
+>;
 
 export interface IImageConfig extends ICommonBaseType {
   translate: TPosDefaultType;
@@ -44,8 +49,8 @@ export interface IImageConfig extends ICommonBaseType {
 export interface IImageSchema {
   editData: TImageEditData;
   config: IImageConfig;
+  [key: string]: any;
 }
-
 
 const Image: IImageSchema = {
   editData: [
@@ -202,6 +207,7 @@ const Image: IImageSchema = {
     round: 0,
     ...baseDefault,
   },
+  templateStr,
 };
 
 export default Image;

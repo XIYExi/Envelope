@@ -8,13 +8,11 @@ import {
   TTextDefaultType,
   TUploadDefaultType,
 } from '@/engine-lib-absolute/core-component/type';
+import templateStr from '!raw-loader!./index';
 
 export type TQrcodeEditData = Array<
-  | IUploadConfigType
-  | ITextConfigType
-  | IColorConfigType
-  | INumberConfigType
-  >;
+  IUploadConfigType | ITextConfigType | IColorConfigType | INumberConfigType
+>;
 export interface IQrcodeConfig {
   qrcode: TUploadDefaultType;
   text: TTextDefaultType;
@@ -25,6 +23,7 @@ export interface IQrcodeConfig {
 export interface IQrcodeSchema {
   editData: TQrcodeEditData;
   config: IQrcodeConfig;
+  [key: string]: any;
 }
 
 const Qrcode: IQrcodeSchema = {
@@ -65,6 +64,7 @@ const Qrcode: IQrcodeSchema = {
     color: 'rgba(153,153,153,1)',
     fontSize: 14,
   },
+  templateStr,
 };
 
 export default Qrcode;

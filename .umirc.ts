@@ -27,6 +27,10 @@ export default defineConfig({
           path: '/lowcode',
           component: '../pages/lowcode',
         },
+        {
+          path: '/test',
+          component: '../pages/test',
+        },
       ],
     },
   ],

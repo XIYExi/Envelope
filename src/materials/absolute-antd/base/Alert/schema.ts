@@ -1,14 +1,15 @@
-import { ISelectConfigType, ISwitchConfigType, ITextConfigType } from '@/engine-lib-absolute/core-component/type';
+import {
+  ISelectConfigType,
+  ISwitchConfigType,
+  ITextConfigType,
+} from '@/engine-lib-absolute/core-component/type';
+import templateStr from '!raw-loader!./index';
 
-
-export type TAlertSelectKeyType = 'success' | 'info' | 'warning'| 'error';
-
+export type TAlertSelectKeyType = 'success' | 'info' | 'warning' | 'error';
 
 export type TAlertEditData = Array<
-  | ITextConfigType
-  | ISelectConfigType<TAlertSelectKeyType>
-  | ISwitchConfigType
-  >
+  ITextConfigType | ISelectConfigType<TAlertSelectKeyType> | ISwitchConfigType
+>;
 
 export interface IAlertConfig {
   message: string;
@@ -18,10 +19,10 @@ export interface IAlertConfig {
   showIcon: boolean;
 }
 
-
 export interface IAlertSchema {
   editData: TAlertEditData;
   config: IAlertConfig;
+  [key: string]: any;
 }
 
 const Alert: IAlertSchema = {
@@ -29,7 +30,7 @@ const Alert: IAlertSchema = {
     {
       key: 'message',
       name: '警告提示内容',
-      type: 'Text'
+      type: 'Text',
     },
     {
       key: 'type',
@@ -38,45 +39,46 @@ const Alert: IAlertSchema = {
       range: [
         {
           key: 'success',
-          text: '成功'
+          text: '成功',
         },
         {
           key: 'info',
-          text: '通知'
+          text: '通知',
         },
         {
           key: 'warning',
-          text: '警告'
+          text: '警告',
         },
         {
           key: 'error',
-          text: '错误'
-        }
-      ]
+          text: '错误',
+        },
+      ],
     },
     {
       key: 'closable',
       name: '是否可关闭',
-      type: 'Switch'
+      type: 'Switch',
     },
     {
       key: 'banner',
       name: '是否用作顶部公告',
-      type: 'Switch'
+      type: 'Switch',
     },
     {
       key: 'showIcon',
       name: '是否显示图标',
-      type: 'Switch'
-    }
+      type: 'Switch',
+    },
   ],
-  config:{
+  config: {
     message: 'Alert',
     type: 'success',
     closable: true,
     banner: false,
     showIcon: false,
-  }
-}
+  },
+  templateStr,
+};
 
 export default Alert;

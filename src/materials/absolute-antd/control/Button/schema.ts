@@ -6,6 +6,7 @@ import {
   TSwitchDefaultType,
   TTextDefaultType,
 } from '@/engine-lib-absolute/core-component/type';
+import templateStr from '!raw-loader!./index';
 
 type TButtonShapeType = 'default' | 'round' | 'circle';
 
@@ -16,10 +17,9 @@ type TButtonEditData = Array<
   | ISwitchConfigType
   | ITextConfigType
   | ISelectConfigType<TButtonIconLocationType>
-  >
+>;
 
-
-export interface IButtonConfig{
+export interface IButtonConfig {
   text: TTextDefaultType;
   block: TSwitchDefaultType;
   danger: TSwitchDefaultType;
@@ -27,14 +27,15 @@ export interface IButtonConfig{
   ghost: TSwitchDefaultType;
   href: TTextDefaultType;
   icon: TTextDefaultType;
-  iconLocation: TSelectDefaultType<TButtonIconLocationType>
+  iconLocation: TSelectDefaultType<TButtonIconLocationType>;
   loading: TSwitchDefaultType;
-  shape: TSelectDefaultType<TButtonShapeType>
+  shape: TSelectDefaultType<TButtonShapeType>;
 }
 
 interface IButtonSchema {
   editData: TButtonEditData;
   config: IButtonConfig;
+  [key: string]: any;
 }
 
 const Button: IButtonSchema = {
@@ -42,37 +43,37 @@ const Button: IButtonSchema = {
     {
       key: 'text',
       name: '文本',
-      type: 'Text'
+      type: 'Text',
     },
     {
       key: 'block',
       name: '将按钮宽度调整为其父宽度',
-      type: 'Switch'
+      type: 'Switch',
     },
     {
       key: 'danger',
       name: '危险按钮',
-      type: 'Switch'
+      type: 'Switch',
     },
     {
       key: 'disabled',
       name: '设置禁用',
-      type: 'Switch'
+      type: 'Switch',
     },
     {
       key: 'ghost',
       name: '设置背景透明',
-      type: 'Switch'
+      type: 'Switch',
     },
     {
       key: 'href',
       name: '跳转链接',
-      type: 'Text'
+      type: 'Text',
     },
     {
       key: 'icon',
       name: '图标',
-      type: 'Text'
+      type: 'Text',
     },
     {
       key: 'iconLocation',
@@ -81,18 +82,18 @@ const Button: IButtonSchema = {
       range: [
         {
           key: 'left',
-          text: '左侧'
+          text: '左侧',
         },
         {
           key: 'right',
-          text: '右侧'
-        }
-      ]
+          text: '右侧',
+        },
+      ],
     },
     {
       key: 'loading',
       name: '设置按钮载入状态',
-      type: 'Switch'
+      type: 'Switch',
     },
     {
       key: 'shape',
@@ -101,18 +102,18 @@ const Button: IButtonSchema = {
       range: [
         {
           key: 'default',
-          text: '默认'
+          text: '默认',
         },
         {
           key: 'circle',
-          text: '圆角'
+          text: '圆角',
         },
         {
           key: 'round',
-          text: '半圆'
-        }
-      ]
-    }
+          text: '半圆',
+        },
+      ],
+    },
   ],
   config: {
     text: 'Button',
@@ -125,7 +126,8 @@ const Button: IButtonSchema = {
     iconLocation: 'left',
     loading: false,
     shape: 'default',
-  }
-}
+  },
+  templateStr,
+};
 
 export default Button;

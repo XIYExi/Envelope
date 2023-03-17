@@ -6,14 +6,11 @@ import {
   TTextAreaDefaultType,
   TTextDefaultType,
 } from '@/engine-lib-absolute/core-component/type';
-
+import templateStr from '!raw-loader!./index';
 
 export type TMapEditData = Array<
-  | ITextConfigType
-  | ITextAreaConfigType
-  | IPosConfigType
-  >
-
+  ITextConfigType | ITextAreaConfigType | IPosConfigType
+>;
 
 export interface IMapConfig {
   ak: TTextDefaultType;
@@ -21,19 +18,18 @@ export interface IMapConfig {
   location: TTextAreaDefaultType;
 }
 
-
-interface IMapSchema  {
+interface IMapSchema {
   editData: TMapEditData;
   config: IMapConfig;
+  [key: string]: any;
 }
-
 
 const Map: IMapSchema = {
   editData: [
     {
       key: 'ak',
       name: '百度地图AK',
-      type: 'Text'
+      type: 'Text',
     },
     {
       key: 'position',
@@ -41,20 +37,21 @@ const Map: IMapSchema = {
       type: 'Pos',
       placeObj: {
         text: '使用百度拾取坐标系获取坐标',
-        link: 'http://api.map.baidu.com/lbsapi/getpoint/index.html'
-      }
+        link: 'http://api.map.baidu.com/lbsapi/getpoint/index.html',
+      },
     },
     {
       key: 'location',
       name: '地址',
-      type: 'TextArea'
-    }
+      type: 'TextArea',
+    },
   ],
-  config:{
+  config: {
     ak: '你的百度地图ak',
     position: [121.444017, 31.237787],
-    location: '上海市'
-  }
-}
+    location: '上海市',
+  },
+  templateStr,
+};
 
 export default Map;

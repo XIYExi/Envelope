@@ -1,17 +1,25 @@
-import { baseConfig, baseDefault, ICommonBaseType } from '@/engine-lib-absolute/core-component/common';
 import {
-  IColorConfigType, INumberConfigType, ISelectConfigType, ITextConfigType, IUploadConfigType,
+  baseConfig,
+  baseDefault,
+  ICommonBaseType,
+} from '@/engine-lib-absolute/core-component/common';
+import {
+  IColorConfigType,
+  INumberConfigType,
+  ISelectConfigType,
+  ITextConfigType,
+  IUploadConfigType,
   TColorDefaultType,
-  TNumberDefaultType, TSelectDefaultType,
+  TNumberDefaultType,
+  TSelectDefaultType,
   TTextDefaultType,
   TUploadDefaultType,
 } from '@/engine-lib-absolute/core-component/type';
-
+import templateStr from '!raw-loader!./index';
 
 export type THeaderSelectKeySizeType = 'small' | 'default' | 'large';
 
 export type THeaderSelectKeyShapeType = 'circle' | 'square';
-
 
 export type THeaderEditData = Array<
   | IColorConfigType
@@ -20,30 +28,28 @@ export type THeaderEditData = Array<
   | ITextConfigType
   | ISelectConfigType<THeaderSelectKeySizeType>
   | ISelectConfigType<THeaderSelectKeyShapeType>
-  >
+>;
 
-
-export interface IHeaderConfig extends ICommonBaseType{
+export interface IHeaderConfig extends ICommonBaseType {
   bgColor: TColorDefaultType;
   logo: TUploadDefaultType;
   fontSize: TNumberDefaultType;
   color: TColorDefaultType;
   height: TNumberDefaultType;
   title: TTextDefaultType;
-  user:TTextDefaultType;
+  user: TTextDefaultType;
   size: TSelectDefaultType<THeaderSelectKeySizeType>;
   shape: TSelectDefaultType<THeaderSelectKeyShapeType>;
 }
 
-
 export type IHeaderSchema = {
   editData: THeaderEditData;
   config: IHeaderConfig;
-}
-
+  [key: string]: any;
+};
 
 const Header: IHeaderSchema = {
-  editData:[
+  editData: [
     {
       key: 'bgColor',
       name: '背景色',
@@ -56,17 +62,17 @@ const Header: IHeaderSchema = {
       range: [
         {
           key: 'small',
-          text: '小号'
+          text: '小号',
         },
         {
           key: 'default',
-          text: '默认'
+          text: '默认',
         },
         {
           key: 'large',
-          text: '大号'
-        }
-      ]
+          text: '大号',
+        },
+      ],
     },
     {
       key: 'shape',
@@ -75,13 +81,13 @@ const Header: IHeaderSchema = {
       range: [
         {
           key: 'circle',
-          text: '圆角'
+          text: '圆角',
         },
         {
           key: 'square',
-          text: '方角'
-        }
-      ]
+          text: '方角',
+        },
+      ],
     },
     {
       key: 'height',
@@ -134,8 +140,9 @@ const Header: IHeaderSchema = {
     height: 58,
     title: 'Envelope',
     user: 'xiye',
-    ...baseDefault
-  }
-}
+    ...baseDefault,
+  },
+  templateStr,
+};
 
 export default Header;

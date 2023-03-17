@@ -4,6 +4,7 @@ import {
   TNumberDefaultType,
   TTextDefaultType,
 } from '@/engine-lib-absolute/core-component/type';
+import templateStr from '!raw-loader!./index';
 
 export type TAudioEditData = Array<INumberConfigType | ITextConfigType>;
 export interface IAudioConfig {
@@ -14,6 +15,7 @@ export interface IAudioConfig {
 export interface IAudioSchema {
   editData: TAudioEditData;
   config: IAudioConfig;
+  [key: string]: any;
 }
 
 const Audio: IAudioSchema = {
@@ -33,6 +35,7 @@ const Audio: IAudioSchema = {
     height: 32,
     url: 'http://io.nainor.com/audio.mp3',
   },
+  templateStr,
 };
 
 export default Audio;

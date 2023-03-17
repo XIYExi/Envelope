@@ -6,19 +6,20 @@ import {
   TSelectDefaultType,
   TSwitchDefaultType,
 } from '@/engine-lib-absolute/core-component/type';
+import templateStr from '!raw-loader!./index';
 
-type TCollapseCollapsibleType = 'icon' | 'disabled' |'header';
+type TCollapseCollapsibleType = 'icon' | 'disabled' | 'header';
 
-type TCollapseExpendIconType = 'start'| 'end';
+type TCollapseExpendIconType = 'start' | 'end';
 
 type TCollapseEditData = Array<
   | ISwitchConfigType
   | ISelectConfigType<TCollapseCollapsibleType>
   | ISelectConfigType<TCollapseExpendIconType>
   | IDataListConfigType
-  >
+>;
 
-export interface ICollapseConfig{
+export interface ICollapseConfig {
   accordion: TSwitchDefaultType;
   bordered: TSwitchDefaultType;
   collapsible: TSelectDefaultType<TCollapseCollapsibleType>;
@@ -30,11 +31,11 @@ export interface ICollapseConfig{
   panelList: TDataListDefaultType;
 }
 
-interface ICollapseSchema{
+interface ICollapseSchema {
   editData: TCollapseEditData;
-  config:ICollapseConfig;
+  config: ICollapseConfig;
+  [key: string]: any;
 }
-
 
 const Collapse: ICollapseSchema = {
   editData: [
@@ -46,7 +47,7 @@ const Collapse: ICollapseSchema = {
     {
       key: 'bordered',
       name: '是否有边框',
-      type: 'Switch'
+      type: 'Switch',
     },
     {
       key: 'collapsible',
@@ -55,52 +56,52 @@ const Collapse: ICollapseSchema = {
       range: [
         {
           key: 'header',
-          text: '顶部'
+          text: '顶部',
         },
         {
           key: 'icon',
-          text: '图标'
+          text: '图标',
         },
         {
           key: 'disabled',
-          text:'不可展开'
-        }
-      ]
+          text: '不可展开',
+        },
+      ],
     },
     {
       key: 'destroyInactivePanel',
-      name:'销毁折叠隐藏的面板',
-      type: 'Switch'
+      name: '销毁折叠隐藏的面板',
+      type: 'Switch',
     },
     {
       key: 'expandIconPosition',
       name: '设置图标位置',
-      type:'Select',
+      type: 'Select',
       range: [
         {
           key: 'start',
-          text:'前面'
+          text: '前面',
         },
         {
-          key:'end',
-          text:'后面'
-        }
-      ]
+          key: 'end',
+          text: '后面',
+        },
+      ],
     },
     {
-      key:'ghost',
-      name:'背景透明无边框',
-      type:'Switch'
+      key: 'ghost',
+      name: '背景透明无边框',
+      type: 'Switch',
     },
     {
-      key:'forceRender',
-      name:'描述被隐藏时是否销毁dom结构',
-      type:'Switch'
+      key: 'forceRender',
+      name: '描述被隐藏时是否销毁dom结构',
+      type: 'Switch',
     },
     {
-      key:'showArrow',
-      name:'是否展示当前面板上的箭头',
-      type: 'Switch'
+      key: 'showArrow',
+      name: '是否展示当前面板上的箭头',
+      type: 'Switch',
     },
     {
       key: 'panelList',
@@ -146,8 +147,9 @@ const Collapse: ICollapseSchema = {
           },
         ],
       },
-    ]
+    ],
   },
+  templateStr,
 };
 
 export default Collapse;

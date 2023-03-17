@@ -1,6 +1,7 @@
-
 // note (@livs-ops): 检测当前浏览器模式
 import { isDev } from '@/engine-lib-absolute/core-utils/tool';
+
+export const isImg = /^http(s)?:\/\/([\w-]+\.)+[\w-]+(\/[\w-./?%&=]*)?/; // /\.(gif|jpg|jpeg|png|svg|JPG|PNG|GIF|JPEG|SVG)$/;
 
 export function detectMobileBrowser(browserNavigatorMetaInfo: string): boolean {
   return (
@@ -26,7 +27,6 @@ export const _gaw = (w: number) => {
   const vw = window.innerWidth > 800 ? 375 : window.innerWidth;
   return (vw / 375) * w;
 };
-
 
 export function throttle(fn: Function, delay: number) {
   let flag = true;
