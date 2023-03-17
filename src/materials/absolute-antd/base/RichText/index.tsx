@@ -1,13 +1,12 @@
 import React, { FC, memo } from 'react';
 import styled from 'styled-components';
-import { IButtonConfig } from './schema';
 import logo from '../../../../assets/absolute/richText.png';
 import { Image } from 'antd';
+import { IRichTextConfig } from '@/materials/absolute-antd/base/RichText/schema';
 
-interface IProps extends IButtonConfig {
+interface IProps extends IRichTextConfig {
   isTpl: boolean;
 }
-
 
 const RichTextWrapper = styled.div`
   :global(p) {
@@ -25,21 +24,16 @@ const RichTextWrapper = styled.div`
     color: #666;
     font-style: italic;
   }
-`
+`;
 
-const ARichText:FC<IProps> = (props: IProps) => {
-  const {
-    isTpl,
-    borderColor,
-    borderWidth,
-    round,
-    padding,
-    content
-  } = props;
+const ARichText: FC<IProps> = (props: IProps) => {
+  const { isTpl, ...restProps } = props;
+
+  const { borderColor, borderWidth, round, padding, content } = restProps;
 
   return isTpl ? (
     <div>
-      <Image preview={false} style={{ width: '100%' }} src={logo} alt=""/>
+      <Image preview={false} style={{ width: '100%' }} src={logo} alt="" />
     </div>
   ) : (
     <RichTextWrapper
@@ -52,5 +46,5 @@ const ARichText:FC<IProps> = (props: IProps) => {
       <div dangerouslySetInnerHTML={{ __html: content }}></div>
     </RichTextWrapper>
   );
-}
+};
 export default memo(ARichText);

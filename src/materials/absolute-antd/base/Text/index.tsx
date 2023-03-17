@@ -1,46 +1,38 @@
-import React, {FC, memo} from 'react';
-import { ITextConfig, TTextSelectKeyType } from '@/materials/absolute-antd/base/Text/schema';
+import React, { FC, memo } from 'react';
+import { ITextConfig } from '@/materials/absolute-antd/base/Text/schema';
 import styled from 'styled-components';
 import { Image, Typography } from 'antd';
-import { TColorDefaultType, TNumberDefaultType, TSelectDefaultType } from '@/engine-lib-absolute/core-component/type';
 import logo from '../../../../assets/absolute/text.png';
 
-
-export interface ITextConfigProps extends ITextConfig{
+export interface ITextConfigProps extends ITextConfig {
   isTpl: boolean;
 }
 
+type TTextSelectKeyType = 'left' | 'right' | 'center';
+type TSelectDefaultType<KeyType> = KeyType;
 
 const ATextWrapper = styled(Typography.Text)<{
-  $color: TColorDefaultType;
+  $color: string;
   $textAlign: TSelectDefaultType<TTextSelectKeyType>;
-  $fontSize: TNumberDefaultType;
-  $lineHeight: TNumberDefaultType;
+  $fontSize: number;
+  $lineHeight: number;
 }>`
-  color: ${props => props.$color};
-  text-align: ${props => props.$textAlign};
-  font-size: ${props => props.$fontSize};
-  line-height: ${props => props.$lineHeight};
-`
+  color: ${(props) => props.$color};
+  text-align: ${(props) => props.$textAlign};
+  font-size: ${(props) => props.$fontSize};
+  line-height: ${(props) => props.$lineHeight};
+`;
 
+const AText: FC<ITextConfigProps> = (props: ITextConfigProps) => {
+  const { isTpl, ...restProps } = props;
 
-const AText:FC<ITextConfigProps> = (props: ITextConfigProps) => {
-  const {
-    textAlign,
-    text,
-    fontSize,
-    color,
-    lineHeight,
-    isTpl,
-    ...restProps
-  } = props;
+  const { textAlign, text, fontSize, color, lineHeight, ...rest } = restProps;
 
   return (
     <>
-      {
-        isTpl ? (
+      {isTpl ? (
         <div>
-          <Image src={logo} alt=''/>
+          <Image src={logo} alt="" />
         </div>
       ) : (
         <ATextWrapper
@@ -48,13 +40,13 @@ const AText:FC<ITextConfigProps> = (props: ITextConfigProps) => {
           $lineHeight={lineHeight}
           $fontSize={fontSize}
           $textAlign={textAlign}
-          {...restProps}
+          {...rest}
         >
           {text}
         </ATextWrapper>
       )}
     </>
   );
-}
+};
 
 export default memo(AText);

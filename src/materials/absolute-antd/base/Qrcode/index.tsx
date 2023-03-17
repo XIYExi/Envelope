@@ -3,37 +3,27 @@ import { IQrcodeConfig } from './schema';
 import logo from '../../../../assets/absolute/Logo.png';
 import { Image } from 'antd';
 import styled from 'styled-components';
-import { TColorDefaultType, TNumberDefaultType } from '@/engine-lib-absolute/core-component/type';
-
-
 
 const QrCodeWrapper = styled.div`
   width: 100%;
   max-width: 220px;
   margin: 16px auto;
-`
+`;
 
 const QrCodeTextWrapper = styled.div<{
-  $color: TColorDefaultType;
-  $fontSize: TNumberDefaultType;
+  $color: string;
+  $fontSize: number;
 }>`
   text-align: center;
-  color: ${props=>props.$color};
-  font-size: ${props=>props.$fontSize};
+  color: ${(props) => props.$color};
+  font-size: ${(props) => props.$fontSize};
   padding: 8px;
-`
+`;
 
-const AQrcode:FC<
-  IQrcodeConfig &
-  { isTpl: boolean }
-  > = (props ) => {
-  const {
-    qrcode,
-    text,
-    color,
-    fontSize = 14,
-    isTpl
-  } = props;
+const AQrcode: FC<IQrcodeConfig & { isTpl: boolean }> = (props) => {
+  const { isTpl, ...restProps } = props;
+
+  const { qrcode, text, color, fontSize = 14 } = restProps;
 
   return (
     <React.Fragment>
@@ -49,15 +39,13 @@ const AQrcode:FC<
             alt={text}
             style={{ width: '100%' }}
           />
-          <QrCodeTextWrapper
-            $color={color}
-            $fontSize={fontSize}>
+          <QrCodeTextWrapper $color={color} $fontSize={fontSize}>
             {text}
           </QrCodeTextWrapper>
         </QrCodeWrapper>
       )}
     </React.Fragment>
   );
-}
+};
 
 export default memo(AQrcode);

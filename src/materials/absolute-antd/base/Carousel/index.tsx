@@ -1,8 +1,8 @@
-import {Carousel} from 'antd';
-import React, {FC, memo, PropsWithChildren} from 'react';
+import { Carousel } from 'antd';
+import React, { FC, memo, PropsWithChildren } from 'react';
 import styled from 'styled-components';
 import { ICarouselConfig } from './schema';
-import logo from '../../../../assets/absolute/banner.png'
+import logo from '../../../../assets/absolute/banner.png';
 
 interface CarouselTypes extends ICarouselConfig {
   isTpl: boolean;
@@ -17,29 +17,27 @@ const PicItem = styled.div`
   img {
     width: 100%;
   }
-`
+`;
 
 const ACarouselWrapper = styled.div`
   width: 100%;
   overflow: hidden;
-`
+`;
 
-const ACarousel:FC<CarouselTypes> = (props) => {
-  const {
-    direction,
-    effect,
-    autoPlay,
-    isTpl,
-    imgList,
-    round
-  } = props;
+const ACarousel: FC<CarouselTypes> = (props) => {
+  const { isTpl, ...restProps } = props;
+
+  const { direction, effect, autoPlay, imgList, round } = restProps;
 
   const contentRender = () => {
     return imgList.map((item, i) => {
       return (
         <PicItem key={+i} style={{ borderRadius: round + 'px' }}>
           <a href={item.link}>
-            <img src={item.imgUrl.length > 0 ? item.imgUrl[0].url : ''} alt="" />
+            <img
+              src={item.imgUrl.length > 0 ? item.imgUrl[0].url : ''}
+              alt=""
+            />
           </a>
         </PicItem>
       );
@@ -53,18 +51,12 @@ const ACarousel:FC<CarouselTypes> = (props) => {
           <img src={logo} alt="?" />
         </PicItem>
       ) : (
-        <Carousel
-          dotPosition={direction}
-          effect={effect}
-          autoplay={autoPlay}
-        >
+        <Carousel dotPosition={direction} effect={effect} autoplay={autoPlay}>
           {contentRender()}
         </Carousel>
       )}
     </ACarouselWrapper>
-  )
-}
+  );
+};
 
 export default memo(ACarousel);
-
-

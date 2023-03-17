@@ -1,22 +1,22 @@
 import React, { FC, memo, useCallback } from 'react';
-import {Button} from 'antd';
+import { Button } from 'antd';
 import BaseForm from '@/engine-lib-absolute/core-component/antd-base-assembly/base-form/base-form';
 import styled from 'styled-components';
-import {IFormConfig} from './schema';
-import { TColorDefaultType, TTextDefaultType } from '@/engine-lib-absolute/core-component/type';
+import { IFormConfig } from './schema';
+import {
+  TColorDefaultType,
+  TTextDefaultType,
+} from '@/engine-lib-absolute/core-component/type';
 import logo from '../../../../assets/absolute/form.png';
-
 
 export interface IFormConfigProps extends IFormConfig {
   isTpl: boolean;
 }
 
-
 const AFormTitle = styled.div`
   padding-bottom: 20px;
   text-align: center;
-`
-
+`;
 
 const AFormWrapper = styled.div<{
   $bgColor: TColorDefaultType;
@@ -29,23 +29,23 @@ const AFormWrapper = styled.div<{
   width: calc(100% - 20px);
   overflow: hidden;
   position: absolute;
-  background-color: ${props => props.$bgColor};
-  pointer-events: ${props => props.$pointer ? 'none' : 'initial'},
-`
-
+  background-color: ${(props) => props.$bgColor};
+  pointer-events: ${(props) => (props.$pointer ? 'none' : 'initial')};
+`;
 
 const AButton = styled(Button)<{
   $bgColor: TColorDefaultType;
   $bdColor: TColorDefaultType;
   $textCol: TTextDefaultType;
 }>`
-  background-color: ${props=>props.$bgColor};
-  border-color: ${props=>props.$bdColor};
-  color:${props=>props.$textCol};
-`
+  background-color: ${(props) => props.$bgColor};
+  border-color: ${(props) => props.$bdColor};
+  color: ${(props) => props.$textCol};
+`;
 
+const AForm: FC<IFormConfigProps> = (props) => {
+  const { isTpl, ...restProps } = props;
 
-const AForm:FC<IFormConfigProps> = (props) => {
   const {
     title,
     bgColor,
@@ -56,7 +56,7 @@ const AForm:FC<IFormConfigProps> = (props) => {
     btnTextColor,
     api,
     formControls,
-  } = props;
+  } = restProps;
 
   const formData: Record<string, any> = {};
 
@@ -85,58 +85,49 @@ const AForm:FC<IFormConfigProps> = (props) => {
 
   return (
     <React.Fragment>
-      {
-        props.isTpl && (
+      {props.isTpl && (
+        <div>
+          <img src={logo} alt="" />
+        </div>
+      )}
+      {!props.isTpl && (
+        <AFormWrapper $bgColor={bgColor} $pointer={isEditorPage}>
+          {title && (
+            <AFormTitle
+              style={{ fontSize, fontWeight: +titWeight, color: titColor }}
+            >
+              {title}
+            </AFormTitle>
+          )}
           <div>
-            <img src={logo} alt="" />
-          </div>
-        )
-      }
-      {
-        !props.isTpl && (
-          <AFormWrapper
-            $bgColor={bgColor}
-            $pointer={isEditorPage}
-          >
-            {
-              title && (
-                <AFormTitle
-                  style={{ fontSize, fontWeight: +titWeight, color: titColor }}
-                >
-                  {title}
-                </AFormTitle>
-              )
-            }
-            <div>
-              {
-                formControls.map(item => {
-                  const FormItem = BaseForm[item.type];
-                  return (
-                    <FormItem onChange={(v: string) => handleChange(item, v)} {...item} key={item.id} />
-                  );
-                })
-              }
-              <div style={{ textAlign: 'center', padding: '16px 0' }}>
-                <AButton
-                  type="primary"
-                  size="small"
-                  block
-                  onClick={handleSubmit}
-                  $bgColor={btnColor}
-                  $bdColor={btnColor}
-                  $textCol={btnTextColor}
-                >
-                  提交
-                </AButton>
-              </div>
+            {formControls.map((item) => {
+              const FormItem = BaseForm[item.type];
+              return (
+                <FormItem
+                  onChange={(v: string) => handleChange(item, v)}
+                  {...item}
+                  key={item.id}
+                />
+              );
+            })}
+            <div style={{ textAlign: 'center', padding: '16px 0' }}>
+              <AButton
+                type="primary"
+                size="small"
+                block
+                onClick={handleSubmit}
+                $bgColor={btnColor}
+                $bdColor={btnColor}
+                $textCol={btnTextColor}
+              >
+                提交
+              </AButton>
             </div>
-          </AFormWrapper>
-        )
-      }
+          </div>
+        </AFormWrapper>
+      )}
     </React.Fragment>
-  )
-
-}
-
+  );
+};
 
 export default memo(AForm);

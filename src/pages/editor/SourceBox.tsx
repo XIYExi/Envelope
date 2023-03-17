@@ -1,6 +1,10 @@
-
-
-import React, { useMemo, memo, ReactNode, useContext, CSSProperties } from 'react';
+import React, {
+  useMemo,
+  memo,
+  ReactNode,
+  useContext,
+  CSSProperties,
+} from 'react';
 import { useDrag } from 'react-dnd';
 import antdSchema from '@/materials/absolute-antd/schema';
 import styles from './Container.less';
@@ -12,9 +16,9 @@ interface TargetBoxProps {
 }
 
 const SourceBox = memo((props: TargetBoxProps) => {
-  const {item} = props;
+  const { item } = props;
 
-  const [{isDragging}, drag] = useDrag({
+  const [{ isDragging }, drag] = useDrag({
     item: {
       type: item.type,
       // @ts-ignore
@@ -22,13 +26,14 @@ const SourceBox = memo((props: TargetBoxProps) => {
       h: item.h,
       // @ts-ignore
       editableEl: antdSchema[item.type as keyof typeof antdSchema].editData,
+      templateStr: antdSchema[item.type as keyof typeof antdSchema].templateStr,
       category: item.category,
       x: item.x || 0,
     },
-    collect: monitor => ({
+    collect: (monitor) => ({
       isDragging: monitor.isDragging(),
-    })
-  })
+    }),
+  });
 
   const containerStyle: CSSProperties = useMemo(
     () => ({
@@ -70,6 +75,6 @@ const SourceBox = memo((props: TargetBoxProps) => {
       </div>
     </>
   );
-})
+});
 
 export default SourceBox;

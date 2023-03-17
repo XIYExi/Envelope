@@ -10,7 +10,9 @@ export type IAlertPrpConfig = IAlertConfig & {
 /*end to delete*/
 
 const AAlert: FC<IAlertPrpConfig> = (props) => {
-  const { message, isTpl, ...restProps } = props;
+  const { isTpl, ...restProps } = props;
+
+  const { message } = props;
 
   return (
     <React.Fragment>
@@ -19,7 +21,10 @@ const AAlert: FC<IAlertPrpConfig> = (props) => {
           <Image src={logo} alt="" />
         </div>
       )}
-      {!isTpl && <Alert message={message} {...restProps} />}
+      {!isTpl && (
+        // @ts-ignore
+        <Alert message={message} {...restProps} />
+      )}
     </React.Fragment>
   );
 };
