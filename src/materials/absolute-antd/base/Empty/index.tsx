@@ -5,26 +5,21 @@ import logo from '../../../../assets/absolute/empty.png';
 
 export type IEmptyProConfig = IEmptyConfig & {
   isTpl: boolean;
-}
+};
 
-const AEmpty:FC<IEmptyProConfig>=(props)=>{
-  const {isTpl,...restProps} = props;
+const AEmpty: FC<IEmptyProConfig> = (props) => {
+  const { isTpl, ...restProps } = props;
 
-  return(
+  return (
     <Fragment>
-      {
-        isTpl &&
-          <div>
-            <Image src={logo} alt={''}/>
-          </div>
-      }
-      {
-        !isTpl &&
-          <Empty {...restProps}/>
-      }
+      {isTpl && (
+        <div>
+          <Image src={logo} alt={''} />
+        </div>
+      )}
+      {!isTpl && <Empty {...restProps} />}
     </Fragment>
-  )
-}
+  );
+};
 
 export default memo(AEmpty);
-
