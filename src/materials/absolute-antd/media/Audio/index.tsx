@@ -1,9 +1,9 @@
 import React, { FC, memo } from 'react';
 import ReactAudioPlayer from 'react-audio-player';
-import { IAudioConfig } from './schema';
 import logo from '../../../../assets/absolute/music@2x.png';
 import { Image } from 'antd';
 import styled from 'styled-components';
+import { IAudioConfig } from '@/materials/absolute-antd/media/Audio/schema';
 
 const AudioWrapper = styled.div`
   height: 100%;
@@ -11,11 +11,7 @@ const AudioWrapper = styled.div`
   align-items: center;
 `;
 
-const AAudio: FC<
-  IAudioConfig & {
-    isTpl: boolean;
-  }
-> = (props) => {
+const AAudio: FC<IAudioConfig & { isTpl: boolean }> = (props) => {
   const { isTpl, ...restProps } = props;
 
   const { height, url } = restProps;

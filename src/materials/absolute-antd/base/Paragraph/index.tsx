@@ -1,8 +1,8 @@
 import React, { memo, FC } from 'react';
-import { ILongTextConfig } from './schema';
 import { Image, Typography } from 'antd';
 import styled from 'styled-components';
 import logo from '../../../../assets/absolute/paragraph.png';
+import { ILongTextConfig } from '@/materials/absolute-antd/base/Paragraph/schema';
 
 export interface ILongTextProps extends ILongTextConfig {
   isTpl: boolean;

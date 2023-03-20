@@ -1,8 +1,8 @@
 import React, { FC, memo } from 'react';
-import { IQrcodeConfig } from './schema';
 import logo from '../../../../assets/absolute/Logo.png';
 import { Image } from 'antd';
 import styled from 'styled-components';
+import { IQrcodeConfig } from '@/materials/absolute-antd/base/Qrcode/schema';
 
 const QrCodeWrapper = styled.div`
   width: 100%;

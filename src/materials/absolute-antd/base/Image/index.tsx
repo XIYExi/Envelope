@@ -1,8 +1,9 @@
 import React, { FC, memo, useState } from 'react';
-import { IImageConfig, TTextSelectKeyType } from './schema';
 import styled from 'styled-components';
 import { Image } from 'antd';
 import logo from '../../../../assets/absolute/img.png';
+import { TTextSelectKeyType } from '@/materials/absolute-antd/base/Text/schema';
+import { IImageConfig } from '@/materials/absolute-antd/base/Image/schema';
 
 const AImageWrapper = styled.div<{
   $baseWidth: number;

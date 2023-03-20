@@ -1,7 +1,6 @@
 import React, { FC, memo } from 'react';
 import './index.css';
 import { Player, BigPlayButton } from 'video-react';
-
 import logo from '../../../../assets/absolute/video.png';
 import { Image } from 'antd';
 import { IVideoConfig } from '@/materials/absolute-antd/media/Video/schema';
