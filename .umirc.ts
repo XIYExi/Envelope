@@ -9,6 +9,10 @@ export default defineConfig({
   manifest: {
     basePath: '/',
   },
+  resolve: {
+    includes: ['src'],
+    excludes: ['engine-core', 'engine-lib-absolute', 'engine-lib-grid'],
+  },
   routes: [
     {
       exact: false,
