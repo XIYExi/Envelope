@@ -4,9 +4,11 @@ import styled from 'styled-components';
 import { ICarouselConfig } from './schema';
 import logo from '../../../../assets/absolute/banner.png';
 
+/*begin to delete*/
 interface CarouselTypes extends ICarouselConfig {
   isTpl: boolean;
 }
+/*end to delete*/
 
 const PicItem = styled.div`
   display: inline-block;

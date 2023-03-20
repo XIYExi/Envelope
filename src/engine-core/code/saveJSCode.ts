@@ -1,25 +1,6 @@
 import JSZip from 'jszip';
 import { isImg } from '@/utils/tools';
-
-const utils = `
-import React from 'react';
-import { Button } from 'antd';
-
-export const isImg = ${isImg};
-export const getChildrenToRender = (item, i) => {
-  let tag = item.name.indexOf('title') === 0 ? 'h1' : 'div';
-  tag = item.href ? 'a' : tag;
-  let children = typeof item.children === 'string' && item.children.match(isImg)
-    ? React.createElement('img', { src: item.children, alt: 'img' })
-    : item.children;
-  if (item.name.indexOf('button') === 0 && typeof item.children === 'object') {
-    children = React.createElement(Button, {
-      ...item.children
-    });
-  }
-  return React.createElement(tag, { key: i.toString(), ...item }, children);
-};
-`;
+import { saveAs } from 'file-saver';
 
 interface ITemplateStrObj {
   JS: {};
@@ -45,7 +26,7 @@ const handlePrintJsCode = (template: any): string => {
   /**
    * 去除logo导入
    */
-  const logol = str.match(/import\s+logo\s+from\s+'(.+?)'/g);
+  const logol = str.match(/import\s+logo\s+from\s+'(.+?)';/g);
   if (logol && logol.length) {
     _str = str.replace(logol[0], '');
   }
@@ -53,7 +34,7 @@ const handlePrintJsCode = (template: any): string => {
   /**
    * 去除导入声明依赖
    */
-  const Configi = str.match(/import\s+{(.+?)}\s+from\s+'@\/(.+?)'/g);
+  const Configi = str.match(/import\s+{(.+?)}\s+from\s+'@\/(.+?)';/g);
   if (Configi && Configi.length) {
     //console.log('yes', Configi)
     _str = _str.replace(Configi[0], '');
@@ -72,7 +53,7 @@ const handlePrintJsCode = (template: any): string => {
   /**
    * 去除 :FC<...>
    */
-  const fci = str.match(/:FC<(.+?)>/g);
+  const fci = str.match(/:\s+FC<(.+?)>/g);
   if (fci && fci.length) {
     _str = _str.replace(fci[0], '');
   }
@@ -151,7 +132,7 @@ const jsToZip = (
 
     //文件名
     const { type } = item;
-    if (tempTypeList.indexOf(type) !== -1) {
+    if (tempTypeList.indexOf(type) === -1) {
       //当前UI尚未添加
       tempTypeList.push(type);
 
@@ -165,10 +146,35 @@ const jsToZip = (
 
       // 依次将data.source.js文件集成进来
       datasourceProps += item.props + '\n';
+    } else {
+      datasourceProps += item.props + '\n';
     }
+  });
 
-    // 生成datasource.js
-    zip.file('data.source.js', datasourceProps);
+  //console.log('datasourceProps', datasourceProps)
+  // 生成datasource.js
+  zip.file('data.source.js', datasourceProps);
+
+  let home = propsStr;
+  home += importStr + '\n';
+  home += dataSourceStr + '\n';
+
+  const utils = `
+export default class Home extends React.Component{
+  render(){
+    ${childStr};
+    return (
+      <div>
+        {children}
+      </div>
+    )
+  }
+}
+`;
+  home += utils;
+  zip.file('index.js', home);
+  zip.generateAsync({ type: 'blob' }).then((content) => {
+    saveAs(content, 'Home.zip');
   });
 };
 
@@ -223,7 +229,7 @@ export function saveJsZip(templateData: any, callBack?: any, getJson?: any) {
     //返回的str就是可以直接打包进zip的js文件
     //console.log(item.templateStr)
     const _template = handlePrintJsCode(item.templateStr);
-    console.log('_template', _template);
+    //console.log('_template', _template);
     promiseObject[`${item.type}`] = {
       ...promiseObject[`${item.type}`],
       [`JS-${key}`]: _template,
@@ -232,7 +238,7 @@ export function saveJsZip(templateData: any, callBack?: any, getJson?: any) {
     templateStrObj[key]['item']['templateStr'] = _template;
   });
 
-  console.log(templateStrObj);
+  //console.log(templateStrObj);
 
   /**
    * promiseObject现在保存着可以打包js的文件，
@@ -247,4 +253,10 @@ export function saveJsZip(templateData: any, callBack?: any, getJson?: any) {
   // importStr - UI组件导入
   const { childStr, dataSourceStr, importStr } =
     setChildrenToIndex(templateStrObj);
+
+  try {
+    jsToZip(templateStrObj, childStr, dataSourceStr, importStr);
+  } catch (e: any) {
+    console.log('代码生成失败', e);
+  }
 }
