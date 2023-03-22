@@ -1,21 +1,6 @@
 import JSZip from 'jszip';
-import { isImg } from '@/utils/tools';
 import { saveAs } from 'file-saver';
-
-interface ITemplateStrObj {
-  JS: {};
-  LESS: {};
-  PROPS: {};
-  OTHER: {
-    index: any;
-    documentation: any;
-  };
-}
-
-interface IPublishJSON {
-  file: string;
-  data: string;
-}
+import documentation from '!raw-loader!./documentation.md';
 
 const handlePrintJsCode = (template: any): string => {
   //const template = localStorage.getItem('userData');
@@ -173,6 +158,7 @@ export default class Home extends React.Component{
 `;
   home += utils;
   zip.file('index.js', home);
+  zip.file('README.md', documentation);
   zip.generateAsync({ type: 'blob' }).then((content) => {
     saveAs(content, 'Home.zip');
   });
