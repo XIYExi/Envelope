@@ -1,4 +1,13 @@
-# Semantic - Button
+---
+order: 1
+group: 
+  path: /semantic
+  title: Semantic
+  order: 1
+---
+
+
+# Button
 
 <code src="./_demo.tsx" 
 title='测试Semantic中控制组件Button'
