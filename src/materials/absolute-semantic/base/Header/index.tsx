@@ -3,9 +3,11 @@ import { IHeaderConfig } from '@/materials/absolute-semantic/base/Header/schema'
 import logo from '../../../../assets/absolute/Logo.png';
 import { Header, Image } from 'semantic-ui-react';
 
+/*begin to delete*/
 interface IHeaderProps extends IHeaderConfig {
   isTpl: boolean;
 }
+/*end to delete*/
 
 const SHeader: FC<IHeaderProps> = (props) => {
   const { isTpl, ...restProps } = props;
