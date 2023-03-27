@@ -1,16 +1,15 @@
 ---
 order: 1
-group: 
+group:
   path: /semantic
   title: Semantic
-  order: 1
+  order: 5
 ---
 
+# Header
 
-# Button
-
-<code src="./_demo.tsx" 
-  title='测试Semantic中控制组件Button'
+<code src="./_demo.tsx"
+  title='测试Semantic中基础组件Header'
   desc='使用自动配置查看效果'
   defaultShowCode=true
 />

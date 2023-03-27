@@ -1,4 +1,5 @@
 import SRadio from '@/materials/absolute-semantic/control/Radio';
+import 'semantic-ui-css/semantic.min.css';
 
 const attr = {
   label: 'Radio',
