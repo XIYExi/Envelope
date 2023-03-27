@@ -2,8 +2,12 @@
 html, body, #root {
   height: 100%;
   /* overflow 可能对低代码页面造成影响，如果后续无法修改就再打开*/
-  /*overflow: hidden;*/
+  overflow: hidden;
+  /* overflow设置为auto时，lowcode-engine的显示会出现问题 */
+  /* 但是=不设置滚动条 dumi页面无法滚动 */
+  /*overflow-y: auto!important;*/
 }
+
 
 body {
   margin: 0;
@@ -13,6 +17,12 @@ body {
   --sk-size: 40px;
   --sk-color: #06c;
 }
+
+/**
+==============================================
+修改Ant Design的默认样式
+==============================================
+ */
 
 .ant-btn-primary {
   color: #fff;
@@ -187,4 +197,23 @@ img {
   .line-scale-pulse-out > div:nth-child(1), .line-scale-pulse-out > div:nth-child(5) {
     -webkit-animation-delay: -0.2s !important;
             animation-delay: -0.2s !important; }
+
+
+/**
+==============================================
+修改 dumi 的默认样式
+==============================================
+*/
+
+/**
+通过scss的@at-root，当检测道dumi框架下第一级元素的样式就强制修改根节点root的样式
+这也是为什么要使用scss的原因之一
+ */
+.__dumi-default-layout{
+  @at-root #root{
+    overflow-y: auto!important;
+  }
+}
+
+
 
