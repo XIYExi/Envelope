@@ -2,7 +2,6 @@ import templateStr from '!raw-loader!./index';
 import {
   IDataListConfigType,
   ISelectConfigType,
-  TDataListDefaultType,
   TDataListFeedListType,
   TSelectDefaultType,
 } from '@/engine-lib-absolute/core-component/type';
@@ -19,6 +18,7 @@ export interface IFeedConfig {
 interface IFeedSchema {
   editData: TFeedEditData;
   config: IFeedConfig;
+  [key: string]: any;
 }
 
 const Feed: IFeedSchema = {
@@ -100,6 +100,7 @@ const Feed: IFeedSchema = {
       },
     ],
   },
+  templateStr,
 };
 
 export default Feed;
