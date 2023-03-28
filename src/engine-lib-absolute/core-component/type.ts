@@ -53,6 +53,32 @@ export type TDataListSemanticItem = {
 
 export type TDataListSemanticItemType = Array<TDataListSemanticItem>;
 
+export type TDataListCommentItem = {
+  id: string;
+  avatar: TTextDefaultType;
+  author: TTextDefaultType;
+  meta: TTextDefaultType;
+  content: TRichTextDefaultType;
+  actions: TTextDefaultType;
+  child: TDataListCommentItem[];
+};
+
+export type TDataListCommentListType = Array<TDataListCommentItem>;
+
+export type TDataListFeedItem = {
+  id: string;
+  src: TTextDefaultType;
+  user: TTextDefaultType;
+  action: TTextDefaultType;
+  date: TTextDefaultType;
+  like: TTextDefaultType;
+  extraText?: TRichTextDefaultType;
+  extraImages?: TRichTextDefaultType;
+  icon?: TTextDefaultType;
+};
+
+export type TDataListFeedListType = Array<TDataListFeedItem>;
+
 export interface ICardPickerConfigType<T> {
   key: string;
   name: string;
