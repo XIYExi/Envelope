@@ -29,8 +29,29 @@ export type TDataListDefaultTypeItem = {
   html?: string;
 };
 
-
 export type TDataListDefaultType = Array<TDataListDefaultTypeItem>;
+
+type TSemanticImageSize =
+  | 'mini'
+  | 'tiny'
+  | 'small'
+  | 'medium'
+  | 'large'
+  | 'big'
+  | 'huge'
+  | 'massive';
+
+export type TDataListSemanticItem = {
+  id: string;
+  src?: TTextDefaultType;
+  imageSize?: TSelectDefaultType<TSemanticImageSize>;
+  title: TTextDefaultType;
+  meta?: TTextDefaultType;
+  desc: TRichTextDefaultType;
+  extra?: TTextDefaultType;
+};
+
+export type TDataListSemanticItemType = Array<TDataListSemanticItem>;
 
 export interface ICardPickerConfigType<T> {
   key: string;
@@ -46,17 +67,16 @@ export interface INumberConfigType {
   step?: number;
 }
 
-
 export type TCardPickerDefaultType<T> = T;
 
 export interface IPosProps {
-  key:string;
+  key: string;
   name: string;
   type: 'Pos';
   placeObj: {
     text: string;
     link: string;
-  }
+  };
 }
 
 export type TNumberDefaultType = number;
@@ -98,7 +118,6 @@ export interface IMutiTextConfigType {
   name: string;
   type: 'MutiText';
 }
-
 
 /////////////////////////////////
 export interface ISelectConfigType<KeyType> {
@@ -142,7 +161,6 @@ export interface ICardPickerConfigType<T> {
   type: 'CardPicker';
   icons: Array<T>;
 }
-
 
 /////////////
 
