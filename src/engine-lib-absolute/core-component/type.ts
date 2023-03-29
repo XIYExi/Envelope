@@ -31,6 +31,16 @@ export type TDataListDefaultTypeItem = {
 
 export type TDataListDefaultType = Array<TDataListDefaultTypeItem>;
 
+export type TDataListSearchTypeItem = {
+  id: string;
+  title: TTextDefaultType;
+  description: TTextDefaultType;
+  image: TTextDefaultType;
+  price: TTextDefaultType;
+};
+
+export type TDataListSearchType = Array<TDataListSearchTypeItem>;
+
 export type TDataListDropdownTypeItem = {
   id: TTextDefaultType;
   key: TTextDefaultType;
