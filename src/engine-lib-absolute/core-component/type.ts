@@ -79,6 +79,14 @@ export type TDataListFeedItem = {
 
 export type TDataListFeedListType = Array<TDataListFeedItem>;
 
+export type TDataListAccordionItem = {
+  id: string;
+  title: TTextDefaultType;
+  content: TRichTextDefaultType;
+};
+
+export type TDataListAccordionType = Array<TDataListAccordionItem>;
+
 export interface ICardPickerConfigType<T> {
   key: string;
   name: string;
