@@ -31,6 +31,19 @@ export type TDataListDefaultTypeItem = {
 
 export type TDataListDefaultType = Array<TDataListDefaultTypeItem>;
 
+export type TDataListDropdownTypeItem = {
+  id: TTextDefaultType;
+  key: TTextDefaultType;
+  text: TTextDefaultType;
+  value: TTextDefaultType;
+  flag: TTextDefaultType;
+  icon: TTextDefaultType;
+  image: TTextDefaultType;
+  description: TTextDefaultType;
+};
+
+export type TDataListDropdownType = Array<TDataListDropdownTypeItem>;
+
 type TSemanticImageSize =
   | 'mini'
   | 'tiny'

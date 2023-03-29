@@ -1,5 +1,5 @@
 import React, { FC } from 'react';
-import { IDividerConfig } from '@/materials/absolute-semantic/control/Divider/schema';
+import { IDividerConfig } from '@/materials/absolute-semantic/base/Divider/schema';
 import { Divider, Image, Segment } from 'semantic-ui-react';
 import logo from '../../../../assets/absolute/Divider.svg';
 

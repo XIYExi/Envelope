@@ -1,5 +1,5 @@
 import React, { FC } from 'react';
-import { IItemConfig } from '@/materials/absolute-semantic/base/Item/schema';
+import { IItemConfig } from '@/materials/absolute-semantic/social/Item/schema';
 import { Image, Item } from 'semantic-ui-react';
 import logo from '../../../../assets/absolute/Logo.png';
 

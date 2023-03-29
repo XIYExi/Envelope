@@ -1,5 +1,5 @@
 import React from 'react';
-import SItem from '@/materials/absolute-semantic/base/Item';
+import SItem from '@/materials/absolute-semantic/social/Item';
 
 const attr = {
   divided: true,

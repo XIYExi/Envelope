@@ -1,5 +1,5 @@
 import React from 'react';
-import SImage from '@/materials/absolute-semantic/base/Image';
+import SImage from '@/materials/absolute-semantic/Media/Image';
 
 const attr = {
   src: 'https://s1.ax1x.com/2023/03/27/ppsbWan.jpg',

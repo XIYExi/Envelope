@@ -1,5 +1,5 @@
 import React, { FC } from 'react';
-import { IEmbedConfig } from '@/materials/absolute-semantic/base/Embed/schema';
+import { IEmbedConfig } from '@/materials/absolute-semantic/Media/Embed/schema';
 import logo from '../../../../assets/absolute/video.png';
 import { Image, Embed } from 'semantic-ui-react';
 import { uuid } from '@/engine-lib-absolute/core-utils/tool';

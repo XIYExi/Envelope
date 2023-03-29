@@ -1,5 +1,5 @@
 import React from 'react';
-import SEmbed from '@/materials/absolute-semantic/base/Embed';
+import SEmbed from '@/materials/absolute-semantic/Media/Embed';
 
 const attr = {
   placeholder: 'https://s1.ax1x.com/2023/03/27/ppsbWan.jpg',

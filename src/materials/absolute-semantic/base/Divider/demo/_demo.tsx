@@ -1,6 +1,6 @@
 import React from 'react';
 import 'semantic-ui-css/semantic.min.css';
-import SDivider from '@/materials/absolute-semantic/control/Divider';
+import SDivider from '@/materials/absolute-semantic/base/Divider';
 
 const attr = {
   text: 'Divider',
