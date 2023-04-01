@@ -29,6 +29,11 @@ const ImageCircular = styled(Image)`
   margin-left: 40px !important;
 `;
 
+const ImageRounded = styled(Image)`
+  border-top-left-radius: 1.25rem !important;
+  border-top-right-radius: 1.25rem !important;
+`;
+
 const FontDesign = styled.p`
   font-size: 14px;
   color: rgba(0, 0, 0, 0.5);
@@ -43,7 +48,7 @@ const HeaderDesign = styled(Header)`
   margin-top: 2em !important;
 `;
 
-const HomeLowCodeEngine: FC<any> = (props) => {
+const HomeLowCodeEngine: FC<{ gotoLowcodeEngine: any }> = (props) => {
   return (
     <React.Fragment>
       <div
@@ -65,8 +70,8 @@ const HomeLowCodeEngine: FC<any> = (props) => {
       <Grid>
         <Grid.Column width={12}>
           <Segment basic>
-            <Image
-              bordered
+            <ImageRounded
+              rounded
               src={lowcodeEngineBar}
               alt="HomeLowCodeEngine抬头图片显示错误"
             />
@@ -208,6 +213,19 @@ const HomeLowCodeEngine: FC<any> = (props) => {
 
         <Grid.Column width={4}>
           <Card.Group>
+            {/*@ts-ignore*/}
+            <Card color="teal">
+              <Card.Content>
+                <Card.Header>Envelope Lowcode</Card.Header>
+                {/*@ts-ignore*/}
+                <Button fluid color="teal" onClick={props.gotoLowcodeEngine}>
+                  立刻使用
+                  {/*@ts-ignore*/}
+                  <Icon name="arrow right" />
+                </Button>
+              </Card.Content>
+            </Card>
+
             {/*@ts-ignore*/}
             <Card color="red">
               <Card.Content>

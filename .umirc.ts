@@ -10,7 +10,7 @@ export default defineConfig({
     basePath: '/',
   },
   resolve: {
-    includes: ['src'],
+    includes: ['src/dumi', 'src/materials'],
     excludes: ['engine-core', 'engine-lib-absolute', 'engine-lib-grid'],
   },
   routes: [

@@ -1,29 +1,16 @@
-import React, { FC, useEffect, useState } from 'react';
+import React, { FC, useState } from 'react';
 import styles from './index.less';
-import {
-  Tabs,
-  message,
-  Typography,
-  Menu,
-  MenuProps,
-  Steps,
-  Button,
-  Divider,
-} from 'antd';
+import { Typography, Menu, MenuProps, Steps, Button, Divider } from 'antd';
 /*@ts-ignore*/
 import { history } from 'umi';
 import {
-  MobileOutlined,
   ConsoleSqlOutlined,
-  CodeOutlined,
-  IdcardOutlined,
   SettingOutlined,
   DesktopOutlined,
   BorderOuterOutlined,
   CodepenCircleOutlined,
   FieldBinaryOutlined,
   FormOutlined,
-  SearchOutlined,
   GithubOutlined,
 } from '@ant-design/icons';
 import { HomeTitle } from '@/pages/home/component/Component';
@@ -34,6 +21,7 @@ import TemplateSystem from '@/pages/home/component/TemplateSystem';
 import ConfirmSystem from '@/pages/home/component/ConfirmSystem';
 import HomeIndex from '@/pages/home/component/HomeIndex';
 import HomeLowCodeEngine from '@/pages/home/component/HomeLowCodeEngine';
+import ThirdUI from '@/pages/home/component/ThirdUI';
 
 const StepsContent = styled.div`
   min-height: 200px;
@@ -69,7 +57,7 @@ const Home: FC = () => {
     console.log(Component)
   }*/
 
-  const [current, setCurrent] = useState('grid');
+  const [current, setCurrent] = useState('home');
 
   const onClick: MenuProps['onClick'] = (e) => {
     //console.log('click ', e);
@@ -124,26 +112,31 @@ const Home: FC = () => {
               <Menu.Item key="grid" icon={<BorderOuterOutlined />}>
                 响应式搭建
               </Menu.Item>
-            </Menu.SubMenu>
-            <Menu.SubMenu
-              key="template"
-              title="模板开发"
-              icon={<DesktopOutlined />}
-            >
               <Menu.Item key="html" icon={<FormOutlined />}>
                 React模板搭建
               </Menu.Item>
+              <Menu.Item key="antv" icon={<FormOutlined />}>
+                AntV可视化搭建
+              </Menu.Item>
+            </Menu.SubMenu>
+            <Menu.SubMenu key="ui" title="UI文档" icon={<DesktopOutlined />}>
+              <Menu.Item key="package" icon={<FormOutlined />}>
+                封装元件文档
+              </Menu.Item>
+              <Menu.Item key="lole" icon={<FormOutlined />}>
+                Lole原生文件文档
+              </Menu.Item>
             </Menu.SubMenu>
             <Menu.SubMenu
-              key="visual"
-              title="可视化构建"
+              key="doc"
+              title="项目文档"
               icon={<CodepenCircleOutlined />}
             >
-              <Menu.Item key="math" icon={<FieldBinaryOutlined />}>
-                数学公式
+              <Menu.Item key="user" icon={<FieldBinaryOutlined />}>
+                使用手册
               </Menu.Item>
-              <Menu.Item key="program" icon={<ConsoleSqlOutlined />}>
-                可视化编程
+              <Menu.Item key="design" icon={<ConsoleSqlOutlined />}>
+                设计文档
               </Menu.Item>
             </Menu.SubMenu>
           </Menu>
@@ -231,24 +224,45 @@ const Home: FC = () => {
           /*TODO lowcode-engine整合*/
           current === 'grid' && (
             <React.Fragment>
-              <HomeLowCodeEngine />
-              {/*<Button onClick={gotoLowcodeEngine}>LowCode</Button>*/}
+              <HomeLowCodeEngine gotoLowcodeEngine={gotoLowcodeEngine} />
             </React.Fragment>
           )
         }
 
         {
           /*TODO 模板开发页面整合*/
-          current === 'template' && <React.Fragment></React.Fragment>
+          current === 'html' && (
+            <React.Fragment>
+              <div>模板开发</div>
+            </React.Fragment>
+          )
+        }
+
+        {
+          /*TODO 可视化开发页面整合*/
+          current === 'antv' && (
+            <React.Fragment>
+              <div>Antv可视化开发</div>
+            </React.Fragment>
+          )
+        }
+
+        {
+          /*TODO dumi页面 指第三方 如semantic和antd*/
+          current === 'package' && (
+            <React.Fragment>
+              <ThirdUI />
+            </React.Fragment>
+          )
         }
 
         <footer className={styles.footer}>
           <div style={{ display: 'flex', justifyContent: 'center' }}>
             <div style={{ marginTop: '30px' }}>
-              <span>TEST!!!</span>
+              <span>TEST Footer!!!</span>
             </div>
           </div>
-          <div style={{ display: 'flex', justifyContent: 'center' }}>
+          {/*<div style={{ display: 'flex', justifyContent: 'center' }}>
             <div
               style={{ width: '500px', marginLeft: '40px', marginTop: '32px' }}
             >
@@ -268,7 +282,7 @@ const Home: FC = () => {
                 在线gif动图制作平台
               </a>
             </div>
-          </div>
+          </div>*/}
         </footer>
       </div>
     </div>
