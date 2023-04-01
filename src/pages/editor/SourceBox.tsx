@@ -1,10 +1,4 @@
-import React, {
-  useMemo,
-  memo,
-  ReactNode,
-  useContext,
-  CSSProperties,
-} from 'react';
+import React, { useMemo, memo, ReactNode, CSSProperties } from 'react';
 import { useDrag } from 'react-dnd';
 import antdSchema from '@/materials/absolute-antd/schema';
 import styles from './Container.less';

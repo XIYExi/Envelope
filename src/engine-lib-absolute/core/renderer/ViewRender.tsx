@@ -1,4 +1,4 @@
-import React, {memo} from 'react';
+import React, { memo } from 'react';
 import ReactGridLayout, { ItemCallback } from 'react-grid-layout';
 import DynamicEngine from '@/engine-lib-absolute/core/DynamicEngine';
 import styled from 'styled-components';
@@ -9,7 +9,6 @@ interface PointDataItem {
   point: Record<string, any>;
 }
 
-
 interface ViewProps {
   pointData: Array<PointDataItem>;
   pageData?: any;
@@ -17,8 +16,8 @@ interface ViewProps {
   dragStop?: ItemCallback;
   onDragStart?: ItemCallback;
   onResizeStop?: ItemCallback;
+  ui: string;
 }
-
 
 const ItemWrapper = styled.div`
   display: inline-block;
@@ -26,24 +25,31 @@ const ItemWrapper = styled.div`
   z-index: 2;
   border: 2px solid transparent;
   cursor: move;
-  &:hover{
+  &:hover {
     border: 2px solid #06c;
   }
-  :global(a){
+  :global(a) {
     display: block;
     pointer-events: none;
   }
-`
+`;
 
-const GridLayerWrapper = styled(ReactGridLayout)<{pageData:any}>`
+const GridLayerWrapper = styled(ReactGridLayout)<{ pageData: any }>`
   min-height: 100vh;
   background-size: 100%;
   background-repeat: no-repeat;
-`
-
+`;
 
 const ViewRender = memo((props: ViewProps) => {
-  const { pointData, pageData, width, dragStop, onDragStart, onResizeStop } = props;
+  const {
+    pointData,
+    pageData,
+    width,
+    dragStop,
+    onDragStart,
+    onResizeStop,
+    ui,
+  } = props;
 
   return (
     <GridLayerWrapper
@@ -58,21 +64,20 @@ const ViewRender = memo((props: ViewProps) => {
       style={{
         backgroundColor: pageData && pageData.bgColor,
         backgroundImage:
-          pageData && pageData.bgImage ? `url(${pageData.bgImage[0].url})` : 'initial',
+          pageData && pageData.bgImage
+            ? `url(${pageData.bgImage[0].url})`
+            : 'initial',
       }}
     >
-      {
-        pointData.map((value: PointDataItem) => {
-          return(
+      {pointData.map((value: PointDataItem) => {
+        return (
           <ItemWrapper key={value.id} data-grid={value.point}>
-            <DynamicEngine isTpl={false} {...(value.item as any)}/>
+            <DynamicEngine isTpl={false} {...(value.item as any)} ui={ui} />
           </ItemWrapper>
-          )
-        })
-      }
-
+        );
+      })}
     </GridLayerWrapper>
-  )
-})
+  );
+});
 
 export default ViewRender;
