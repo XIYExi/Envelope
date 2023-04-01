@@ -10,6 +10,7 @@ import {
   Button,
   Divider,
 } from 'antd';
+/*@ts-ignore*/
 import { history } from 'umi';
 import {
   MobileOutlined,
@@ -47,7 +48,7 @@ const Home: FC = () => {
   const handleGo = (type: string) => {
     setCurrent(''); //current置为空，出来的时候会跳转到起步页面
     if (type === 'H5') {
-      history.push('/editor?tid=123456');
+      history.push(`/editor?tid=123456&ui=${ui}`);
     } else if (type === 'PC') {
       window.open('http://v6.dooring.cn/beta');
     } else {
