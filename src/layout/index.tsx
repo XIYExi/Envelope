@@ -7,6 +7,7 @@ import styles from './index.less';
 
 import 'react-grid-layout/css/styles.css';
 import 'antd/dist/antd.css';
+import 'semantic-ui-css/semantic.min.css';
 
 export default function Layout({ children }: IRouteComponentProps) {
   const [modalOpen, setModalOpen] = useState<boolean>(false);

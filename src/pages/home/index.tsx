@@ -32,6 +32,7 @@ import UISystem from '@/pages/home/component/UISystem';
 import styled from 'styled-components';
 import TemplateSystem from '@/pages/home/component/TemplateSystem';
 import ConfirmSystem from '@/pages/home/component/ConfirmSystem';
+import HomeIndex from '@/pages/home/component/HomeIndex';
 
 const StepsContent = styled.div`
   min-height: 200px;
@@ -67,7 +68,7 @@ const Home: FC = () => {
     console.log(Component)
   }*/
 
-  const [current, setCurrent] = useState('lowcode');
+  const [current, setCurrent] = useState('home');
 
   const onClick: MenuProps['onClick'] = (e) => {
     //console.log('click ', e);
@@ -149,8 +150,10 @@ const Home: FC = () => {
       </div>
 
       <div className={styles.contentArea}>
-        {current === '' && (
-          <React.Fragment>{/*TODO 起步页面展示*/}</React.Fragment>
+        {current === 'home' && (
+          <React.Fragment>
+            <HomeIndex />
+          </React.Fragment>
         )}
 
         {

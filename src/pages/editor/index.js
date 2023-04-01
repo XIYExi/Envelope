@@ -9,8 +9,6 @@ import SemanticContainer from './SemanticContainer';
 
 import styles from './Container.less';
 
-import 'semantic-ui-css/semantic.min.css';
-
 function BasicLayout(props) {
   useEffect(() => {
     console.log(props.location.query.ui);
