@@ -1,18 +1,22 @@
-import React, { memo, useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useDrop } from 'react-dnd';
 import Draggable, { DraggableData, DraggableEvent } from 'react-draggable';
 import { ItemCallback } from 'react-grid-layout';
 import { connect } from 'dva';
-import {ViewRender} from '@/engine-lib-absolute/core/index';
+import { ViewRender } from '@/engine-lib-absolute/core/index';
 import styles from './Container.less';
-import {uuid} from '@/engine-lib-absolute/core-utils/tool';
+import { uuid } from '@/engine-lib-absolute/core-utils/tool';
+/*@ts-ignore*/
 import { Dispatch } from 'umi';
 import { StateWithHistory } from 'redux-undo';
 import { Menu, Item, MenuProvider } from 'react-contexify';
 import 'react-contexify/dist/ReactContexify.min.css';
 
 interface SourceBoxProps {
-  pstate: { pointData: { id: string; item: any; point: any; isMenu?: any }[]; curPoint: any };
+  pstate: {
+    pointData: { id: string; item: any; point: any; isMenu?: any }[];
+    curPoint: any;
+  };
   cstate: { pointData: { id: string; item: any; point: any }[]; curPoint: any };
   scaleNum: number;
   canvasId: string;
@@ -25,10 +29,21 @@ interface SourceBoxProps {
       y: number;
     }>
   >;
+  ui: string;
 }
 
 const TargetBox = (props: SourceBoxProps) => {
-  const { pstate, scaleNum, canvasId, allType, dispatch, dragState, setDragState, cstate } = props;
+  const {
+    pstate,
+    scaleNum,
+    canvasId,
+    allType,
+    dispatch,
+    dragState,
+    setDragState,
+    cstate,
+    ui,
+  } = props;
 
   let pointData = pstate ? pstate.pointData : [];
   const cpointData = cstate ? cstate.pointData : [];
@@ -54,12 +69,19 @@ const TargetBox = (props: SourceBoxProps) => {
         payload: {
           id: uuid(6, 10),
           item,
-          point: { i: `x-${pointData.length}`, x: 0, y: gridY, w, h: item.h, isBounded: true },
+          point: {
+            i: `x-${pointData.length}`,
+            x: 0,
+            y: gridY,
+            w,
+            h: item.h,
+            isBounded: true,
+          },
           status: 'inToCanvas',
         },
       });
     },
-    collect: monitor => ({
+    collect: (monitor) => ({
       isOver: monitor.isOver(),
       canDrop: monitor.canDrop(),
       item: monitor.getItem(),
@@ -68,7 +90,7 @@ const TargetBox = (props: SourceBoxProps) => {
 
   const dragStop: ItemCallback = useMemo(() => {
     return (layout, oldItem, newItem, placeholder, e, element) => {
-      const curPointData = pointData.filter(item => item.id === newItem.i)[0];
+      const curPointData = pointData.filter((item) => item.id === newItem.i)[0];
       dispatch({
         type: 'editorModal/modPointData',
         payload: { ...curPointData, point: newItem, status: 'inToCanvas' },
@@ -78,7 +100,7 @@ const TargetBox = (props: SourceBoxProps) => {
 
   const onDragStart: ItemCallback = useMemo(() => {
     return (layout, oldItem, newItem, placeholder, e, element) => {
-      const curPointData = pointData.filter(item => item.id === newItem.i)[0];
+      const curPointData = pointData.filter((item) => item.id === newItem.i)[0];
       dispatch({
         type: 'editorModal/modPointData',
         payload: { ...curPointData, status: 'inToCanvas' },
@@ -88,7 +110,7 @@ const TargetBox = (props: SourceBoxProps) => {
 
   const onResizeStop: ItemCallback = useMemo(() => {
     return (layout, oldItem, newItem, placeholder, e, element) => {
-      const curPointData = pointData.filter(item => item.id === newItem.i)[0];
+      const curPointData = pointData.filter((item) => item.id === newItem.i)[0];
       dispatch({
         type: 'editorModal/modPointData',
         payload: { ...curPointData, point: newItem, status: 'inToCanvas' },
@@ -133,7 +155,9 @@ const TargetBox = (props: SourceBoxProps) => {
   );
 
   useEffect(() => {
-    let { width, height } = document.getElementById(canvasId)!.getBoundingClientRect();
+    let { width, height } = document
+      .getElementById(canvasId)!
+      .getBoundingClientRect();
     setCanvasRect([width, height]);
   }, [canvasId]);
 
@@ -149,6 +173,7 @@ const TargetBox = (props: SourceBoxProps) => {
 
   const render = useMemo(() => {
     return (
+      /*@ts-ignore*/
       <Draggable
         position={dragState}
         handle=".js_box"
@@ -157,6 +182,7 @@ const TargetBox = (props: SourceBoxProps) => {
         }}
       >
         <div className={styles.canvasBox}>
+          {/*@ts-ignore*/}
           <MenuProvider id="menu_id">
             <div
               style={{
@@ -181,6 +207,7 @@ const TargetBox = (props: SourceBoxProps) => {
                     dragStop={dragStop}
                     onDragStart={onDragStart}
                     onResizeStop={onResizeStop}
+                    ui={ui}
                   />
                 ) : null}
               </div>
@@ -202,6 +229,7 @@ const TargetBox = (props: SourceBoxProps) => {
     pointData,
     scaleNum,
     setDragState,
+    ui,
   ]);
 
   return (
@@ -216,4 +244,3 @@ export default connect((state: StateWithHistory<any>) => ({
   pstate: state.present.editorModal,
   cstate: state.present.editorPcModal,
 }))(TargetBox);
-

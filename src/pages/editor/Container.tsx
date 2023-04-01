@@ -1,4 +1,10 @@
-import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import React, {
+  useState,
+  useEffect,
+  useMemo,
+  useCallback,
+  useRef,
+} from 'react';
 import { Result, Tabs } from 'antd';
 import {
   PieChartOutlined,
@@ -8,7 +14,11 @@ import {
   DoubleLeftOutlined,
   AppstoreOutlined,
 } from '@ant-design/icons';
-import {componentsType, DynamicEngine, FormEditor} from '@/engine-lib-absolute/core';
+import {
+  componentsType,
+  DynamicEngine,
+  FormEditor,
+} from '@/engine-lib-absolute/core';
 import styles from './Container.less';
 import { connect } from 'dva';
 
@@ -22,14 +32,18 @@ import antdSocialTemplate from '@/materials/absolute-antd/social/template';
 import antdSchema from '@/materials/absolute-antd/schema';
 
 import { ActionCreators, StateWithHistory } from 'redux-undo';
-import { detectMobileBrowser, getBrowserNavigatorMetaInfo, throttle } from '@/utils/tools';
+import {
+  detectMobileBrowser,
+  getBrowserNavigatorMetaInfo,
+  throttle,
+} from '@/utils/tools';
 import HeaderComponent from '@/pages/editor/components/HeaderComponent';
 import CanvasControl from '@/pages/editor/components/CanvasControl';
 import Calibration from '@/engine-lib-absolute/core-component/Calibration';
 import SourceBox from './TargetBox';
 import TargetBox from './SourceBox';
 
-const {TabPane} = Tabs;
+const { TabPane } = Tabs;
 
 interface PointProps {
   x: number;
@@ -37,13 +51,12 @@ interface PointProps {
 }
 
 const Container = (props: {
-  history?: any,
+  history?: any;
   location?: any;
-  pstate?:any;
+  pstate?: any;
   cstate?: any;
   dispatch?: any;
 }) => {
-
   const [collapsed, setCollapsed] = useState<boolean>(false);
   const [rightColla, setRightColla] = useState<boolean>(true);
   const [scaleNum, setScale] = useState<number>(1);
@@ -60,18 +73,18 @@ const Container = (props: {
   const pointData = pstate ? pstate.pointData : [];
   const cpointData = cstate ? cstate.pointData : [];
 
-  const changeCollapse = useMemo(()=>{
-    return(c: boolean) => {
+  const changeCollapse = useMemo(() => {
+    return (c: boolean) => {
       setCollapsed(c);
-    }
-  }, [])
+    };
+  }, []);
 
   //右侧边框
-  const changeRightColla = useMemo(()=>{
+  const changeRightColla = useMemo(() => {
     return (c: boolean) => {
       setRightColla(c);
-    }
-  },[])
+    };
+  }, []);
 
   const curPoint = pstate ? pstate.curPoint : {};
 
@@ -83,9 +96,9 @@ const Container = (props: {
     setScale(1);
     setDragState({
       x: 0,
-      y: 0
+      y: 0,
     });
-  }
+  };
 
   // 左侧 Tabs 的 Icon
   const CpIcon = {
@@ -98,23 +111,21 @@ const Container = (props: {
   // 生成头部
   const generateHeader = useMemo(() => {
     return (type: componentsType, text: string) => {
-      return(
-        <div style={{height: '10%'}}>
+      return (
+        <div style={{ height: '10%' }}>
           {(CpIcon as any)[type]} {text}
         </div>
-      )
-    }
-  }, [CpIcon])
+      );
+    };
+  }, [CpIcon]);
 
   // 滑动条
   const handleSlider = useMemo(() => {
     return (type: any) => {
-      if(type)
-        setScale((prev: number) => +(prev + 0.1).toFixed(1));
-      else
-        setScale((prev: number) => +(prev - 0.1).toFixed(1));
-    }
-  }, [])
+      if (type) setScale((prev: number) => +(prev + 0.1).toFixed(1));
+      else setScale((prev: number) => +(prev - 0.1).toFixed(1));
+    };
+  }, []);
 
   // 保存表单
   const handleFormSave = useMemo(() => {
@@ -122,9 +133,9 @@ const Container = (props: {
       dispatch({
         type: 'editorModal/modPointData',
         payload: { ...curPoint, item: { ...curPoint.item, config: data } },
-      })
-    }
-  }, [curPoint, dispatch])
+      });
+    };
+  }, [curPoint, dispatch]);
 
   // 清除全部数据
   const clearData = useCallback(() => {
@@ -174,28 +185,33 @@ const Container = (props: {
     }
   }, [pstate.curPoint]);
 
-  const allType = useMemo(()=>{
+  const allType = useMemo(() => {
     let arr: string[] = [];
-    antdBaseTemplate.map(item => {
+    antdBaseTemplate.map((item) => {
       arr.push(item.type);
-    })
-    antdControlTemplate.map(item => {
+    });
+    antdControlTemplate.map((item) => {
       arr.push(item.type);
-    })
-    antdMediaTemplate.map(item=>{
+    });
+    antdMediaTemplate.map((item) => {
       arr.push(item.type);
-    })
-    antdSocialTemplate.map(item=>{
+    });
+    antdSocialTemplate.map((item) => {
       arr.push(item.type);
-    })
+    });
     return arr;
-  },[antdBaseTemplate, antdControlTemplate, antdMediaTemplate, antdSocialTemplate])
+  }, [
+    antdBaseTemplate,
+    antdControlTemplate,
+    antdMediaTemplate,
+    antdSocialTemplate,
+  ]);
 
-  useEffect(()=>{
-    console.log('curPoint',curPoint)
-  },[])
+  useEffect(() => {
+    console.log('curPoint', curPoint);
+  }, []);
 
-  const renderRight = useMemo(()=>{
+  const renderRight = useMemo(() => {
     return (
       <React.Fragment>
         <div
@@ -206,40 +222,48 @@ const Container = (props: {
             transform: rightColla ? 'translate(100%,0)' : 'translate(0,0)',
           }}
         >
-          {
-            pointData.length && curPoint ? (
-              <React.Fragment>
-                <div className={styles.tit}>属性设置</div>
-                <FormEditor
-                  uid={curPoint.id}
-                  onSave={handleFormSave}
-                  onDel={handleDel}
-                  defaultValue={curPoint.item.config}
-                  config={curPoint.item.editableEl}
-                  rightPannelRef={ref}
-                  />
-              </React.Fragment>
-            ) : (
-              <div style={{ paddingTop: '100px' }}>
-                <Result status="404" title="还没有数据哦" subTitle="赶快拖拽组件来生成你的页面吧～"/>
-              </div>
-            )
-          }
+          {pointData.length && curPoint ? (
+            <React.Fragment>
+              <div className={styles.tit}>属性设置</div>
+              <FormEditor
+                uid={curPoint.id}
+                onSave={handleFormSave}
+                onDel={handleDel}
+                defaultValue={curPoint.item.config}
+                config={curPoint.item.editableEl}
+                rightPannelRef={ref}
+              />
+            </React.Fragment>
+          ) : (
+            <div style={{ paddingTop: '100px' }}>
+              <Result
+                status="404"
+                title="还没有数据哦"
+                subTitle="赶快拖拽组件来生成你的页面吧～"
+              />
+            </div>
+          )}
         </div>
       </React.Fragment>
-    )
-  }, [cpointData.length, curPoint, handleDel, handleFormSave, pointData.length, rightColla])
+    );
+  }, [
+    cpointData.length,
+    curPoint,
+    handleDel,
+    handleFormSave,
+    pointData.length,
+    rightColla,
+  ]);
 
-
- /* useEffect(()=>{
+  /* useEffect(()=>{
     //测试用
     antdSocialTemplate.map((value, i) => {
       console.log(antdSchema[value.type as keyof typeof antdSchema])
     })
   }, [])*/
 
-  const tabRender = useMemo(()=>{
-    if(collapsed){
+  const tabRender = useMemo(() => {
+    if (collapsed) {
       return (
         <>
           <TabPane tab={generateHeader('base', '')} key="1"></TabPane>
@@ -247,96 +271,107 @@ const Container = (props: {
           <TabPane tab={generateHeader('media', '')} key="3"></TabPane>
           <TabPane tab={generateHeader('social', '')} key="4"></TabPane>
         </>
-      )
-    }
-    else{
-      return(
+      );
+    } else {
+      return (
         <>
-          <TabPane tab={generateHeader('base', '')} key='1'>
+          <TabPane tab={generateHeader('base', '')} key="1">
             <div className={styles.ctitle}>基础组件</div>
-            {
-              antdBaseTemplate.map((value, i) => {
-                return(
-                  <TargetBox item={value} key={i} canvasId={canvasId}>
-                    <DynamicEngine
-                      isTpl={true}
-                      {...value}
-                      //@ts-ignore
-                      config={antdSchema[value.type as keyof typeof antdSchema].config}
-                      componentsType="base"
-                      />
-                  </TargetBox>
-                )
-              })
-            }
+            {antdBaseTemplate.map((value, i) => {
+              return (
+                <TargetBox item={value} key={i} canvasId={canvasId}>
+                  <DynamicEngine
+                    ui={'antd'}
+                    isTpl={true}
+                    {...value}
+                    //@ts-ignore
+                    config={
+                      antdSchema[value.type as keyof typeof antdSchema].config
+                    }
+                    componentsType="base"
+                  />
+                </TargetBox>
+              );
+            })}
           </TabPane>
 
-          <TabPane tab={generateHeader('control', '')} key='2'>
+          <TabPane tab={generateHeader('control', '')} key="2">
             <div className={styles.ctitle}>交互组件</div>
-            {
-              antdControlTemplate.map((value, i) => {
-                return(
-                  <TargetBox item={value} key={i} canvasId={canvasId}>
-                    <DynamicEngine
-                      isTpl={true}
-                      {...value}
-                      // @ts-ignore
-                      config={antdSchema[value.type as keyof typeof antdSchema].config}
-                      componentsType="control"
-                    />
-                  </TargetBox>
-                )
-              })
-            }
+            {antdControlTemplate.map((value, i) => {
+              return (
+                <TargetBox item={value} key={i} canvasId={canvasId}>
+                  <DynamicEngine
+                    ui={'antd'}
+                    isTpl={true}
+                    {...value}
+                    // @ts-ignore
+                    config={
+                      antdSchema[value.type as keyof typeof antdSchema].config
+                    }
+                    componentsType="control"
+                  />
+                </TargetBox>
+              );
+            })}
           </TabPane>
 
-          <TabPane tab={generateHeader('media', '')} key='3'>
+          <TabPane tab={generateHeader('media', '')} key="3">
             <div className={styles.ctitle}>媒体组件</div>
-            {
-              antdMediaTemplate.map((value, i) => {
-                return(
-                  <TargetBox item={value} key={i} canvasId={canvasId}>
-                    <DynamicEngine
-                      isTpl={true}
-                      {...value}
-                      // @ts-ignore
-                      config={antdSchema[value.type as keyof typeof antdSchema].config}
-                      componentsType="media"
-                    />
-                  </TargetBox>
-                )
-              })
-            }
+            {antdMediaTemplate.map((value, i) => {
+              return (
+                <TargetBox item={value} key={i} canvasId={canvasId}>
+                  <DynamicEngine
+                    ui={'antd'}
+                    isTpl={true}
+                    {...value}
+                    // @ts-ignore
+                    config={
+                      antdSchema[value.type as keyof typeof antdSchema].config
+                    }
+                    componentsType="media"
+                  />
+                </TargetBox>
+              );
+            })}
           </TabPane>
 
-          <TabPane tab={generateHeader('social', '')} key='4'>
+          <TabPane tab={generateHeader('social', '')} key="4">
             <div className={styles.ctitle}>展示组件</div>
-            {
-              antdSocialTemplate.map((value, i) => {
-                return(
-                  <TargetBox item={value} key={i} canvasId={canvasId}>
-                    <DynamicEngine
-                      isTpl={true}
-                      {...value}
-                      // @ts-ignore
-                      config={antdSchema[value.type as keyof typeof antdSchema].config}
-                      componentsType="social"
-                    />
-                  </TargetBox>
-                )
-              })
-            }
+            {antdSocialTemplate.map((value, i) => {
+              return (
+                <TargetBox item={value} key={i} canvasId={canvasId}>
+                  <DynamicEngine
+                    ui={'antd'}
+                    isTpl={true}
+                    {...value}
+                    // @ts-ignore
+                    config={
+                      antdSchema[value.type as keyof typeof antdSchema].config
+                    }
+                    componentsType="social"
+                  />
+                </TargetBox>
+              );
+            })}
           </TabPane>
         </>
-      )
+      );
     }
-  }, [canvasId, collapsed, generateHeader,
-    antdBaseTemplate, antdControlTemplate, antdSocialTemplate, antdMediaTemplate, antdSchema])
+  }, [
+    canvasId,
+    collapsed,
+    generateHeader,
+    antdBaseTemplate,
+    antdControlTemplate,
+    antdSocialTemplate,
+    antdMediaTemplate,
+    antdSchema,
+  ]);
 
-  const handleTabsChange = useCallback((e)=>{
-    console.log(String(e))
+  const handleTabsChange = useCallback((e) => {
+    console.log(String(e));
     setTabsKey(String(e));
-  },[])
+  }, []);
 
   const mousedownfn = useMemo(() => {
     return (e: React.MouseEvent<HTMLDivElement>) => {
@@ -368,7 +403,7 @@ const Container = (props: {
           },
           move: true,
         });
-        setDragState(prev => {
+        setDragState((prev) => {
           return {
             x: prev.x + diffx,
             y: prev.y + diffy,
@@ -390,12 +425,12 @@ const Container = (props: {
   const onwheelFn = useMemo(() => {
     return (e: React.WheelEvent<HTMLDivElement>) => {
       if (e.deltaY < 0) {
-        setDragState(prev => ({
+        setDragState((prev) => ({
           x: prev.x,
           y: prev.y + 40,
         }));
       } else {
-        setDragState(prev => ({
+        setDragState((prev) => ({
           x: prev.x,
           y: prev.y - 40,
         }));
@@ -411,7 +446,7 @@ const Container = (props: {
     }
   }, [diffmove.move]);
 
-  return(
+  return (
     <div className={styles.editorWrap}>
       <HeaderComponent
         redohandler={redohandler}
@@ -438,7 +473,7 @@ const Container = (props: {
               onTabClick={() => changeCollapse(false)}
               activeKey={tabsKey}
               tabPosition={'left'}
-              onChange={e=>handleTabsChange(e)}
+              onChange={(e) => handleTabsChange(e)}
             >
               {tabRender}
             </Tabs>
@@ -470,10 +505,18 @@ const Container = (props: {
           onWheel={onwheelFn}
         >
           <div className={styles.tickMarkTop}>
-            <Calibration direction="up" id="calibrationUp" multiple={scaleNum} />
+            <Calibration
+              direction="up"
+              id="calibrationUp"
+              multiple={scaleNum}
+            />
           </div>
           <div className={styles.tickMarkLeft}>
-            <Calibration direction="right" id="calibrationRight" multiple={scaleNum} />
+            <Calibration
+              direction="right"
+              id="calibrationRight"
+              multiple={scaleNum}
+            />
           </div>
           <SourceBox
             dragState={dragstate}
@@ -481,8 +524,13 @@ const Container = (props: {
             scaleNum={scaleNum}
             canvasId={canvasId}
             allType={allType}
+            ui="antd"
           />
-          <CanvasControl scaleNum={scaleNum} handleSlider={handleSlider} backSize={backSize} />
+          <CanvasControl
+            scaleNum={scaleNum}
+            handleSlider={handleSlider}
+            backSize={backSize}
+          />
         </div>
         {renderRight}
         <div
@@ -505,12 +553,12 @@ const Container = (props: {
         ></div>
       </div>
     </div>
-  )
-}
+  );
+};
 
 export default connect((state: StateWithHistory<any>) => {
-  return { pstate: state.present.editorModal, cstate: state.present.editorPcModal };
+  return {
+    pstate: state.present.editorModal,
+    cstate: state.present.editorPcModal,
+  };
 })(Container);
-
-
-
