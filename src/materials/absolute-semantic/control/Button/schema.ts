@@ -82,7 +82,7 @@ interface IButtonSchema {
   [key: string]: any;
 }
 
-const SButton: IButtonSchema = {
+const Button: IButtonSchema = {
   editData: [
     {
       key: 'text',
@@ -342,4 +342,4 @@ const SButton: IButtonSchema = {
   templateStr,
 };
 
-export default SButton;
+export default Button;
