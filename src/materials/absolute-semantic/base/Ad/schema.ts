@@ -55,7 +55,7 @@ interface IAdvertisementSchema {
   [key: string]: any;
 }
 
-const Advertisement: IAdvertisementSchema = {
+const Ad: IAdvertisementSchema = {
   editData: [
     {
       key: 'centered',
@@ -181,4 +181,4 @@ const Advertisement: IAdvertisementSchema = {
   templateStr,
 };
 
-export default Advertisement;
+export default Ad;
