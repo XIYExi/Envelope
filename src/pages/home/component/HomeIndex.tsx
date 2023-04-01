@@ -62,6 +62,7 @@ const ButtonAction = styled(
 const renderMsg = [
   {
     type: 'lowcode',
+    color: 'teal',
     image: 'https://s1.ax1x.com/2023/03/27/ppsbWan.jpg',
     title: 'Ant Design 风格模板',
     description:
@@ -82,6 +83,7 @@ const renderMsg = [
   },
   {
     type: 'lowcode',
+    color: 'teal',
     image: 'https://s1.ax1x.com/2023/03/27/ppsbWan.jpg',
     title: 'Semantic UI 风格模板',
     description:
@@ -102,6 +104,7 @@ const renderMsg = [
   },
   {
     type: 'lowcode',
+    color: 'teal',
     image: 'https://s1.ax1x.com/2023/03/27/ppsbWan.jpg',
     title: 'Lowcode Engine',
     description:
@@ -122,6 +125,7 @@ const renderMsg = [
   },
   {
     type: 'lowcode',
+    color: 'teal',
     image: 'https://s1.ax1x.com/2023/03/27/ppsbWan.jpg',
     title: '模板网页构建',
     description:
@@ -142,6 +146,7 @@ const renderMsg = [
   },
   {
     type: 'lowcode',
+    color: 'teal',
     image: 'https://s1.ax1x.com/2023/03/27/ppsbWan.jpg',
     title: 'AntV 可视化开发',
     description:
@@ -162,6 +167,7 @@ const renderMsg = [
   },
   {
     type: 'ui',
+    color: 'yellow',
     image: 'https://s1.ax1x.com/2023/03/27/ppsbWan.jpg',
     title: '封装组件展示文档',
     description: '对二次封装组件进行展示，让用户可以快速预览组件效果以及样式',
@@ -181,6 +187,7 @@ const renderMsg = [
   },
   {
     type: 'ui',
+    color: 'yellow',
     image: 'https://s1.ax1x.com/2023/03/27/ppsbWan.jpg',
     title: 'Love Letter UI',
     description:
@@ -201,6 +208,7 @@ const renderMsg = [
   },
   {
     type: 'doc',
+    color: 'pink',
     image: 'https://s1.ax1x.com/2023/03/27/ppsbWan.jpg',
     title: '使用手册',
     description:
@@ -221,6 +229,7 @@ const renderMsg = [
   },
   {
     type: 'doc',
+    color: 'pink',
     image: 'https://s1.ax1x.com/2023/03/27/ppsbWan.jpg',
     title: '设计手册',
     description:
@@ -379,10 +388,11 @@ const HomeIndex: FC<any> = (props) => {
               actionUrl,
               designUrl,
               type,
+              color,
             } = v;
 
             return (
-              <CardItem raised key={_}>
+              <CardItem raised key={_} color={color}>
                 <Card.Content>
                   <CardHeaderFirst>
                     <Image

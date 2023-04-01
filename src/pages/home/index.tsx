@@ -33,6 +33,7 @@ import styled from 'styled-components';
 import TemplateSystem from '@/pages/home/component/TemplateSystem';
 import ConfirmSystem from '@/pages/home/component/ConfirmSystem';
 import HomeIndex from '@/pages/home/component/HomeIndex';
+import HomeLowCodeEngine from '@/pages/home/component/HomeLowCodeEngine';
 
 const StepsContent = styled.div`
   min-height: 200px;
@@ -68,7 +69,7 @@ const Home: FC = () => {
     console.log(Component)
   }*/
 
-  const [current, setCurrent] = useState('home');
+  const [current, setCurrent] = useState('grid');
 
   const onClick: MenuProps['onClick'] = (e) => {
     //console.log('click ', e);
@@ -230,7 +231,8 @@ const Home: FC = () => {
           /*TODO lowcode-engine整合*/
           current === 'grid' && (
             <React.Fragment>
-              <Button onClick={gotoLowcodeEngine}>LowCode</Button>
+              <HomeLowCodeEngine />
+              {/*<Button onClick={gotoLowcodeEngine}>LowCode</Button>*/}
             </React.Fragment>
           )
         }
