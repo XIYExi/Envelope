@@ -32,6 +32,10 @@ export default defineConfig({
           component: '../pages/lowcode',
         },
         {
+          path: '/antv',
+          component: '../pages/antv',
+        },
+        {
           path: '/test',
           component: '../pages/test',
         },

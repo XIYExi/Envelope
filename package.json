@@ -28,6 +28,8 @@
     "@alilc/lowcode-engine-ext": "^1.0.5",
     "@ant-design/icons": "^4.8.0",
     "@ant-design/pro-layout": "^6.5.0",
+    "@antv/x6": "^1.24.8",
+    "@antv/x6-react-shape": "^1.4.0",
     "@babel/core": "^7.16.7",
     "@mdx-js/loader": "^2.3.0",
     "@uiw/react-baidu-map": "^2.5.5",
