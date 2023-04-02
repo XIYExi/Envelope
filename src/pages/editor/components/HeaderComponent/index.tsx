@@ -16,6 +16,7 @@ import {
   UploadOutlined,
   InstagramOutlined,
 } from '@ant-design/icons';
+/*@ts-ignore*/
 import { history } from 'umi';
 import MyPopover from 'yh-react-popover';
 import { saveAs } from 'file-saver';
