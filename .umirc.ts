@@ -9,6 +9,7 @@ export default defineConfig({
   manifest: {
     basePath: '/',
   },
+  mode: 'site',
   resolve: {
     includes: ['src/dumi', 'src/materials'],
     excludes: ['engine-core', 'engine-lib-absolute', 'engine-lib-grid'],

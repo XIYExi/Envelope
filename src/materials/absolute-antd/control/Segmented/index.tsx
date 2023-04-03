@@ -4,10 +4,12 @@ import { ISegmentedConfig } from '@/materials/absolute-antd/control/Segmented/sc
 import logo from '../../../../assets/absolute/Segmented.svg';
 import * as Icon from '@ant-design/icons';
 
+/*begin to delete*/
 interface ISegmentedProProps extends ISegmentedConfig {
   isTpl: boolean;
   onChange?: (e: any) => void;
 }
+/*end to delete*/
 
 const ASegmented: FC<ISegmentedProProps> = (props) => {
   const { isTpl, ...restProps } = props;

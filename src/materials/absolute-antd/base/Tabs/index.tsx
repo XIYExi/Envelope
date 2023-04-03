@@ -4,9 +4,11 @@ import { Image, Tabs } from 'antd';
 import logo from '../../../../assets/absolute/tabs.png';
 import styled from 'styled-components';
 
+/*begin to delete*/
 interface ITabsProConfig extends ITabsConfig {
   isTpl: boolean;
 }
+/*end to delete*/
 
 const TabsWrapper = styled.div`
   padding-top: 16px;

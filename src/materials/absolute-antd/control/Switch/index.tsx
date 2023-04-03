@@ -3,10 +3,12 @@ import logo from '../../../../assets/absolute/Switch.svg';
 import { Image, Switch } from 'antd';
 import { ISwitchConfig } from '@/materials/absolute-antd/control/Switch/schema';
 
+/*begin to delete*/
 interface ISwitchProProps extends ISwitchConfig {
   isTpl: boolean;
   onChange?: (e: any) => void;
 }
+/*end to delete*/
 
 const ASwitch: FC<ISwitchProProps> = (props) => {
   const { isTpl, ...restProps } = props;

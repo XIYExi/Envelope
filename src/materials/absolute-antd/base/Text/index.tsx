@@ -4,9 +4,11 @@ import styled from 'styled-components';
 import { Image, Typography } from 'antd';
 import logo from '../../../../assets/absolute/text.png';
 
+/*begin to delete*/
 export interface ITextConfigProps extends ITextConfig {
   isTpl: boolean;
 }
+/*end to delete*/
 
 type TTextSelectKeyType = 'left' | 'right' | 'center';
 type TSelectDefaultType<KeyType> = KeyType;

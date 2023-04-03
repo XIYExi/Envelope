@@ -7,10 +7,12 @@ import { ISelectConfig } from '@/materials/absolute-antd/control/Select/schema';
 
 const { Option } = Select;
 
+/*begin to delete*/
 interface ISelectProProps extends ISelectConfig {
   isTpl: boolean;
   onChange?: (e: any) => void;
 }
+/*end to delete*/
 
 const tagRender = (props: CustomTagProps) => {
   const { label, closable, onClose } = props;

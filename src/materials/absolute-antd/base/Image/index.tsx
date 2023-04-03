@@ -47,7 +47,13 @@ const ASubTextWrapper = styled.div<{
   text-align: ${(props) => props.$textAlign};
 `;
 
-const AImage: FC<IImageConfig> = (props) => {
+/*begin to delete*/
+interface IImageProps extends IImageConfig {
+  isTpl: boolean;
+}
+/*end to delete*/
+
+const AImage: FC<IImageProps> = (props) => {
   const { isTpl, ...restProps } = props;
 
   const {

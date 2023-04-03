@@ -20,7 +20,13 @@ const QrCodeTextWrapper = styled.div<{
   padding: 8px;
 `;
 
-const AQrcode: FC<IQrcodeConfig & { isTpl: boolean }> = (props) => {
+/*begin to delete*/
+interface IQrcodeProps extends IQrcodeConfig {
+  isTpl: boolean;
+}
+/*end to delete*/
+
+const AQrcode: FC<IQrcodeProps> = (props) => {
   const { isTpl, ...restProps } = props;
 
   const { qrcode, text, color, fontSize = 14 } = restProps;

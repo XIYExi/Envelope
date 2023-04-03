@@ -9,9 +9,11 @@ import {
 } from '@/engine-lib-absolute/core-component/type';
 import logo from '../../../../assets/absolute/form.png';
 
+/*begin to delete*/
 export interface IFormConfigProps extends IFormConfig {
   isTpl: boolean;
 }
+/*end to delete*/
 
 const AFormTitle = styled.div`
   padding-bottom: 20px;

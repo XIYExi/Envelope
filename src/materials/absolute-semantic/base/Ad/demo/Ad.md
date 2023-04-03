@@ -1,7 +1,8 @@
 ---
 order: 1
+nav: 1
 group:
-  path: /semantic
+  path: /materials/semantic
   title: Semantic
   order: 10
 ---

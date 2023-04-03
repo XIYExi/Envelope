@@ -3,10 +3,12 @@ import logo from '../../../../assets/absolute/Silder.svg';
 import { ISlideConfig } from '@/materials/absolute-antd/control/Slider/schema';
 import { Image, Slider } from 'antd';
 
+/*begin to delete*/
 interface ISlideProProps extends ISlideConfig {
   isTpl: boolean;
   onChange?: (e: any) => void;
 }
+/*end to delete*/
 
 const ASlider: FC<ISlideProProps> = (props) => {
   const { isTpl, ...restProps } = props;

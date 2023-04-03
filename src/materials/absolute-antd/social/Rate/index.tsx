@@ -4,10 +4,12 @@ import { IRateConfig } from '@/materials/absolute-antd/social/Rate/schema';
 import * as Icon from '@ant-design/icons';
 import logo from '../../../../assets/absolute/Rate.svg';
 
-type IRateProps = IRateConfig & {
+/*begin to delete*/
+interface IRateProps extends IRateConfig {
   isTpl: boolean;
   onChange?: (e: any) => void;
-};
+}
+/*end to delete*/
 
 const ARate: FC<IRateProps> = (props) => {
   const { isTpl, ...restProps } = props;

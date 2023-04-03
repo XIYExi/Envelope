@@ -3,10 +3,12 @@ import logo from '../../../../assets/absolute/Radio.svg';
 import { IRadioConfig } from '@/materials/absolute-antd/control/Radio/schema';
 import { Image, Radio, RadioChangeEvent } from 'antd';
 
+/*begin to delete*/
 interface IRadioProProps extends IRadioConfig {
   isTpl: boolean;
   onChange?: (e: Event) => void;
 }
+/*end to delete*/
 
 const ARadio: FC<IRadioProProps> = (props) => {
   const { isTpl, ...restProps } = props;

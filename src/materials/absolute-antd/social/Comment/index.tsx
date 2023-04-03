@@ -4,9 +4,11 @@ import { Image, Comment, Avatar } from 'antd';
 import { ICommentConfig } from '@/materials/absolute-antd/social/Comment/schema';
 import * as Icon from '@ant-design/icons';
 
+/*begin to delete*/
 interface ICommentProProps extends ICommentConfig {
   isTpl: boolean;
 }
+/*end to delete*/
 
 const AComment: FC<ICommentProProps> = (props) => {
   const { isTpl, ...restProps } = props;

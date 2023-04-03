@@ -5,9 +5,11 @@ import logo from '../../../../assets/absolute/video.png';
 import { Image } from 'antd';
 import { IVideoConfig } from '@/materials/absolute-antd/media/Video/schema';
 
+/*begin to delete*/
 interface IVideoProProps extends IVideoConfig {
   isTpl: boolean;
 }
+/*end to delete*/
 
 const AVideo: FC<IVideoProProps> = (props) => {
   const { isTpl, ...restProps } = props;

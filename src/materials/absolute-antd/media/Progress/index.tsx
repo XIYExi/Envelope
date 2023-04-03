@@ -3,9 +3,11 @@ import logo from '../../../../assets/absolute/Progress.svg';
 import { Image, Progress } from 'antd';
 import { IProgressConfig } from '@/materials/absolute-antd/media/Progress/schema';
 
+/*begin to delete*/
 interface IProgressProProps extends IProgressConfig {
   isTpl: boolean;
 }
+/*end to delete*/
 
 const AProgress: FC<IProgressProProps> = (props) => {
   const { isTpl, ...restProps } = props;

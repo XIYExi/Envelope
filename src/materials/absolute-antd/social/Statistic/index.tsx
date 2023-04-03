@@ -4,9 +4,11 @@ import { Image, Statistic } from 'antd';
 import { IStatisticConfig } from '@/materials/absolute-antd/social/Statistic/schema';
 import * as Icon from '@ant-design/icons';
 
-type IStatisticProps = IStatisticConfig & {
+/*begin to delete*/
+interface IStatisticProps extends IStatisticConfig {
   isTpl: boolean;
-};
+}
+/*end to delete*/
 
 const AStatistic: FC<IStatisticProps> = (props) => {
   const { isTpl, ...restProps } = props;

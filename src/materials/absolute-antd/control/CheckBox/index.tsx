@@ -3,10 +3,12 @@ import { Checkbox, Image } from 'antd';
 import logo from '../../../../assets/absolute/CheckBox.svg';
 import { ICheckBoxConfig } from '@/materials/absolute-antd/control/CheckBox/schema';
 
+/*begin to delete*/
 interface ICheckBoxProProps extends ICheckBoxConfig {
   isTpl: boolean;
   onChange?: (e: any) => void;
 }
+/*end to delete*/
 
 const ACheckBox: FC<ICheckBoxProProps> = (props) => {
   const { isTpl, ...restProps } = props;

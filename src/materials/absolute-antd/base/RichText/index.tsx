@@ -4,9 +4,11 @@ import logo from '../../../../assets/absolute/richText.png';
 import { Image } from 'antd';
 import { IRichTextConfig } from '@/materials/absolute-antd/base/RichText/schema';
 
+/*begin to delete*/
 interface IProps extends IRichTextConfig {
   isTpl: boolean;
 }
+/*end to delete*/
 
 const RichTextWrapper = styled.div`
   :global(p) {

@@ -6,9 +6,11 @@ import * as Icon from '@ant-design/icons';
 
 const { Meta } = Card;
 
+/*begin to delete*/
 interface ICardProProps extends ICardConfig {
   isTpl: boolean;
 }
+/*end to delete*/
 
 const ACard: FC<ICardProProps> = (props) => {
   const { isTpl, ...restProps } = props;

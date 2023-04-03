@@ -4,10 +4,12 @@ import logo from '../../../../assets/absolute/Button.svg';
 import { Button, Image } from 'antd';
 import * as Icon from '@ant-design/icons';
 
+/*begin to delete*/
 interface IButtonProProp extends IButtonConfig {
   isTpl: boolean;
   onClick?: (e: any) => void;
 }
+/*end to delete*/
 
 const AButton: FC<IButtonProProp> = (props) => {
   const { isTpl, ...restProps } = props;

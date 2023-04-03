@@ -4,9 +4,11 @@ import styled from 'styled-components';
 import logo from '../../../../assets/absolute/paragraph.png';
 import { ILongTextConfig } from '@/materials/absolute-antd/base/Paragraph/schema';
 
+/*begin to delete*/
 export interface ILongTextProps extends ILongTextConfig {
   isTpl: boolean;
 }
+/*end to delete*/
 
 type TLongTextSelectKeyType = 'left' | 'right' | 'center';
 type TSelectDefaultType<KeyType> = KeyType;

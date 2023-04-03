@@ -29,7 +29,13 @@ const ListWrapper = styled.div<{
     rotate(${(props) => props.props.baseRotate}deg);
 `;
 
-const AList: FC<IListConfig> = (props) => {
+/*begin to delete*/
+interface IListProps extends IListConfig {
+  isTpl: boolean;
+}
+/*end to delete*/
+
+const AList: FC<IListProps> = (props) => {
   const { isTpl, ...restProps } = props;
 
   const {

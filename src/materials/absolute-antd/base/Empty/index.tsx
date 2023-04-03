@@ -3,9 +3,11 @@ import { Empty, Image } from 'antd';
 import { IEmptyConfig } from '@/materials/absolute-antd/base/Empty/schema';
 import logo from '../../../../assets/absolute/empty.png';
 
+/*begin to delete*/
 export type IEmptyProConfig = IEmptyConfig & {
   isTpl: boolean;
 };
+/*end to delete*/
 
 const AEmpty: FC<IEmptyProConfig> = (props) => {
   const { isTpl, ...restProps } = props;

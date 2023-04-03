@@ -5,9 +5,11 @@ import { ICalendarConfig } from '@/materials/absolute-antd/media/Calendar/schema
 import logo from '../../../../assets/absolute/calend.png';
 import moment, { Moment } from 'moment';
 
+/*begin to delete*/
 interface ICalendarPropProps extends ICalendarConfig {
   isTpl: boolean;
 }
+/*end to delete*/
 
 const CalendarWrapper = styled.div`
   position: relative;

@@ -5,9 +5,11 @@ import logo from '../../../../assets/absolute/map@2x.png';
 import { Image } from 'antd';
 import { IMapConfig } from '@/materials/absolute-antd/media/Map/schema';
 
+/*begin to delete*/
 export interface IMapProProps extends IMapConfig {
   isTpl: boolean;
 }
+/*end to delete*/
 
 const MapWrapper = styled.div`
   height: 100%;

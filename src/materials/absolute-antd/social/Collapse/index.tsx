@@ -5,9 +5,11 @@ import { ICollapseConfig } from '@/materials/absolute-antd/social/Collapse/schem
 
 const { Panel } = Collapse;
 
+/*begin to delete*/
 interface ICollapseProProps extends ICollapseConfig {
   isTpl: boolean;
 }
+/*end to delete*/
 
 const ACollapse: FC<ICollapseProProps> = (props) => {
   const { isTpl, ...restProps } = props;

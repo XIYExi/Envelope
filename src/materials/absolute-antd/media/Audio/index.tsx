@@ -11,7 +11,13 @@ const AudioWrapper = styled.div`
   align-items: center;
 `;
 
-const AAudio: FC<IAudioConfig & { isTpl: boolean }> = (props) => {
+/*begin to delete*/
+interface IAudioProps extends IAudioConfig {
+  isTpl: boolean;
+}
+/*end to delete*/
+
+const AAudio: FC<IAudioProps> = (props) => {
   const { isTpl, ...restProps } = props;
 
   const { height, url } = restProps;

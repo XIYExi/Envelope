@@ -68,11 +68,13 @@ const Index = styled.header<{ props: IHeaderConfig }>`
     rotate(${(props) => props.props.baseRadius}deg);
 `;
 
+/*begin to delete*/
 export interface IHeaderProProps extends IHeaderConfig {
   onLogin?: () => void;
   onLogout?: () => void;
   onCreateAccount?: () => void;
 }
+/*end to delete*/
 
 export const AHeader: FC<IHeaderProProps> = (props) => {
   const { isTpl, ...restProps } = props;
