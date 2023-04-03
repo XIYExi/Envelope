@@ -2,17 +2,15 @@ import React, { FC, useState } from 'react';
 import {
   Button,
   Card,
-  Container,
   Divider,
   Grid,
-  Header,
   Icon,
   Image,
   Search,
   Segment,
 } from 'semantic-ui-react';
 import styled from 'styled-components';
-import { Space, Typography } from 'antd';
+import { Typography } from 'antd';
 import _ from 'lodash';
 
 const CardHeaderFirst = styled(Card.Header)`

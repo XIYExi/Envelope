@@ -1,17 +1,5 @@
-import { Addon } from '@antv/x6';
-import React, {
-  FC,
-  memo,
-  useCallback,
-  useEffect,
-  useMemo,
-  useState,
-} from 'react';
-import { Channel } from '@/engine-lib-antv/common/transmit';
-import {
-  ActionType,
-  CustomEventTypeEnum,
-} from '@/engine-lib-antv/common/enums';
+import React, { FC, memo, useCallback, useMemo, useState } from 'react';
+import { ActionType } from '@/engine-lib-antv/common/enums';
 import {
   getDiamondNode,
   getEllipseNode,

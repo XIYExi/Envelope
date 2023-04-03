@@ -15,13 +15,15 @@ import {
 } from '@ant-design/icons';
 import { HomeTitle } from '@/pages/home/component/Component';
 import { AppstoreOutlined } from '@ant-design/icons';
-import UISystem from '@/pages/home/component/UISystem';
+import UISystem from '@/pages/home/component/absolute/UISystem';
 import styled from 'styled-components';
-import TemplateSystem from '@/pages/home/component/TemplateSystem';
-import ConfirmSystem from '@/pages/home/component/ConfirmSystem';
-import HomeIndex from '@/pages/home/component/HomeIndex';
-import HomeLowCodeEngine from '@/pages/home/component/HomeLowCodeEngine';
-import ThirdUI from '@/pages/home/component/ThirdUI';
+import TemplateSystem from '@/pages/home/component/absolute/TemplateSystem';
+import ConfirmSystem from '@/pages/home/component/absolute/ConfirmSystem';
+import HomeIndex from '@/pages/home/component/home_index/HomeIndex';
+import HomeLowCodeEngine from '@/pages/home/component/grid/HomeLowCodeEngine';
+import ThirdUI from '@/pages/home/component/package/ThirdUI';
+import AntVIndex from '@/pages/home/component/antv/AntvIndex';
+import LoleIndex from '@/pages/home/component/lole/LoleIndex';
 
 const StepsContent = styled.div`
   min-height: 200px;
@@ -57,7 +59,7 @@ const Home: FC = () => {
     console.log(Component)
   }*/
 
-  const [current, setCurrent] = useState('home');
+  const [current, setCurrent] = useState('antv');
 
   const onClick: MenuProps['onClick'] = (e) => {
     //console.log('click ', e);
@@ -242,7 +244,7 @@ const Home: FC = () => {
           /*TODO 可视化开发页面整合*/
           current === 'antv' && (
             <React.Fragment>
-              <div>Antv可视化开发</div>
+              <AntVIndex />
             </React.Fragment>
           )
         }
@@ -252,6 +254,15 @@ const Home: FC = () => {
           current === 'package' && (
             <React.Fragment>
               <ThirdUI />
+            </React.Fragment>
+          )
+        }
+
+        {
+          /*TODO lole页面 */
+          current === 'lole' && (
+            <React.Fragment>
+              <LoleIndex />
             </React.Fragment>
           )
         }

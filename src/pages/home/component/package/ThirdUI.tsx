@@ -9,7 +9,7 @@ import {
   Divider,
   Icon,
 } from 'semantic-ui-react';
-import devices from '../../../assets/home/devices.png';
+import devices from '../../../../assets/home/devices.png';
 import CodeShow1 from '!@mdx-js/loader!./CodeShow.mdx';
 import CodeShow2 from '!@mdx-js/loader!./CodeShow2.mdx';
 import CodeShow3 from '!@mdx-js/loader!./CodeShow3.mdx';

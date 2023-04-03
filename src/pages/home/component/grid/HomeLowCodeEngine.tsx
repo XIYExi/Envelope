@@ -12,9 +12,9 @@ import {
   List,
 } from 'semantic-ui-react';
 import { Divider, Typography } from 'antd';
-import lowcodeEngineBar from '../../../assets/home/lowcodeEngineBar.png';
-import Logo from '../../../assets/home/semlogo.png';
-import GitHubButton from '@/pages/home/component/GitHubButton';
+import lowcodeEngineBar from '../../../../assets/home/lowcodeEngineBar.png';
+import Logo from '../../../../assets/home/semlogo.png';
+import GitHubButton from '@/pages/home/component/common/GitHubButton';
 
 const CardWithNoShadow = styled(
   /*@ts-ignore*/
