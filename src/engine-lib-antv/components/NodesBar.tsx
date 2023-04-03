@@ -1,5 +1,12 @@
 import { Addon } from '@antv/x6';
-import React, { FC, useCallback, useEffect, useMemo, useState } from 'react';
+import React, {
+  FC,
+  memo,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from 'react';
 import { Channel } from '@/engine-lib-antv/common/transmit';
 import {
   ActionType,
@@ -25,8 +32,6 @@ import './index.scss';
 const { TabPane } = Tabs;
 
 const NodesBar: FC<any> = (props) => {
-  const current = props.graph;
-
   const [data, setData] = useState({
     dnd: {},
     freeze: false,
@@ -44,25 +49,21 @@ const NodesBar: FC<any> = (props) => {
     setTabsKey(String(e));
   }, []);
 
-  useEffect(() => {
-    const d = new Addon.Dnd({
-      target: current.current,
-      validateNode() {
-        return true;
-      },
-    });
+  /*useEffect(() => {
+    console.log('initDnd', props.dnd)
+    console.log('尝试得到 graph.value ',props.graph)
 
-    console.log(d);
-
-    setData({
+    /!*setData({
       dnd: d,
       freeze: data.freeze,
-    });
-  }, []);
+    });*!/
+    //d = _d;
+  }, [props]);*/
 
   const startDrag = useCallback(
     (currentTarget: any, e: any) => {
-      console.log('47 现在graph的值为: ', current.current);
+      //console.log('initDnd', props.dnd)
+      //console.log('尝试得到 graph.value ',props.graph.current)
 
       //console.log('startDrag', currentTarget, e)
       const { actionType, shape, label } = currentTarget;
@@ -111,14 +112,14 @@ const NodesBar: FC<any> = (props) => {
         default:
           break;
       }
-      const node = current.current.createNode(json);
+
+      const node = props.graph.current.createNode(json);
       if (!data.freeze) {
-        console.log('data.dnd ', data.dnd);
-        /*@ts-ignore*/
-        data.dnd.start(node, e);
+        console.log('d', props.dnd);
+        props.dnd.current.start(node, e);
       }
     },
-    [data, current],
+    [props],
   );
 
   // 左侧 Tabs 的 Icon
@@ -228,4 +229,4 @@ const NodesBar: FC<any> = (props) => {
   );
 };
 
-export default NodesBar;
+export default memo(NodesBar);

@@ -7,6 +7,7 @@ import { Config, CustomEventTypeEnum } from '@/engine-lib-antv/common/enums';
 import { Channel } from '@/engine-lib-antv/common/transmit';
 import registerTool from '@/engine-lib-antv/tool/registerTool';
 import { initGraph } from '@/engine-lib-antv/common/graph';
+import { Addon } from '@antv/x6';
 
 export function useStateRef(state: any) {
   const stateRef = useRef<any>();
@@ -18,12 +19,22 @@ export function useStateRef(state: any) {
 }
 
 const Antv: FC<any> = () => {
-  const [graph, setGraph] = useState<any>('hello');
+  const graph = useRef<any>(null);
+  const dnd = useRef<any>(null);
+
   useEffect(() => {
     registerTool();
     const g = initGraph();
-    console.log('graph return ', g);
-    setGraph(g);
+    const _d: any = new Addon.Dnd({
+      target: g,
+      validateNode() {
+        return true;
+      },
+    });
+    /* console.log(_d);
+     console.log('graph return ', g);*/
+    dnd.current = _d;
+    graph.current = g;
   }, []);
 
   useEffect(() => {
@@ -47,7 +58,7 @@ const Antv: FC<any> = () => {
 
         <div className={'container'}>
           {/*组件栏*/}
-          <NodesBar graph={useStateRef(graph)} />
+          <NodesBar graph={graph} dnd={dnd} />
 
           {/*图容器区*/}
           <div id="container" className="graph-main-container" />

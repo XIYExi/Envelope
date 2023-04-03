@@ -20,7 +20,7 @@ const ContainerDiv = styled.div`
 const ReactNode: FC<any> = (props) => {
   return (
     <>
-      <ContainerDiv></ContainerDiv>
+      <ContainerDiv className="container"></ContainerDiv>
     </>
   );
 };
