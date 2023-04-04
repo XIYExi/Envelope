@@ -24,6 +24,7 @@ import HomeLowCodeEngine from '@/pages/home/component/grid/HomeLowCodeEngine';
 import ThirdUI from '@/pages/home/component/package/ThirdUI';
 import AntVIndex from '@/pages/home/component/antv/AntvIndex';
 import LoleIndex from '@/pages/home/component/lole/LoleIndex';
+import TemplateIndex from '@/pages/home/component/template/TemplateIndex';
 
 const StepsContent = styled.div`
   min-height: 200px;
@@ -52,6 +53,10 @@ const Home: FC = () => {
     history.push('./lowcode');
   };
 
+  const gotoAntV = () => {
+    history.push('./antv');
+  };
+
   // Test
   /*  const handleOk = async () => {
     const { default: Graph } = await import('@/materials/absolute-antd/base/Alert');
@@ -59,7 +64,7 @@ const Home: FC = () => {
     console.log(Component)
   }*/
 
-  const [current, setCurrent] = useState('antv');
+  const [current, setCurrent] = useState('html');
 
   const onClick: MenuProps['onClick'] = (e) => {
     //console.log('click ', e);
@@ -235,7 +240,7 @@ const Home: FC = () => {
           /*TODO 模板开发页面整合*/
           current === 'html' && (
             <React.Fragment>
-              <div>模板开发</div>
+              <TemplateIndex />
             </React.Fragment>
           )
         }
@@ -244,7 +249,7 @@ const Home: FC = () => {
           /*TODO 可视化开发页面整合*/
           current === 'antv' && (
             <React.Fragment>
-              <AntVIndex />
+              <AntVIndex gotoAntv={gotoAntV} />
             </React.Fragment>
           )
         }
