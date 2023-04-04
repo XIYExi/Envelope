@@ -25,6 +25,7 @@ import ThirdUI from '@/pages/home/component/package/ThirdUI';
 import AntVIndex from '@/pages/home/component/antv/AntvIndex';
 import LoleIndex from '@/pages/home/component/lole/LoleIndex';
 import TemplateIndex from '@/pages/home/component/template/TemplateIndex';
+import Footer from '@/pages/home/component/Footer';
 
 const StepsContent = styled.div`
   min-height: 200px;
@@ -64,7 +65,7 @@ const Home: FC = () => {
     console.log(Component)
   }*/
 
-  const [current, setCurrent] = useState('html');
+  const [current, setCurrent] = useState('home');
 
   const onClick: MenuProps['onClick'] = (e) => {
     //console.log('click ', e);
@@ -272,34 +273,8 @@ const Home: FC = () => {
           )
         }
 
-        <footer className={styles.footer}>
-          <div style={{ display: 'flex', justifyContent: 'center' }}>
-            <div style={{ marginTop: '30px' }}>
-              <span>TEST Footer!!!</span>
-            </div>
-          </div>
-          {/*<div style={{ display: 'flex', justifyContent: 'center' }}>
-            <div
-              style={{ width: '500px', marginLeft: '40px', marginTop: '32px' }}
-            >
-              <span style={{ marginRight: '24px' }}>更多产品: </span>
-              <a
-                href="http://v6.dooring.cn/beta"
-                style={{ marginRight: '24px' }}
-                target="_blank"
-              >
-                v6.dooring可视化大屏编辑器
-              </a>
-              <a
-                href="http://h5.dooring.cn/qt"
-                style={{ marginRight: '24px' }}
-                target="_blank"
-              >
-                在线gif动图制作平台
-              </a>
-            </div>
-          </div>*/}
-        </footer>
+        <Divider style={{ marginTop: '7em' }} />
+        <Footer />
       </div>
     </div>
   );
