@@ -22,22 +22,26 @@ export default defineConfig({
       routes: [
         {
           path: '/',
+          component: '../pages/homepage',
+        },
+        {
+          path: '/inner',
           component: '../pages/home',
         },
         {
-          path: '/editor',
+          path: '/inner/editor',
           component: '../pages/editor',
         },
         {
-          path: '/lowcode',
+          path: '/inner/lowcode',
           component: '../pages/lowcode',
         },
         {
-          path: '/antv',
+          path: '/inner/antv',
           component: '../pages/antv',
         },
         {
-          path: '/test',
+          path: '/inner/test',
           component: '../pages/test',
         },
       ],

@@ -1,0 +1,78 @@
+#logo {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  animation: fill-anm 1700ms ease forwards 2600ms;
+}
+
+@keyframes fill-anm {
+  from {
+    fill: transparent;
+  }
+  to {
+    fill: #000;
+    transform: translate(-22em, -2.8em);
+  }
+}
+
+@keyframes line-anm {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+#logo path:nth-child(1) {
+  stroke-dasharray: 307;
+  stroke-dashoffset: 307;
+  animation: line-anm 1.5s ease forwards;
+}
+#logo path:nth-child(2) {
+  stroke-dasharray: 243;
+  stroke-dashoffset: 243;
+  animation: line-anm 1.5s ease forwards 200ms;
+}
+#logo path:nth-child(3) {
+  stroke-dasharray: 202;
+  stroke-dashoffset: 202;
+  animation: line-anm 1.5s ease forwards 400ms;
+}
+#logo path:nth-child(4) {
+  stroke-dasharray: 291;
+  stroke-dashoffset: 291;
+  animation: line-anm 1.5s ease forwards 600ms;
+}
+#logo path:nth-child(5) {
+  stroke-dasharray: 140;
+  stroke-dashoffset: 140;
+  animation: line-anm 1.5s ease forwards 800ms;
+}
+#logo path:nth-child(6) {
+  stroke-dasharray: 242;
+  stroke-dashoffset: 242;
+  animation: line-anm 1.5s ease forwards 1000ms;
+}
+#logo path:nth-child(7) {
+  stroke-dasharray: 313;
+  stroke-dashoffset: 313;
+  animation: line-anm 1.5s ease forwards 1200ms;
+}
+#logo path:nth-child(8) {
+  stroke-dasharray: 291;
+  stroke-dashoffset: 291;
+  animation: line-anm 1.5s ease forwards 1400ms;
+}
+
+#platform {
+  position: absolute;
+  top: 47%;
+  left: 54%;
+  opacity: 0;
+  animation: fill-platform 2600ms ease forwards 3500ms;
+}
+
+@keyframes fill-platform {
+  to {
+    opacity: 1;
+  }
+}
