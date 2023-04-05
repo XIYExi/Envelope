@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import './index.less';
-
+/*@ts-ignore*/
 import { history } from 'umi';
 
 const SvgAnimate = (props: any) => {
@@ -13,12 +13,6 @@ const SvgAnimate = (props: any) => {
       console.log(`第${i}个字符长度为: ${logo[i].getTotalLength()}`)
     }
   }, [])*/
-
-  useEffect(() => {
-    setTimeout(() => {
-      history.push('/inner');
-    }, 5000);
-  });
 
   return (
     <React.Fragment>

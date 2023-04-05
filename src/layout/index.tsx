@@ -1,5 +1,11 @@
-import React, { FC, useState } from 'react';
-import { IRouteComponentProps, history } from 'umi';
+import React, {
+  createContext,
+  FC,
+  useContext,
+  useEffect,
+  useState,
+} from 'react';
+import { IRouteComponentProps } from 'umi';
 import { Button } from 'antd';
 import { CustomerServiceOutlined } from '@ant-design/icons';
 import Draggable from 'react-draggable';
@@ -9,8 +15,17 @@ import 'react-grid-layout/css/styles.css';
 import 'antd/dist/antd.css';
 import 'semantic-ui-css/semantic.min.css';
 
+export const ctx = createContext<boolean>(false);
+
 export default function Layout({ children }: IRouteComponentProps) {
   const [modalOpen, setModalOpen] = useState<boolean>(false);
+  const [show, setShow] = useState(false);
+
+  useEffect(() => {
+    setTimeout(() => {
+      setShow(true);
+    }, 5000);
+  }, []);
 
   const hackCodeStyle =
     window.location.pathname.indexOf('preview') < 0
@@ -37,8 +52,10 @@ export default function Layout({ children }: IRouteComponentProps) {
           <CustomerServiceOutlined />
         </Button>
       </div>
+
       {/*TODO 添加 modal*/}
-      {children}
+      <ctx.Provider value={show}>{children}</ctx.Provider>
+
       {window.location.pathname.indexOf('editor') > -1 && (
         /*@ts-ignore*/
         <Draggable>

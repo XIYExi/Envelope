@@ -96,7 +96,13 @@ const Home: FC = () => {
     <div className={styles.homeWrap}>
       <div className={styles.leftArea}>
         <div style={{ padding: '0 40px' }}>
-          <HomeTitle level={3} copyable={false}>
+          <HomeTitle
+            level={3}
+            copyable={false}
+            onClick={() => {
+              history.push('/');
+            }}
+          >
             Envelope
           </HomeTitle>
         </div>
