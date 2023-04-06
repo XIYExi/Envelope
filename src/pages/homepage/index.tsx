@@ -1,7 +1,6 @@
-import React, { useContext, useEffect, useRef, useState } from 'react';
+import React, { useContext } from 'react';
 import SvgAnimate from '@/pages/homepage/svg/SvgAnimate';
 import { Home } from './Home';
-import { history } from '@@/core/history';
 import { ctx } from '@/layout';
 
 const HomePage = (props: any) => {
