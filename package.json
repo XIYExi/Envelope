@@ -1,5 +1,8 @@
 {
+  "name": "envelope",
+  "version": "2.0.0",
   "private": true,
+  "main": "./main/main.js",
   "scripts": {
     "start": "umi dev",
     "build": "umi build",
@@ -10,7 +13,10 @@
     "dumi": "umi dev --dumi ",
     "dumi build": "umi build --dumi",
     "build-storybook": "build-storybook",
-    "start total": "npm start && npm start src/dumi"
+    "electron": "electron --inspect=8000 -w ./",
+    "start:electrondev": "cross-env NODE_ENV=development nodemon --watch ./main/ --exec \"electron ./\"",
+    "start:umidev": "cross-env UMI_DEV=dev umi dev",
+    "electron start!": "concurrently \"npm run start:umidev\" \"wait-on http://localhost:8000 && npm run start:electrondev\""
   },
   "gitHooks": {
     "pre-commit": "lint-staged"
@@ -38,6 +44,7 @@
     "axios": "^0.19.2",
     "braft-editor": "^2.3.9",
     "dva": "^2.4.1",
+    "electron": "^24.0.0",
     "enquire-js": "^0.2.1",
     "jszip": "^3.10.1",
     "moment": "^2.29.4",
