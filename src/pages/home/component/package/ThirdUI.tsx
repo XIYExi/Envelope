@@ -10,9 +10,9 @@ import {
   Icon,
 } from 'semantic-ui-react';
 import devices from '../../../../assets/home/devices.png';
-import CodeShow1 from '!@mdx-js/loader!./CodeShow.mdx';
+/*import CodeShow1 from '!@mdx-js/loader!./CodeShow.mdx';
 import CodeShow2 from '!@mdx-js/loader!./CodeShow2.mdx';
-import CodeShow3 from '!@mdx-js/loader!./CodeShow3.mdx';
+import CodeShow3 from '!@mdx-js/loader!./CodeShow3.mdx';*/
 import styled from 'styled-components';
 import AText from '@/materials/absolute-antd/base/Text';
 import SProgress from '@/materials/absolute-semantic/control/Progress';
@@ -92,7 +92,8 @@ const ThirdUI: FC<any> = (props) => {
           <Button
             color="teal"
             onClick={() => {
-              history.push('/~docs');
+              //history.push('/~docs/absolute-antd/antd/alert');
+              window.open('/#/~docs/absolute-antd/antd/alert', 'blank');
             }}
           >
             查看文档
@@ -124,7 +125,8 @@ const ThirdUI: FC<any> = (props) => {
             </Grid.Column>
             <Grid.Column width={8}>
               <Segment>
-                <CodeShow1 />
+                {/*<CodeShow1 />*/}
+                <Image src="https://s1.ax1x.com/2023/04/10/ppqlDAK.png" />
               </Segment>
               {/*@ts-ignore*/}
               <Button primary>一个标准的Semantic按钮</Button>
@@ -149,7 +151,8 @@ const ThirdUI: FC<any> = (props) => {
             </Grid.Column>
             <Grid.Column width={8}>
               <Segment>
-                <CodeShow2 />
+                {/*<CodeShow2 />*/}
+                <Image src="https://s1.ax1x.com/2023/04/10/ppqlhHP.png" />
               </Segment>
               {/*@ts-ignore*/}
               <AText isTpl={false} {...attrAtext} />
@@ -175,7 +178,8 @@ const ThirdUI: FC<any> = (props) => {
             </Grid.Column>
             <Grid.Column width={8}>
               <Segment>
-                <CodeShow3 />
+                {/*<CodeShow3 />*/}
+                <Image src="https://s1.ax1x.com/2023/04/10/ppqlbcj.png" />
               </Segment>
               {/*@ts-ignore*/}
               <SProgress isTpl={false} {...attrProgress} />

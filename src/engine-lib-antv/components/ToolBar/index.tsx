@@ -57,7 +57,7 @@ const ToolBar = () => {
   };
 
   const toBack = () => {
-    history.push('/');
+    history.push('/inner');
   };
 
   return (

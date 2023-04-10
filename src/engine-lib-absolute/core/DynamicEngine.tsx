@@ -29,7 +29,7 @@ const DynamicFunc = (type: string, componentsType: string, ui: string) => {
     loading: () => (
       <div>
         <Loader active inline="centered">
-          a
+          组件载入中，请稍等...
         </Loader>
       </div>
     ),

@@ -2,7 +2,7 @@ const { app, BrowserWindow } = require('electron');
 const GLOBAL_CONFIG = require('./config/config.global');
 const { isDevEnv } = require('./utils/util');
 const setApplicationMenu = require('./utils/menu');
-const setIpc = require('./ipc/index');
+const setIpc = require('./ipc');
 
 /* global 配置 */
 global.GLOBAL_CONFIG = GLOBAL_CONFIG;
@@ -33,6 +33,7 @@ function createWindow() {
   } else {
     //生产环境
     //暂不予考虑
+    mainWindow.loadFile(`${__dirname}/dist/index.html`);
   }
 
   mainWindow.on('closed', () => {

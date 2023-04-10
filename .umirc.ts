@@ -5,6 +5,14 @@ export default defineConfig({
   dva: {
     immer: true,
   },
+  // 默认路由模式是“browser”，打包后会出现首页或其他页面找不到继而加载不出来的情况，所以需要改成hash模式。
+  history: {
+    type: 'hash',
+  },
+  // 配置 webpack 的 publicPath。当打包的时候，webpack 会在静态文件路径前面添加 publicPath 的值，
+  // 当你需要修改静态文件地址时，比如使用 CDN 部署，把 publicPath 的值设为 CDN 的值就可以。
+  // 如果使用一些特殊的文件系统，比如混合开发或者 cordova 等技术，可以尝试将 publicPath 设置成 ./ 相对路径
+  publicPath: './',
   ignoreMomentLocale: true,
   manifest: {
     basePath: '/',

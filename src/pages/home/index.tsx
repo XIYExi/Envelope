@@ -42,7 +42,7 @@ const Home: FC = () => {
   const handleGo = (type: string) => {
     setCurrent(''); //current置为空，出来的时候会跳转到起步页面
     if (type === 'H5') {
-      history.push(`/editor?tid=123456&ui=${ui}`);
+      history.push(`/inner/editor?tid=123456&ui=${ui}`);
     } else if (type === 'PC') {
       window.open('http://v6.dooring.cn/beta');
     } else {
@@ -51,11 +51,11 @@ const Home: FC = () => {
   };
 
   const gotoLowcodeEngine = () => {
-    history.push('./lowcode');
+    history.push('/inner/lowcode');
   };
 
   const gotoAntV = () => {
-    history.push('./antv');
+    history.push('/inner/antv');
   };
 
   // Test

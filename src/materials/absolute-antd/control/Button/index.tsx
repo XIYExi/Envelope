@@ -31,11 +31,12 @@ const AButton: FC<IButtonProProp> = (props) => {
     <React.Fragment>
       {isTpl && (
         <div>
-          <Image preview={false} src={logo} alt={''} />
+          <Image preview={false} src={logo} alt={'Antd Button'} />
         </div>
       )}
       {!isTpl && (
         <Button
+          id="antd button"
           block={block}
           ghost={ghost}
           danger={danger}

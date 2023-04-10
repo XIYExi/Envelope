@@ -152,12 +152,12 @@ const HeaderComponent = memo((props: HeaderComponentProps) => {
   };
 
   const toBack = () => {
-    history.push('/');
+    history.push('/inner');
   };
 
   const newPage = () => {
     clearData();
-    history.push(`/editor?tid=${uuid(8, 16)}`);
+    history.push(`/inner/editor?tid=${uuid(8, 16)}`);
   };
 
   const handleSaveCode = () => {

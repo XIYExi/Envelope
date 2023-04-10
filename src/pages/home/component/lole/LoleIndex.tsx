@@ -14,6 +14,8 @@ import {
   Segment,
 } from 'semantic-ui-react';
 import styled from 'styled-components';
+/*@ts-ignore*/
+import { history } from 'umi';
 
 const FontDesign = styled.p`
   color: rgba(0, 0, 0, 0.5);
@@ -82,7 +84,15 @@ const LoleIndex = (props: any) => {
                 </FontDesign>
 
                 {/*@ts-ignore*/}
-                <Button primary>
+                <Button
+                  primary
+                  onClick={() => {
+                    window.open(
+                      'http://lole.feifeilong.work/md/storybook-static/index.html',
+                      'blank',
+                    );
+                  }}
+                >
                   查看组件库
                   {/*@ts-ignore*/}
                   <Icon name="arrow right" />
@@ -138,7 +148,13 @@ const LoleIndex = (props: any) => {
                 </FontDesign>
 
                 {/*@ts-ignore*/}
-                <Button primary>
+                <Button
+                  primary
+                  onClick={() => {
+                    window.open('/#/~docs/lole文档/lole_of_react');
+                    //history.push('/~docs/lole文档/lole_of_react')
+                  }}
+                >
                   设计文档
                   {/*@ts-ignore*/}
                   <Icon name="arrow right" />
@@ -185,7 +201,13 @@ const LoleIndex = (props: any) => {
                 </FontDesign>
 
                 {/*@ts-ignore*/}
-                <Button primary>
+                <Button
+                  primary
+                  onClick={() => {
+                    window.open('/#/~docs/lole文档/lole_of_react');
+                    //history.push('/~docs/lole文档/lole_of_react')
+                  }}
+                >
                   查看用户手册
                   {/*@ts-ignore*/}
                   <Icon name="arrow right" />
