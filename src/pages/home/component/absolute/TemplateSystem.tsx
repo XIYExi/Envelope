@@ -1,6 +1,14 @@
 import React, { FC } from 'react';
 import styles from '@/pages/home/index.less';
 import { Button, Card, Space, Typography } from 'antd';
+import { Image } from 'semantic-ui-react';
+import styled from 'styled-components';
+
+const ShowImage = styled(Image)`
+  width: 240px !important;
+  height: 360px !important;
+  object-fit: cover !important;
+`;
 
 const TemplateSystem: FC<{
   template: string;
@@ -22,7 +30,7 @@ const TemplateSystem: FC<{
               margin: '5px',
             }}
             cover={
-              <img
+              <ShowImage
                 alt="example"
                 src="https://os.alipayobjects.com/rmsportal/QBnOOoLaAfKPirc.png"
               />
@@ -37,7 +45,7 @@ const TemplateSystem: FC<{
 
           {
             //TODO 后续从服务器拉取数据，这里通过数组先填充
-            new Array(10).fill(0).map((item, i) => {
+            templateList.map((item, i) => {
               return (
                 <Card
                   key={i}
@@ -47,17 +55,12 @@ const TemplateSystem: FC<{
                     borderColor: template === 'test' ? '#8db8ee' : '',
                     margin: '5px',
                   }}
-                  cover={
-                    <img
-                      alt="example"
-                      src="https://os.alipayobjects.com/rmsportal/QBnOOoLaAfKPirc.png"
-                    />
-                  }
-                  onClick={() => chooseTemplate('empty')}
+                  cover={<ShowImage alt={item.description} src={item.src} />}
+                  onClick={() => chooseTemplate(item.key)}
                 >
                   <Card.Meta
-                    title="测试模板"
-                    description="用于占位，后续从服务器拉去模板"
+                    title={item.title}
+                    description={item.description}
                   />
                 </Card>
               );
@@ -97,3 +100,36 @@ const TemplateSystem: FC<{
 };
 
 export default TemplateSystem;
+
+const templateList = [
+  {
+    key: 'activity',
+    title: '活动模板',
+    description: '适用于移动端促销活动或额外信息的页面模板',
+    src: 'https://s1.ax1x.com/2023/04/11/ppOiEAs.png',
+  },
+  {
+    key: 'text',
+    title: '文字模板',
+    description: '适用于移动端文字介绍页面的模板',
+    src: 'https://s1.ax1x.com/2023/04/11/ppOiQuF.jpg',
+  },
+  {
+    key: 'wx_text',
+    title: '微信公众号模板',
+    description: '适用于微信公众号文案展示的模板',
+    src: 'https://s1.ax1x.com/2023/04/11/ppOi8E9.jpg',
+  },
+  {
+    key: 'shop',
+    title: '商店页面模板',
+    description: '适用于移动端网购商品展示页面的模板',
+    src: 'https://s1.ax1x.com/2023/04/11/ppOit9x.jpg',
+  },
+  {
+    key: 'friend',
+    title: '朋友圈模板',
+    description: '适用于构建移动端朋友圈的模板',
+    src: 'https://s1.ax1x.com/2023/04/11/ppOiUgK.jpg',
+  },
+];

@@ -1,6 +1,9 @@
 import { defineConfig } from 'umi';
 
 export default defineConfig({
+  define: {
+    ENV: 'dev',
+  },
   dynamicImport: {},
   dva: {
     immer: true,

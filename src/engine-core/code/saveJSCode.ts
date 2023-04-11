@@ -165,8 +165,10 @@ export default class Home extends React.Component{
 };
 
 export function saveJsZip(templateData: any, callBack?: any, getJson?: any) {
+  console.log('开始工作', templateData);
+
   // 每次保存重置保存对象数据。。
-  let templateStrObj: any = templateData;
+  let templateStrObj: { [key: string]: any } = templateData;
 
   const promiseObject: any = {};
 
@@ -182,7 +184,11 @@ export function saveJsZip(templateData: any, callBack?: any, getJson?: any) {
      */
 
     const datasourceName = `${item.type}${id}DataSource`;
-    templateStrObj[key]['item']['datasourceName'] = datasourceName;
+    console.log('当前datasourceName： ', datasourceName);
+    templateStrObj[key]['item'] = {
+      ...templateStrObj[key]['item'],
+      datasourceName: datasourceName,
+    };
 
     const props = `export const ${item.type}${id}DataSource = ${JSON.stringify(
       item.config,

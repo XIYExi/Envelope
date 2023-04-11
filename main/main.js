@@ -29,11 +29,11 @@ function createWindow() {
     // installDevtoolExt();
 
     mainWindow.loadURL('http://localhost:8000');
-    // mainWindow.webContents.openDevTools();
+    mainWindow.webContents.openDevTools();
   } else {
     //生产环境
     //暂不予考虑
-    mainWindow.loadFile(`${__dirname}/dist/index.html`);
+    mainWindow.loadFile(`dist/index.html`);
   }
 
   mainWindow.on('closed', () => {

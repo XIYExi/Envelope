@@ -9,7 +9,8 @@
     "esModuleInterop": true,
     "sourceMap": true,
     "baseUrl": "./",
-    "strict": true,
+    "strict": false,
+    "suppressImplicitAnyIndexErrors": true,
     "paths": {
       "@/*": ["src/*"],
       "@@/*": ["src/.umi/*"]

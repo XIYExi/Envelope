@@ -22,6 +22,7 @@ import MyPopover from 'yh-react-popover';
 import { saveAs } from 'file-saver';
 import { uuid } from '@/engine-lib-absolute/core-utils/tool';
 import logo from '@/assets/absolute/Card.svg';
+import { saveJsZip } from '@/engine-core/code/saveJSCode';
 
 const { confirm } = Modal;
 // TODO 测试用
@@ -71,7 +72,12 @@ const HeaderComponent = memo((props: HeaderComponentProps) => {
 
   const toCodeDownLoading = () => {
     console.log(pointData);
-
+    let data = localStorage.getItem('userData');
+    if (data != null) {
+      data = JSON.parse(data);
+    }
+    //console.log('data', data)
+    saveJsZip(data);
     //window.open('/ide');
   };
 
