@@ -1,4 +1,11 @@
-import React, { FC, memo, useCallback, useMemo, useState } from 'react';
+import React, {
+  FC,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import { ActionType } from '@/engine-lib-antv/common/enums';
 import {
   getDiamondNode,
@@ -16,14 +23,20 @@ import {
 import TargetBoxAntV from '@/engine-lib-antv/components/TargetBox';
 import { nodes } from '@/engine-lib-antv/common/nodeBar';
 import './index.scss';
+import { connect } from 'dva';
+import { StateWithHistory } from 'redux-undo';
 
 const { TabPane } = Tabs;
 
 const NodesBar: FC<any> = (props) => {
   const [data, setData] = useState({
-    dnd: {},
     freeze: false,
   });
+  const { cstate, dispatch } = props;
+  const graph = useRef(cstate.graph);
+  const dnd = useRef(cstate.dnd);
+  // text是用来测试的，保证ref的值被更新了
+  const text = useRef(cstate.text);
 
   const [collapsed, setCollapsed] = useState<boolean>(false);
   const changeCollapse = useMemo(() => {
@@ -37,7 +50,19 @@ const NodesBar: FC<any> = (props) => {
     setTabsKey(String(e));
   }, []);
 
-  /*useEffect(() => {
+  // 新方案，缺点是会造成大量渲染，每次modal中值变动都会导致此函数一次渲染
+  // 但这是必要开销！
+  useEffect(() => {
+    //console.log('NodesBar cstate: ', cstate)
+    graph.current = cstate.graph;
+    dnd.current = cstate.dnd;
+    text.current = cstate.text;
+  }, [cstate]);
+
+  /*
+  废案，不通过ref传值，全部使用dva，为了保证值最新，
+  在useEffect中监听最新值，之后通过组件内部的ref传递最新的画布数据
+  useEffect(() => {
     console.log('initDnd', props.dnd)
     console.log('尝试得到 graph.value ',props.graph)
 
@@ -48,6 +73,8 @@ const NodesBar: FC<any> = (props) => {
     //d = _d;
   }, [props]);*/
 
+  // 开始拖拽函数，通过监听组件内部的ref，来判断是否需要更新函数
+  // 因为函数中依赖dnd和graph的最新值，为了避免重复渲染，使用useCallBack监听，只要不拖拽创建新的节点就不会触发更新
   const startDrag = useCallback(
     (currentTarget: any, e: any) => {
       //console.log('initDnd', props.dnd)
@@ -101,13 +128,15 @@ const NodesBar: FC<any> = (props) => {
           break;
       }
 
-      const node = props.graph.current.createNode(json);
+      // const node = props.graph.current.createNode(json);
+      const node = graph.current.createNode(json);
       if (!data.freeze) {
-        console.log('d', props.dnd);
-        props.dnd.current.start(node, e);
+        // console.log('d', graph.current, dnd.current);
+        // cstate.dnd.start(node, e);
+        dnd.current.start(node, e);
       }
     },
-    [props],
+    [graph.current, dnd.current],
   );
 
   // 左侧 Tabs 的 Icon
@@ -143,6 +172,7 @@ const NodesBar: FC<any> = (props) => {
                 <TargetBoxAntV
                   key={index}
                   onMouseDown={(e: any) => startDrag(node, e)}
+                  title={node.title}
                 >
                   <div
                     className={
@@ -151,9 +181,7 @@ const NodesBar: FC<any> = (props) => {
                         : `default-${node.shape}`
                     }
                     style={node.styles}
-                  >
-                    <span>{node.label}</span>
-                  </div>
+                  ></div>
                 </TargetBoxAntV>
               );
             })}
@@ -185,7 +213,7 @@ const NodesBar: FC<any> = (props) => {
   return (
     <React.Fragment>
       <div
-        className={'list'}
+        className={'antvlist'}
         style={{
           transition: 'all ease-in-out 0.5s',
           position: 'fixed',
@@ -217,4 +245,8 @@ const NodesBar: FC<any> = (props) => {
   );
 };
 
-export default memo(NodesBar);
+export default connect((state: StateWithHistory<any>) => {
+  return {
+    cstate: state.present.antvModal,
+  };
+})(NodesBar);
