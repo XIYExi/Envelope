@@ -4,7 +4,6 @@ import ErrorClass from './errorClass';
 import { fromJSON, toJSON } from './transform';
 import { Channel } from './transmit';
 import { freezeGraph, unfreezeGraph } from './trigger';
-import { useGraph } from '../store';
 
 /**json格式化 */
 export function fmtJSON(target: any) {
@@ -36,28 +35,26 @@ export function fmtLabelOverflow(label: any) {
   return cutLabel;
 }
 
+// TODO 删除useGraph后下述代码暂时有误，之后统一修改
+
 /**获取画布数据 */
-export function getGraphJSON() {
-  const graph: any = useGraph();
-  return toJSON(graph.value);
+export function getGraphJSON(graph: any) {
+  return toJSON(graph);
 }
 
 /**初始化画布默认数据 */
-export function setDefaultGraphData(nodes: any, edges: any) {
-  const graph: any = useGraph();
-  fromJSON(graph.value, nodes, edges);
+export function setDefaultGraphData(nodes: any, edges: any, graph: any) {
+  fromJSON(graph, nodes, edges);
 }
 
 /**冻结画布 */
-export function disableGraph(bool: any) {
-  const graph: any = useGraph();
-  if (bool) freezeGraph(graph.value);
-  else unfreezeGraph(graph.value);
+export function disableGraph(bool: any, graph: any) {
+  if (bool) freezeGraph(graph);
+  else unfreezeGraph(graph);
 }
 
 /**清理画布 */
-export function graphClean() {
-  const graph: any = useGraph();
+export function graphClean(graph: any) {
   const cells = graph.value.getCells();
   if (cells.length) {
     // 删除前移除所有包含工具
@@ -88,9 +85,8 @@ export function runtimeError(cb: any) {
 }
 
 /**修改Node节点 */
-export function updateNode(data: any) {
-  const graph: any = useGraph();
-  const cells = graph.value.getSelectedCells();
+export function updateNode(data: any, graph: any) {
+  const cells = graph.getSelectedCells();
   if (Lang.isArray(cells) && cells.length === 1) {
     const cell = cells[0];
     const { label, ...otherParams } = data;
@@ -115,7 +111,7 @@ export function updateNode(data: any) {
       }
     }
     // 清除选框
-    graph.value.cleanSelection();
+    graph.cleanSelection();
   }
 }
 
@@ -123,17 +119,15 @@ export function updateNode(data: any) {
  * 图形校验
  * 判断是否有未连接的节点
  */
-export function validate() {
-  const graph: any = useGraph();
-
+export function validate(graph: any) {
   const errs = [];
 
   // 获取所有单元
-  const cells = graph.value.getCells();
+  const cells = graph.getCells();
   if (!cells.length) errs.push('画布无可用节点');
 
   // 获取所有边
-  const edges = graph.value.getEdges();
+  const edges = graph.getEdges();
   const nodeSet = new Set(
     edges.reduce((a: any, v: any) => {
       a.push(v.target.cell);
@@ -143,7 +137,7 @@ export function validate() {
   );
 
   // 获取所有节点
-  const nodes = graph.value.getNodes();
+  const nodes = graph.getNodes();
 
   // 如果通过边获取到的 所有节点数量与 node节点不匹配,则证明存在未连接的节点
   if (nodeSet.size !== nodes.length) errs.push('存在未连线的节点');
@@ -175,10 +169,9 @@ export function validate() {
 }
 
 /**获取node基础数据 */
-function getBaseNodes() {
-  const graph: any = useGraph();
+function getBaseNodes(graph: any) {
   // 获取所有节点
-  const nodes = graph.value.getNodes();
+  const nodes = graph.getNodes();
   return nodes.map((node: any) => {
     const { id, data } = node;
     return {
@@ -189,10 +182,9 @@ function getBaseNodes() {
 }
 
 /**获取edge基础数据 */
-function getBaseEdges() {
-  const graph: any = useGraph();
+function getBaseEdges(graph: any) {
   // 获取所有边
-  const edges = graph.value.getEdges();
+  const edges = graph.getEdges();
   return edges.map((edge: any) => {
     return {
       id: edge.id,
@@ -205,18 +197,18 @@ function getBaseEdges() {
 /**
  * 获取所有已存在的node节点和edge边
  */
-export function getAtoms(options: any) {
+export function getAtoms(graph: any, options?: any) {
   let atoms;
   // 如果是空，则获取所有
   switch (options) {
     case 'nodes':
-      atoms = { nodes: getBaseNodes() };
+      atoms = { nodes: getBaseNodes(graph) };
       break;
     case 'edges':
-      atoms = { edges: getBaseEdges() };
+      atoms = { edges: getBaseEdges(graph) };
       break;
     default:
-      atoms = { nodes: getBaseNodes(), edges: getBaseEdges() };
+      atoms = { nodes: getBaseNodes(graph), edges: getBaseEdges(graph) };
       break;
   }
   return atoms;
