@@ -9,12 +9,12 @@ interface ITools {
 export const Tools: ITools = {
   undo: {
     svg: 'undo',
-    can: false,
+    can: true,
     title: '撤销',
   },
   redo: {
     svg: 'redo',
-    can: false,
+    can: true,
     title: '重做',
   },
   zoomin: {
