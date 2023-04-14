@@ -51,7 +51,8 @@ const Home: FC = () => {
   };
 
   const gotoLowcodeEngine = () => {
-    history.push('/inner/lowcode');
+    //history.push('/inner/lowcode');
+    window.open('https://lowcode-engine.cn/demo/demo-general/index.html');
   };
 
   const gotoAntV = () => {
