@@ -1,13 +1,14 @@
 import React, { FC } from 'react';
+import { Typography } from 'antd';
 
 const TargetBoxAntV: FC<any> = (props) => {
   return (
     <>
-      <div className={'listWrap'} {...props}>
+      <div className={'antvListWrap'} {...props}>
         <div className={'module'}>
           <div
             style={{
-              height: '110px',
+              height: '45px',
               display: 'flex',
               justifyContent: 'center',
               alignItems: 'center',
@@ -15,8 +16,11 @@ const TargetBoxAntV: FC<any> = (props) => {
               overflow: 'hidden',
             }}
           >
-            {props.children}
+            <div style={{ transform: 'scale(0.6)' }}>{props.children}</div>
           </div>
+        </div>
+        <div className="antvTitle">
+          <p>{props.title}</p>
         </div>
       </div>
     </>

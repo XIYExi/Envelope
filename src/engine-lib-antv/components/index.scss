@@ -52,12 +52,11 @@
 
 
 
-.list {
+.antvlist {
   width: 350px;
   height: 100%;
   padding: 10px 0 10px 10px;
   box-shadow: 2px 0px 10px rgba(0, 0, 0, 0.2);
-  display: inline-block;
   background-color: #fff;
   & > div:nth-child(1) {
     height: 100%;
@@ -77,34 +76,48 @@
   .searchBar {
     margin-bottom: 20px;
   }
-  &Wrap {
-    width: 50%;
-    &:nth-child(even) {
-      padding-left: 0px;
-    }
-    &:nth-child(odd) {
-      padding-left: 8px;
-    }
-  }
-  .module {
-    position: relative;
-    margin-bottom: 10px;
-    width: 100%;
-    overflow: hidden;
-    user-select: none;
-    border: 2px solid #9e9e9e3d;
-    transition: border 0.3s;
+
+  .antvListWrap{
+    display: inline-flex;
+    width:100%;
+
     &:hover {
-      border: 2px solid #06c;
+      & > .module{
+        transform: translateY(-5px);
+        border: 2px solid #06c;
+      }
     }
-    &::after {
-      content: '';
-      position: absolute;
-      z-index: 99;
-      width: 100%;
-      height: 100%;
-      top: 0;
-      left: 0;
+
+    .module {
+      position: relative;
+      margin-bottom: 10px;
+      width: 70%;
+      overflow: hidden;
+      user-select: none;
+      border: 2px solid #9e9e9e3d;
+      border-radius: 12px;
+      transition: all 0.25s ease-in-out;
+      &:hover {
+        border: 2px solid #06c;
+      }
+      &::after {
+        content: '';
+        position: absolute;
+        z-index: 99;
+        width: 100%;
+        height: 100%;
+        top: 0;
+        left: 0;
+      }
+    }
+    .antvTitle{
+      p{
+        padding-top: 15px;
+        padding-left: 1em;
+        font-weight: 520;
+        cursor: default;
+      }
     }
   }
+
 }
