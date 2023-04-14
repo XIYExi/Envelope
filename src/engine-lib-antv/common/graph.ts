@@ -1,6 +1,5 @@
 import { Graph } from '@antv/x6';
 import trigger from '../common/trigger';
-import { useProvideGraph } from '../store';
 import registerNode from '../shape/registerNode';
 import registerGraphListener from '../eventSystems';
 
@@ -196,7 +195,6 @@ export function initGraph() {
   registerGraphListener(graph);
   // 注入触发器
   trigger(graph);
-  // 缓存实例化graph引用
-  useProvideGraph(graph);
+  // init中不触发缓存，有容器创建完成后保存到dva
   return graph;
 }
