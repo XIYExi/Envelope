@@ -22,9 +22,9 @@ module.exports = {
     category: 'public.app-category.developer-tools',
     target: 'default', // 目标包类型，
   },
-  /*dmg: {
-    background: 'build/appdmg.png', // dmg安装窗口背景图
-    icon: 'build/icon.icns', // 客户端图标
+  dmg: {
+    background: 'build/lole.png', // dmg安装窗口背景图
+    icon: 'build/lole_256x256.png', // 客户端图标
     iconSize: 100, // 安装图标大小
     // 安装窗口中包含的项目和配置
     contents: [
@@ -32,11 +32,11 @@ module.exports = {
       { x: 110, y: 280, type: 'file' },
     ],
     window: { width: 500, height: 500 }, // 安装窗口大小
-  },*/
-  /*  linux: {
+  },
+  linux: {
     target: ['AppImage', 'deb'],
-    icon: 'build/icon.png',
-  },*/
+    icon: 'build/lole_256x256.png',
+  },
   win: {
     target: ['nsis', 'portable', 'squirrel'],
     icon: 'build/lole_256x256.png', // 客户端图标

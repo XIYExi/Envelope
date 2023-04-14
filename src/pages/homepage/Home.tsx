@@ -93,7 +93,17 @@ export const Home = (props: any) => {
                 </FontDesign>
 
                 {/*@ts-ignore*/}
-                <Button size="large">下载客户端</Button>
+                <Button
+                  size="large"
+                  onClick={() => {
+                    window.open(
+                      'https://github.com/XIYExi/Envelope/releases/tag/Envelope2.0.0',
+                      'blank',
+                    );
+                  }}
+                >
+                  下载客户端
+                </Button>
                 {/*@ts-ignore*/}
                 <Button
                   size="large"

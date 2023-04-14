@@ -19,7 +19,9 @@
     "start:electrondev": "cross-env NODE_ENV=development nodemon --watch ./main/ --exec \"electron ./main/main.js\"",
     "start:umidev": "cross-env UMI_DEV=dev umi dev",
     "electron start!": "concurrently \"npm run start:umidev\" \"wait-on http://localhost:8000 && npm run start:electrondev\"",
-    "dist-win64": "cross-env ELECTRON_MIRROR=https://npm.taobao.org/mirrors/electron/ electron-builder -w --config ./electron-builder.config.js"
+    "dist-win64": "cross-env ELECTRON_MIRROR=https://npm.taobao.org/mirrors/electron/ electron-builder -w --config ./electron-builder.config.js",
+    "dist-linux": "cross-env ELECTRON_MIRROR=https://npm.taobao.org/mirrors/electron/ electron-builder -l --config ./electron-builder.config.js",
+    "dist-mac": "cross-env ELECTRON_MIRROR=https://npm.taobao.org/mirrors/electron/ electron-builder -m --config ./electron-builder.config.js"
   },
   "gitHooks": {
     "pre-commit": "lint-staged"
