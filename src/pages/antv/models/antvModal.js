@@ -14,7 +14,7 @@ export default {
   },
   reducers: {
     initializeGraph(state, action) {
-      console.log('test AntV dva', state, action);
+      //console.log('test AntV dva', state, action);
 
       return {
         ...state,
@@ -24,7 +24,7 @@ export default {
       };
     },
     singleClick(state, action) {
-      console.log('单击节点，触发事件');
+      //console.log("单击节点，触发事件");
       return {
         ...state,
         node: action.payload.node,
