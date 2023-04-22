@@ -4,7 +4,15 @@ export default (graph: any) => {
   graph.on('edge:connected', (args: any) => {
     const edge = args.edge;
     const node = args.currentCell;
-    const elem = args.currentMagnet;
+    let elem = args.currentMagnet;
+
+    if (elem.tagName === 'rect') {
+      /**
+       * 和graph.ts中同理，对应er节点，需要重定位到父节点g
+       */
+      elem = elem.parentNode;
+    }
+
     const portId = elem.getAttribute('port');
 
     if (node.isNode() && node.shape === 'vue-shape') {
