@@ -95,6 +95,11 @@ const ToolBar = (props: any) => {
     message.info('图数据导出成功！');
   };
 
+  const handleDownloadImage = () => {
+    graph.current.exportPNG('image.png', {});
+    message.info('图下载成功!');
+  };
+
   const handleExportJson = () => {
     const { ok, errs } = validate(graph.current);
     if (ok) {
@@ -216,6 +221,10 @@ const ToolBar = (props: any) => {
             </Button>
             <Button disabled={disable} onClick={() => handleExportJson()}>
               导出JSON
+            </Button>
+
+            <Button disabled={disable} onClick={() => handleDownloadImage()}>
+              下载图片
             </Button>
           </Space>
         </div>
