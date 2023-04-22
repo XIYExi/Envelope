@@ -1,4 +1,4 @@
-import { Graph } from '@antv/x6';
+import { Graph, Path } from '@antv/x6';
 import trigger from '../common/trigger';
 import registerNode from '../shape/registerNode';
 import registerGraphListener from '../eventSystems';
@@ -7,6 +7,9 @@ import registerGraphListener from '../eventSystems';
  * x6实例化
  */
 export function initGraph() {
+  // 注册自定义节点
+  registerNode();
+
   const graph = new Graph({
     // @ts-ignore
     container: document.getElementById('container'),
@@ -49,7 +52,7 @@ export function initGraph() {
     // https://x6.antv.vision/zh/docs/tutorial/basic/history/#gatsby-focus-wrapper
     history: {
       enabled: true,
-      beforeAddCommand(event, args) {
+      beforeAddCommand(event: any, args: any) {
         // @ts-ignore
         if (args.key) {
           // 禁止删除按钮添加到 Undo 队列中
@@ -129,14 +132,15 @@ export function initGraph() {
       // 指定连接点，默认值为 boundary。
       connectionPoint: 'anchor',
       // 连接器将起点、路由返回的点、终点加工为 元素的 d 属性，决定了边渲染到画布后的样式，默认值为 normal。
-      connector: {
-        name: 'rounded',
+      connector: 'algo-connector',
+      // 路由将边的路径点 vertices 做进一步转换处理，并在必要时添加额外的点，然后返回处理后的点，默认值为 normal。
+      router: {
+        name: 'er',
         args: {
-          radius: 20,
+          offset: 25,
+          direction: 'H',
         },
       },
-      // 路由将边的路径点 vertices 做进一步转换处理，并在必要时添加额外的点，然后返回处理后的点，默认值为 normal。
-      router: 'manhattan',
       // https://x6.antv.vision/zh/docs/tutorial/basic/interacting/#validatemagnet
       // 判断是否新增边
       validateMagnet({ magnet }) {
@@ -175,10 +179,29 @@ export function initGraph() {
         }
         // @ts-ignore
         if (sourceCell.getData()?.disableMove) return false;
+
+        let t: any = undefined;
+        if (targetMagnet.tagName === 'rect') {
+          //当tagName选到rect说明，当前是er节点，拖拽后选到下一层body上去了，这里向上回溯得到g标签
+          t = targetMagnet.parentNode;
+        }
+
         // 判断目标链接桩是否可连接
-        const portId = targetMagnet.getAttribute('port');
+        // 4.22 添加额外判断，是否为er图，如果是er图则将目标节点替换为t
+        const portId =
+          t === undefined
+            ? targetMagnet.getAttribute('port')
+            : t.getAttribute('port');
+
+        /**
+         * targetMagnet 当使用的节点时常规节点（目前除了er外）、
+         * 这类节点都存在连接框，所以存在属性port，
+         * 但是er图时动态生成ports连接桩，并不存在连接框，所以下述判断portId存在就直接走流程，不存在就默认存在
+         */
+
         // @ts-ignore
         const node = targetView.cell;
+
         // @ts-ignore
         const port = node.getPort(portId);
         if (!port) {
@@ -189,8 +212,6 @@ export function initGraph() {
     },
   });
 
-  // 注册Vue节点
-  registerNode();
   // 注册画布监听器
   registerGraphListener(graph);
   // 注入触发器
