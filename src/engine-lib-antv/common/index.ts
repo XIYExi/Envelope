@@ -115,6 +115,28 @@ export function updateNode(data: any, graph: any) {
   }
 }
 
+/**修改ER Node节点
+ * E-R节点需要修改ports，所以不可以直接用updataNode
+ * 虽然可以修改，但直接写来的快
+ * */
+export function updateERNode(data: any, graph: any) {
+  const cells = graph.getSelectedCells();
+  // 选中的是单个节点
+  if (Lang.isArray(cells) && cells.length === 1) {
+    const cell = cells[0];
+    console.log('当前选中节点', cell);
+    //console.log('是否为node',cell.isNode())
+    if (cell.hasPorts()) {
+      cell.removePorts();
+    }
+
+    cell.addPorts(data);
+  }
+
+  // 清除选框
+  graph.cleanSelection();
+}
+
 /**
  * 图形校验
  * 判断是否有未连接的节点
