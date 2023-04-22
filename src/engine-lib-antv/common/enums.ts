@@ -95,12 +95,32 @@ interface IActionType {
   TRIGGER: string;
   CONDITION: string;
   ACTION: string;
+  OPTIONAL: string;
+  DATA: string;
+  CONNECT: string;
+  DAG: string;
+  DAGLINE: string;
+  ER: string;
+  ALGO: string;
+  PRO: string;
 }
-export const ActionType = {
+export const ActionType: IActionType = {
   /**@type {String} 触发器 */
   TRIGGER: 'TRIGGER',
   /**@type {String} 条件 */
   CONDITION: 'CONDITION',
   /**@type {String} 动作 */
   ACTION: 'ACTION',
+  /**@type{String} 可选操作*/
+  OPTIONAL: 'OPTIONAL',
+  /**@type{String} 数据操作*/
+  DATA: 'DATA',
+  /**@type{String} 连接操作*/
+  CONNECT: 'CONNECT',
+
+  DAG: 'DAG',
+  DAGLINE: 'DAGLINE',
+  ER: 'ER',
+  ALGO: 'ALGO',
+  PRO: 'PRO',
 };
