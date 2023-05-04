@@ -3,7 +3,6 @@ import { connect } from 'dva';
 import { StateWithHistory } from 'redux-undo';
 import { Button, Divider, Input, Radio, Space, Typography } from 'antd';
 import type { RadioChangeEvent } from 'antd';
-import { toJSON } from '@/engine-lib-antv/common/transform';
 import {
   fmtJSON,
   getAtoms,
