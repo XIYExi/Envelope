@@ -20,6 +20,13 @@ export default defineConfig({
   manifest: {
     basePath: '/',
   },
+  proxy: {
+    '/api': {
+      target: 'http://localhost:8012',
+      pathRewrite: { '^/api': '' },
+      changeOrigin: true,
+    },
+  },
   mode: 'site',
   resolve: {
     includes: ['src/dumi', 'src/materials'],
@@ -28,30 +35,58 @@ export default defineConfig({
   routes: [
     {
       exact: false,
+      path: '/rbac',
+      component: '@/pages/rbac/index',
+      routes: [
+        {
+          exact: true,
+          path: '/rbac/userlist',
+          component: '../pages/rbac/page/UserList',
+        },
+        {
+          exact: true,
+          path: '/rbac/',
+          component: '../pages/rbac/page/Home',
+        },
+      ],
+    },
+    {
+      exact: false,
       path: '/',
       component: '@/layout/index',
       routes: [
         {
+          exact: true,
           path: '/',
           component: '../pages/homepage',
         },
         {
+          exact: true,
+          path: '/login',
+          component: '../pages/login',
+        },
+        {
+          exact: true,
           path: '/inner',
           component: '../pages/home',
         },
         {
+          exact: true,
           path: '/inner/editor',
           component: '../pages/editor',
         },
         {
+          exact: true,
           path: '/inner/lowcode',
           component: '../pages/lowcode',
         },
         {
+          exact: true,
           path: '/inner/antv',
           component: '../pages/antv',
         },
         {
+          exact: true,
           path: '/inner/test',
           component: '../pages/test',
         },
