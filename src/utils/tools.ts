@@ -40,3 +40,11 @@ export function throttle(fn: Function, delay: number) {
     }
   };
 }
+
+const LOCAL_JWT_KEY = 'envelopecloudjwt';
+export const setJwtToken = (jwtToken) => {
+  sessionStorage.setItem(LOCAL_JWT_KEY, jwtToken);
+};
+export const getJwtToken = () => {
+  return sessionStorage.getItem(LOCAL_JWT_KEY);
+};

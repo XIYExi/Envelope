@@ -272,7 +272,6 @@ function homeReducer(state: any, action: any) {
 
 const HomeIndex: FC<any> = (props) => {
   const [maps, setMaps] = useState(renderMsg);
-
   const [state, dispatch] = React.useReducer(homeReducer, initialState);
   const { loading, results, value } = state;
   const timeoutRef = React.useRef();
