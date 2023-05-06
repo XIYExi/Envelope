@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback, useEffect, useRef } from 'react';
 import './index.less';
 import {
   Button,
@@ -12,6 +12,7 @@ import phone from '../../assets/pages/phone.png';
 import styled from 'styled-components';
 /*@ts-ignore*/
 import VideoPlay from 'react-sublime-video';
+import loleLogo from '../../assets/home/loleLogo.png';
 import cell1 from '../../assets/pages/cell1.png';
 import cell2 from '../../assets/pages/cell2.png';
 import cell3 from '../../assets/pages/cell3.png';
@@ -67,10 +68,72 @@ const FeatureCardCss = {
   margin: 'auto',
 };
 
+const HeaderSection = styled.section`
+  position: fixed;
+  width: 100%;
+  height: 4.5em;
+  background: rgba(34, 53, 73, 1);
+  z-index: 999 !important;
+`;
+
 export const Home = (props: any) => {
+  const headRef = useRef(null);
+
+  const handleScroll = useCallback((event) => {
+    const scroll = document.getElementById('homepage').scrollTop;
+    if (scroll >= 400) {
+      headRef.current.style.boxShadow =
+        'rgba(100, 100, 111, 0.2) 0px 7px 29px 0px';
+      headRef.current.style.opacity = '0.6';
+    } else {
+      headRef.current.style.boxShadow = 'none';
+      headRef.current.style.opacity = `${(3000 - scroll * 3) / 3000}`;
+    }
+  }, []);
+
+  useEffect(() => {
+    const scrollDom = document.getElementById('homepage');
+    scrollDom.addEventListener('scroll', handleScroll);
+    return () => scrollDom.removeEventListener('scroll', handleScroll);
+  }, [handleScroll]);
+
   return (
     <React.Fragment>
-      <div>
+      <div
+        id="homepage"
+        style={{ height: '100%', overflowY: 'auto', overflowX: 'hidden' }}
+      >
+        {/*0 - 标题栏*/}
+        <HeaderSection ref={headRef}>
+          <div
+            style={{
+              position: 'absolute',
+              marginTop: '1em',
+              marginLeft: '1em',
+            }}
+          >
+            <Image src={loleLogo} size="mini" />
+          </div>
+
+          <div
+            style={{
+              position: 'absolute',
+              marginTop: '1em',
+              marginRight: '2em',
+              right: '10px',
+            }}
+          >
+            {/*@ts-ignore*/}
+            <Button
+              onClick={() => {
+                history.push('/login');
+              }}
+            >
+              登录
+            </Button>
+          </div>
+        </HeaderSection>
+
         {/*1 - 首页*/}
         <section className="bg" style={{ height: '100vh' }}>
           <div style={{ paddingTop: '6.5em' }} />
