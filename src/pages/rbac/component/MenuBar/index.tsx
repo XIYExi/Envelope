@@ -77,20 +77,35 @@ const MenuBar = (props: any) => {
         用户管理
       </Menu.Item>
 
-      <Menu.Item icon={<BookOutlined />} onClick={() => {}}>
+      <Menu.Item
+        icon={<BookOutlined />}
+        onClick={() => {
+          history.push('/rbac/templatelist');
+        }}
+      >
         模板管理
       </Menu.Item>
 
-      <Menu.Item icon={<AppstoreOutlined />} onClick={() => {}}>
+      <Menu.Item
+        icon={<AppstoreOutlined />}
+        onClick={() => {
+          history.push('/rbac/log');
+        }}
+      >
         日志查询
       </Menu.Item>
 
-      <Menu.Item icon={<SettingOutlined />} onClick={() => {}}>
-        微服务查询
+      <Menu.Item
+        icon={<SettingOutlined />}
+        onClick={() => {
+          history.push('/rbac/server');
+        }}
+      >
+        注册中心
       </Menu.Item>
 
       <Menu.Item icon={<SettingOutlined />} onClick={() => {}}>
-        数据库查询
+        数据监控
       </Menu.Item>
 
       <SubMenu icon={<BookOutlined />} title="开发内档">
