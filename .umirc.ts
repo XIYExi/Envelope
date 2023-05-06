@@ -45,6 +45,21 @@ export default defineConfig({
         },
         {
           exact: true,
+          path: '/rbac/templatelist',
+          component: '../pages/rbac/page/TemplateList',
+        },
+        {
+          exact: true,
+          path: '/rbac/server',
+          component: '../pages/rbac/page/Eureka',
+        },
+        {
+          exact: true,
+          path: '/rbac/log',
+          component: '../pages/rbac/page/LogMirror',
+        },
+        {
+          exact: true,
           path: '/rbac/',
           component: '../pages/rbac/page/Home',
         },
