@@ -1,0 +1,263 @@
+import mockjs from 'mockjs';
+
+export default {
+  'GET /templateApi/template/list': mockjs.mock({
+    success: true,
+    'data|20': [
+      {
+        templateId: '@id',
+        templateTitle: '@name',
+        templateUi: '@integer(1,3)',
+        templateDesc: '@cparagraph(2)',
+        templateType: '@integer(1,3)',
+        createTime: '@datetime("yyyy-MM-dd A HH:mm:ss")',
+        updateTime: '@datetime("yyyy-MM-dd A HH:mm:ss")',
+      },
+    ],
+  }),
+
+  'GET /templateApi/template/queryById': mockjs.mock({
+    success: true,
+    data: {
+      content: JSON.stringify([
+        {
+          id: '166671',
+          item: {
+            type: 'Alert',
+            config: {
+              message: 'Alert',
+              type: 'success',
+              closable: true,
+              banner: false,
+              showIcon: false,
+            },
+            h: 20,
+            editableEl: [
+              { key: 'message', name: '警告提示内容', type: 'Text' },
+              {
+                key: 'type',
+                name: '警告类型',
+                type: 'Select',
+                range: [
+                  { key: 'success', text: '成功' },
+                  { key: 'info', text: '通知' },
+                  { key: 'warning', text: '警告' },
+                  { key: 'error', text: '错误' },
+                ],
+              },
+              { key: 'closable', name: '是否可关闭', type: 'Switch' },
+              { key: 'banner', name: '是否用作顶部公告', type: 'Switch' },
+              { key: 'showIcon', name: '是否显示图标', type: 'Switch' },
+            ],
+            templateStr:
+              "import React, { FC, memo } from 'react';\nimport { IAlertConfig } from '@/materials/absolute-antd/base/Alert/schema';\nimport { Alert, Image } from 'antd';\nimport logo from '../../../../assets/absolute/Logo.png';\n\n/*begin to delete*/\nexport type IAlertPrpConfig = IAlertConfig & {\n  isTpl: boolean;\n};\n/*end to delete*/\n\nconst AAlert: FC<IAlertPrpConfig> = (props) => {\n  const { isTpl, ...restProps } = props;\n\n  const { message } = props;\n\n  return (\n    <React.Fragment>\n      {isTpl && (\n        <div>\n          <Image src={logo} alt=\"\" />\n        </div>\n      )}\n      {!isTpl && (\n        // @ts-ignore\n        <Alert message={message} {...restProps} />\n      )}\n    </React.Fragment>\n  );\n};\n\nexport default memo(AAlert);\n",
+            category: 'base',
+            x: 0,
+          },
+          point: {
+            w: 24,
+            h: 20,
+            x: 0,
+            y: 109,
+            i: '166671',
+            moved: true,
+            static: false,
+            isBounded: true,
+          },
+          status: 'inToCanvas',
+        },
+        {
+          id: '142873',
+          item: {
+            type: 'Carousel',
+            config: {
+              direction: 'bottom',
+              effect: 'scrollx',
+              round: 0,
+              autoPlay: true,
+              imgList: [
+                {
+                  id: '1',
+                  title: '趣谈小课1',
+                  desc: '致力于打造优质小课程',
+                  link: 'xxxxx',
+                  imgUrl: [
+                    {
+                      uid: '001',
+                      name: 'image.png',
+                      status: 'done',
+                      url: 'http://h5.dooring.cn/uploads/1_1740bd7c3dc.png',
+                    },
+                  ],
+                },
+                {
+                  id: '2',
+                  title: '趣谈小课1',
+                  desc: '致力于打造优质小课程',
+                  link: 'xxxxx',
+                  imgUrl: [
+                    {
+                      uid: '001',
+                      name: 'image.png',
+                      status: 'done',
+                      url: 'http://h5.dooring.cn/uploads/1_1740bd7c3dc.png',
+                    },
+                  ],
+                },
+              ],
+              tplImg: 'http://h5.dooring.cn/uploads/1_1740bd7c3dc.png',
+            },
+            h: 82,
+            editableEl: [
+              {
+                key: 'direction',
+                name: '滑动条位置',
+                type: 'Radio',
+                range: [
+                  { key: 'bottom', text: '底部' },
+                  { key: 'top', text: '顶部' },
+                  { key: 'right', text: '右侧' },
+                  { key: 'left', text: '左侧' },
+                ],
+              },
+              {
+                key: 'effect',
+                name: '动画效果',
+                type: 'Radio',
+                range: [
+                  { key: 'scrollx', text: '滑动' },
+                  { key: 'fade', text: '消失' },
+                ],
+              },
+              { key: 'round', name: '圆角', type: 'Number' },
+              { key: 'autoPlay', name: '是否自动切换', type: 'Switch' },
+              { key: 'imgList', name: '图片列表', type: 'DataList' },
+            ],
+            templateStr:
+              "import { Carousel } from 'antd';\nimport React, { FC, memo, PropsWithChildren } from 'react';\nimport styled from 'styled-components';\nimport { ICarouselConfig } from './schema';\nimport logo from '../../../../assets/absolute/banner.png';\n\n/*begin to delete*/\ninterface CarouselTypes extends ICarouselConfig {\n  isTpl: boolean;\n}\n/*end to delete*/\n\nconst PicItem = styled.div`\n  display: inline-block;\n  width: 100%;\n  max-height: 220px;\n  overflow: hidden;\n  vertical-align: top;\n  img {\n    width: 100%;\n  }\n`;\n\nconst ACarouselWrapper = styled.div`\n  width: 100%;\n  overflow: hidden;\n`;\n\nconst ACarousel: FC<CarouselTypes> = (props) => {\n  const { isTpl, ...restProps } = props;\n\n  const { direction, effect, autoPlay, imgList, round } = restProps;\n\n  const contentRender = () => {\n    return imgList.map((item, i) => {\n      return (\n        <PicItem key={+i} style={{ borderRadius: round + 'px' }}>\n          <a href={item.link}>\n            <img\n              src={item.imgUrl.length > 0 ? item.imgUrl[0].url : ''}\n              alt=\"\"\n            />\n          </a>\n        </PicItem>\n      );\n    });\n  };\n\n  return (\n    <ACarouselWrapper>\n      {isTpl ? (\n        <PicItem>\n          <img src={logo} alt=\"?\" />\n        </PicItem>\n      ) : (\n        <Carousel dotPosition={direction} effect={effect} autoplay={autoPlay}>\n          {contentRender()}\n        </Carousel>\n      )}\n    </ACarouselWrapper>\n  );\n};\n\nexport default memo(ACarousel);\n",
+            category: 'base',
+            x: 0,
+          },
+          point: { i: 'x-1', x: 0, y: 37, w: 24, h: 82, isBounded: true },
+          status: 'inToCanvas',
+        },
+        {
+          id: '088438',
+          item: {
+            type: 'Divider',
+            config: {
+              title: '嵌套的标题',
+              dashed: false,
+              orientation: 'center',
+              plain: false,
+            },
+            h: 15,
+            editableEl: [
+              { key: 'title', name: '嵌套的标题', type: 'Text' },
+              { key: 'dashed', name: '是否为虚线', type: 'Switch' },
+              {
+                key: 'orientation',
+                name: '标题位置',
+                type: 'Select',
+                range: [
+                  { key: 'left', text: '左侧' },
+                  { key: 'center', text: '居中' },
+                  { key: 'right', text: '右侧' },
+                ],
+              },
+              { key: 'plain', name: '文字是否为普通正文样式', type: 'Switch' },
+            ],
+            templateStr:
+              "import React, { FC, memo } from 'react';\nimport { IDividerConfig } from '@/materials/absolute-antd/base/Divider/schema';\nimport { Divider, Image } from 'antd';\nimport logo from '../../../../assets/absolute/Divider.svg';\n\n/*begin to delete*/\ninterface IDividerPropProps extends IDividerConfig {\n  isTpl: boolean;\n}\n/*end to delete*/\n\nconst ADivider: FC<IDividerPropProps> = (props) => {\n  const { isTpl, ...restProps } = props;\n\n  const { orientation, title, dashed, plain } = restProps;\n\n  return (\n    <React.Fragment>\n      {isTpl && (\n        <div>\n          <Image preview={false} src={logo} alt={''} />\n        </div>\n      )}\n      {!isTpl && title.length === 0 && (\n        <div>\n          <Divider plain={plain} orientation={orientation} dashed={dashed} />\n        </div>\n      )}\n      {!isTpl && title.length > 0 && (\n        <div>\n          <Divider plain={plain} orientation={orientation} dashed={dashed}>\n            {title}\n          </Divider>\n        </div>\n      )}\n    </React.Fragment>\n  );\n};\n\nexport default memo(ADivider);\n",
+            category: 'base',
+            x: 0,
+          },
+          point: {
+            w: 24,
+            h: 39,
+            x: 0,
+            y: 103,
+            i: '088438',
+            moved: true,
+            static: false,
+            isBounded: true,
+          },
+          status: 'inToCanvas',
+        },
+        {
+          id: '905984',
+          item: {
+            type: 'Paragraph',
+            config: {
+              text: 'Ant Design, a design language for background applications, is refined by Ant UED Team. Ant\n        Design, a design language for background applications, is refined by Ant UED Team. Ant\n        Design, a design language for background applications, is refined by Ant UED Team. Ant\n        Design, a design language for background applications, is refined by Ant UED Team. Ant\n        Design, a design language for background applications, is refined by Ant UED Team. Ant\n        Design, a design language for background applications, is refined by Ant UED Team.',
+              disabled: false,
+              code: false,
+              delete: false,
+              strong: false,
+              italic: false,
+              underline: false,
+              mark: false,
+              color: 'rgba(60, 60, 60, 1)',
+              fontSize: 14,
+              indent: 20,
+              lineHeight: 1.8,
+              textAlign: 'left',
+              bgColor: 'rgba(255, 255, 255, 0)',
+              padding: 0,
+              radius: 0,
+              rows: 2,
+              expendable: true,
+              symbol: 'more',
+            },
+            h: 36,
+            editableEl: [
+              { key: 'text', name: '文字', type: 'TextArea' },
+              { key: 'disabled', name: '禁用文本', type: 'Switch' },
+              { key: 'code', name: '添加代码样式', type: 'Switch' },
+              { key: 'delete', name: '删除线样式', type: 'Switch' },
+              { key: 'strong', name: '加粗', type: 'Switch' },
+              { key: 'italic', name: '斜体', type: 'Switch' },
+              { key: 'mark', name: '添加标记', type: 'Switch' },
+              { key: 'underline', name: '下划线', type: 'Switch' },
+              { key: 'color', name: '颜色', type: 'Color' },
+              { key: 'fontSize', name: '字体大小', type: 'Number' },
+              { key: 'indent', name: '首行缩进', type: 'Number' },
+              { key: 'lineHeight', name: '行高', type: 'Number' },
+              {
+                key: 'textAlign',
+                name: '对齐方式',
+                type: 'Select',
+                range: [
+                  { key: 'left', text: '左对齐' },
+                  { key: 'right', text: '右对齐' },
+                  { key: 'center', text: '居中' },
+                ],
+              },
+              { key: 'bgColor', name: '背景颜色', type: 'Color' },
+              { key: 'padding', name: '填充间距', type: 'Number' },
+              { key: 'radius', name: '背景圆角', type: 'Number' },
+              { key: 'rows', name: '最大行数', type: 'Number' },
+              { key: 'expendable', name: '是否可展开', type: 'Switch' },
+              { key: 'symbol', name: '展开标志', type: 'Text' },
+            ],
+            templateStr:
+              "import React, { memo, FC } from 'react';\nimport { Image, Typography } from 'antd';\nimport styled from 'styled-components';\nimport logo from '../../../../assets/absolute/paragraph.png';\nimport { ILongTextConfig } from '@/materials/absolute-antd/base/Paragraph/schema';\n\n/*begin to delete*/\nexport interface ILongTextProps extends ILongTextConfig {\n  isTpl: boolean;\n}\n/*end to delete*/\n\ntype TLongTextSelectKeyType = 'left' | 'right' | 'center';\ntype TSelectDefaultType<KeyType> = KeyType;\n\nconst LongTextWrapper = styled(Typography.Paragraph)<{\n  $color: string;\n  indent: number;\n  $fontSize: number;\n  $lineHeight: number;\n  $textAlign: TSelectDefaultType<TLongTextSelectKeyType>;\n  $bgColor: string;\n  $padding: number;\n  radius: number;\n}>`\n  color: ${(props) => props.$color};\n  text-indent: ${(props) => props.indent + 'px'};\n  font-size: ${(props) => props.$fontSize};\n  line-height: ${(props) => props.$lineHeight};\n  text-align: ${(props) => props.$textAlign};\n  background-color: ${(props) => props.$bgColor};\n  padding: ${(props) => props.$padding};\n  border-radius: ${(props) => props.radius};\n`;\n\nconst AParagraph: FC<ILongTextProps> = (props) => {\n  const {\n    isTpl,\n\n    ...restProps\n  } = props;\n\n  // code, delete, mark等antd配置\n  const {\n    text,\n    fontSize,\n    color,\n    indent,\n    lineHeight,\n    textAlign,\n    bgColor,\n    padding,\n    radius,\n    rows,\n    expendable,\n    symbol,\n    ...rest\n  } = restProps;\n\n  return (\n    <React.Fragment>\n      {isTpl && (\n        <div>\n          <Image src={logo} alt=\"\" />\n        </div>\n      )}\n      {!isTpl && (\n        <LongTextWrapper\n          $color={color}\n          indent={indent}\n          $fontSize={fontSize}\n          $lineHeight={lineHeight}\n          $textAlign={textAlign}\n          $bgColor={bgColor}\n          $padding={padding}\n          radius={radius}\n          ellipsis={{\n            rows: rows,\n            expandable: expendable,\n            symbol: symbol,\n          }}\n          {...rest}\n        >\n          {text}\n        </LongTextWrapper>\n      )}\n    </React.Fragment>\n  );\n};\n\nexport default memo(AParagraph);\n",
+            category: 'base',
+            x: 0,
+          },
+          point: {
+            w: 22,
+            h: 161,
+            x: 1,
+            y: 141,
+            i: '905984',
+            moved: false,
+            static: false,
+            isBounded: true,
+          },
+          status: 'inToCanvas',
+        },
+      ]),
+    },
+  }),
+};
