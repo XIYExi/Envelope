@@ -1,19 +1,38 @@
 import React from 'react';
 import {
   Button,
+  Checkbox,
+  Divider,
   Form,
   Grid,
   Header,
   Image,
-  Message,
+  Popup,
   Segment,
 } from 'semantic-ui-react';
 import logo from '../../assets/home/loleLogo.png';
+import signin from '../../assets/home/signin.png';
+import signup from '../../assets/home/signup.png';
 import axios from 'axios';
 import { setJwtToken } from '@/utils/tools';
 import { history } from 'umi';
 import { back_port } from '@/utils/port';
 import { message } from 'antd';
+import styled from 'styled-components';
+
+const DividerWrapper = styled(Divider)`
+  margin-top: 3em !important;
+  margin-bottom: 3em !important;
+`;
+
+const FormItemWrapper = styled(Form.Input)`
+  margin-bottom: 1.5em !important;
+`;
+
+const SegmentWrapper = styled(Segment)`
+  margin-top: 0 !important;
+  padding-top: 0 !important;
+`;
 
 class LoginForm extends React.Component<any, any> {
   constructor(props) {
@@ -73,7 +92,8 @@ class LoginForm extends React.Component<any, any> {
         if (response.data.message !== '用户不存在') {
           setJwtToken(response.data.message);
 
-          history.replace('/inner');
+          if (inputUsername === 'admin') history.replace('/rbac');
+          else history.replace('/inner');
         } else message.error(response.data.message);
       })
       .catch((error) => console.log(error));
@@ -114,110 +134,173 @@ class LoginForm extends React.Component<any, any> {
   render() {
     return (
       <div className="login">
-        <Grid
-          textAlign="center"
-          style={{ height: '100vh' }}
-          verticalAlign="middle"
-        >
-          <Grid.Column style={{ maxWidth: 450 }}>
-            <Header as="h2" color="teal" textAlign="center">
-              <Image style={{ width: '50px' }} src={logo} /> Envelop
-              低代码整合平台
-            </Header>
-            {this.state.which === 'in' && (
-              <>
-                <Form size="large">
-                  <Segment stacked>
-                    <Form.Input
-                      fluid
-                      icon="user"
-                      iconPosition="left"
-                      placeholder="用户名"
-                      onChange={(e) => this.bindInputUsername(e)}
-                    />
-                    <Form.Input
-                      fluid
-                      icon="lock"
-                      iconPosition="left"
-                      placeholder="密码"
-                      type="password"
-                      onChange={(e) => this.bindInputPwd(e)}
-                    />
-                    {/*@ts-ignore*/}
-                    <Button
-                      color="teal"
-                      fluid
-                      size="large"
-                      onClick={this.bindLoginBtn}
-                    >
-                      登录
-                    </Button>
-                  </Segment>
-                </Form>
-                {/*@ts-ignore*/}
-                <Message>
-                  新用户？ <a onClick={this.jumpToSignUp}>立刻注册</a>
-                </Message>
-              </>
-            )}
-            {this.state.which === 'out' && (
-              <>
-                <Form size="large">
-                  <Segment stacked>
-                    <Form.Input
-                      fluid
-                      icon="user"
-                      iconPosition="left"
-                      placeholder="请输入用户名"
-                      onChange={(e) => this.bindInputUsername(e)}
-                    />
-                    <Form.Input
-                      fluid
-                      icon="user"
-                      iconPosition="left"
-                      placeholder="请输入昵称"
-                      onChange={(e) => this.bindInputNickname(e)}
-                    />
-                    <Form.Input
-                      fluid
-                      icon="lock"
-                      iconPosition="left"
-                      placeholder="请输入密码"
-                      type="password"
-                      onChange={(e) => this.bindInputPwd(e)}
-                    />
-                    <Form.Input
-                      fluid
-                      icon="lock"
-                      iconPosition="left"
-                      placeholder="请确认输入密码"
-                      type="password"
-                    />
-                    <Form.Input
-                      fluid
-                      icon="phone"
-                      iconPosition="left"
-                      placeholder="请输入电话"
-                      onChange={(e) => this.bindInputTel(e)}
-                    />
-                    {/*@ts-ignore*/}
-                    <Button
-                      color="teal"
-                      fluid
-                      size="large"
-                      onClick={this.bindSignUpBtn}
-                    >
-                      注册
-                    </Button>
-                  </Segment>
-                </Form>
-                {/*@ts-ignore*/}
-                <Message>
-                  返回到 <a onClick={this.jumpToSignUp}>登录</a>
-                </Message>
-              </>
-            )}
-          </Grid.Column>
+        <Grid style={{ height: '100vh' }} verticalAlign="middle">
+          <Grid.Row>
+            <Grid.Column width={4}>
+              <div style={{ paddingLeft: '3em' }}>
+                <Header as="h2" color="teal" textAlign="center">
+                  <Image style={{ width: '64px' }} src={logo} />
+                  <p
+                    style={{
+                      marginTop: '0.3em',
+                      fontSize: '24px',
+                      fontWeight: 550,
+                    }}
+                  >
+                    Envelope
+                  </p>
+                </Header>
+
+                <DividerWrapper horizontal>
+                  {this.state.which === 'in' ? '用户登录' : '新用户注册'}
+                </DividerWrapper>
+
+                {this.state.which === 'in' && (
+                  <>
+                    <Form size="large">
+                      <Segment basic>
+                        <Form.Field>
+                          <label>用户名</label>
+                          <FormItemWrapper
+                            fluid
+                            icon="user"
+                            iconPosition="left"
+                            onChange={(e) => this.bindInputUsername(e)}
+                          />
+                        </Form.Field>
+
+                        <Form.Field>
+                          <label>密码</label>
+                          <Form.Input
+                            fluid
+                            icon="lock"
+                            iconPosition="left"
+                            type="password"
+                            onChange={(e) => this.bindInputPwd(e)}
+                          />
+                        </Form.Field>
+
+                        <Form.Field>
+                          {/*@ts-ignore*/}
+                          <Checkbox label="记住我" />
+                          <span style={{ position: 'absolute', right: '5px' }}>
+                            {/*@ts-ignore*/}
+                            <Popup
+                              content="鬼"
+                              position="bottom right"
+                              trigger={<a>忘记密码？</a>}
+                            />
+                          </span>
+                        </Form.Field>
+
+                        <div style={{ marginTop: '3em' }}>
+                          {/*@ts-ignore*/}
+                          <Button
+                            color="teal"
+                            fluid
+                            size="large"
+                            onClick={this.bindLoginBtn}
+                          >
+                            登录
+                          </Button>
+                        </div>
+                      </Segment>
+                    </Form>
+                    {/* @ts-ignore*/}
+                    <SegmentWrapper basic textAlign={'center'}>
+                      新用户？ <a onClick={this.jumpToSignUp}>立刻注册</a>
+                    </SegmentWrapper>
+                  </>
+                )}
+                {this.state.which === 'out' && (
+                  <>
+                    <Form size="large">
+                      <Segment basic>
+                        <Form.Field>
+                          <label>请输入用户名</label>
+                          <Form.Input
+                            fluid
+                            icon="user"
+                            iconPosition="left"
+                            placeholder="username"
+                            onChange={(e) => this.bindInputUsername(e)}
+                          />
+                        </Form.Field>
+
+                        <Form.Field>
+                          <label>请输入昵称</label>
+                          <Form.Input
+                            fluid
+                            icon="user"
+                            iconPosition="left"
+                            placeholder="nickname"
+                            onChange={(e) => this.bindInputNickname(e)}
+                          />
+                        </Form.Field>
+
+                        <Form.Field>
+                          <label>请输入密码</label>
+                          <Form.Input
+                            fluid
+                            icon="lock"
+                            iconPosition="left"
+                            type="password"
+                            onChange={(e) => this.bindInputPwd(e)}
+                            placeholder="password"
+                          />
+                        </Form.Field>
+
+                        <Form.Field>
+                          <label>请确认密码</label>
+                          <Form.Input
+                            fluid
+                            icon="lock"
+                            iconPosition="left"
+                            type="password"
+                            placeholder="password"
+                          />
+                        </Form.Field>
+
+                        <Form.Field>
+                          <label>请输入联系方式</label>
+                          <Form.Input
+                            fluid
+                            icon="phone"
+                            iconPosition="left"
+                            placeholder="Phone"
+                            onChange={(e) => this.bindInputTel(e)}
+                          />
+                        </Form.Field>
+
+                        <div style={{ marginTop: '3em' }}>
+                          {/*@ts-ignore*/}
+                          <Button
+                            color="teal"
+                            fluid
+                            size="large"
+                            onClick={this.bindSignUpBtn}
+                          >
+                            注册
+                          </Button>
+                        </div>
+                      </Segment>
+                    </Form>
+                    {/* @ts-ignore*/}
+                    <SegmentWrapper basic textAlign={'center'}>
+                      已有账号 返回到 <a onClick={this.jumpToSignUp}>登录</a>
+                    </SegmentWrapper>
+                  </>
+                )}
+              </div>
+            </Grid.Column>
+            <Grid.Column width={12}>
+              <Image
+                centered
+                src={this.state.which === 'in' ? signin : signup}
+                size="big"
+              />
+            </Grid.Column>
+          </Grid.Row>
         </Grid>
       </div>
     );
