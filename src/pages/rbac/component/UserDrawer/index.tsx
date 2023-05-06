@@ -3,6 +3,7 @@ import React, { Component, useEffect, useRef, useState } from 'react';
 import { PoweroffOutlined, UserOutlined } from '@ant-design/icons';
 import { connect } from 'dva';
 import { StateWithHistory } from 'redux-undo';
+import { history } from 'umi';
 
 const UserDrawer = (props) => {
   const [visible, setVisible] = useState(false);
@@ -58,7 +59,14 @@ const UserDrawer = (props) => {
             </Descriptions.Item>
           </Descriptions>
           <div style={{ margin: '50px' }} />
-          <Button danger icon={<PoweroffOutlined />} block={true}>
+          <Button
+            danger
+            icon={<PoweroffOutlined />}
+            block={true}
+            onClick={() => {
+              history.replace('/login');
+            }}
+          >
             退出
           </Button>
         </Drawer>
