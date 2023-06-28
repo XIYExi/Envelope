@@ -14,7 +14,7 @@
       n.r(t),
         n.d(t, {
           ctx: function () {
-            return o;
+            return c;
           },
           default: function () {
             return g;
@@ -22,38 +22,38 @@
         });
       n(57663);
       var l = n(71577),
-        i = n(57337),
+        i = n(2824),
         C = n(12924),
-        A = n.n(C),
-        E = n(33040),
-        a = n(61193),
-        r = n.n(a),
+        r = n.n(C),
+        a = n(33040),
+        E = n(61193),
+        A = n.n(E),
         m = n(36404),
-        c = n.n(m),
-        o = (n(60674), (0, C.createContext)(!1));
+        o = n.n(m),
+        c = (n(60674), (0, C.createContext)(!1));
       function g(e) {
         var t = e.children,
           n = (0, C.useState)(!1),
-          a = (0, i.Z)(n, 2),
-          m = a[0],
-          g = a[1],
+          E = (0, i.Z)(n, 2),
+          m = E[0],
+          g = E[1],
           I = (0, C.useState)(!1),
-          B = (0, i.Z)(I, 2),
-          Z = B[0],
-          s = B[1];
+          s = (0, i.Z)(I, 2),
+          p = s[0],
+          d = s[1];
         (0, C.useEffect)(() => {
           setTimeout(() => {
-            s(!0);
+            d(!0);
           }, 5e3);
         }, []);
-        var p =
+        var B =
           window.location.pathname.indexOf('preview') < 0
             ? { height: '100%' }
             : { height: '100%', overflow: 'auto' };
-        return A().createElement(
+        return r().createElement(
           'div',
-          { style: p },
-          A().createElement(
+          { style: B },
+          r().createElement(
             'div',
             {
               style: {
@@ -64,30 +64,30 @@
                 zIndex: 2,
               },
             },
-            A().createElement(
+            r().createElement(
               l.Z,
               {
                 type: 'primary',
                 style: { padding: '0 6px' },
                 onClick: () => g(!m),
               },
-              A().createElement(E.Z, null),
+              r().createElement(a.Z, null),
             ),
           ),
-          A().createElement(o.Provider, { value: Z }, t),
+          r().createElement(c.Provider, { value: p }, t),
           window.location.pathname.indexOf('editor') > -1 &&
-            A().createElement(
-              r(),
+            r().createElement(
+              A(),
               null,
-              A().createElement(
+              r().createElement(
                 'div',
-                { className: c().dragPay },
-                A().createElement(
+                { className: o().dragPay },
+                r().createElement(
                   'div',
-                  { className: c().crouseBtn },
+                  { className: o().crouseBtn },
                   '\u642d\u5efa\u6280\u5de7(\u53ef\u62d6\u52a8)',
                 ),
-                A().createElement('div', { className: c().mask }),
+                r().createElement('div', { className: o().mask }),
               ),
             ),
         );
@@ -99,43 +99,43 @@
       var l,
         i,
         C,
-        A,
-        E = n(27049),
-        a = n(20310),
-        r = n(12924),
-        m = n.n(r),
-        c = n(12788),
-        o = n(48237),
+        r,
+        a = n(27049),
+        E = n(20310),
+        A = n(12924),
+        m = n.n(A),
+        o = n(12788),
+        c = n(48237),
         g = n(14309),
-        I = n(49282),
-        B = n(39445),
-        Z = n(20995),
-        s = n.n(Z),
-        p = c.ZP.footer(
+        I = n(76763),
+        s = n(39445),
+        p = n(20995),
+        d = n.n(p),
+        B = o.ZP.footer(
           l ||
-            (l = (0, a.Z)(['\n  margin-top: 9em;\n  margin-bottom: 20px;\n'])),
+            (l = (0, E.Z)(['\n  margin-top: 9em;\n  margin-bottom: 20px;\n'])),
         ),
-        d = c.ZP.p(
+        Z = o.ZP.p(
           i ||
-            (i = (0, a.Z)([
+            (i = (0, E.Z)([
               '\n  color: black;\n  opacity: 0.6;\n  font-size: 15px;\n  margin-top: 2em;\n  margin-bottom: 2em;\n',
             ])),
         ),
-        u = c.ZP.p(
+        u = o.ZP.p(
           C ||
-            (C = (0, a.Z)([
+            (C = (0, E.Z)([
               '\n  color: black;\n  opacity: 0.6;\n  font-size: 15px;\n',
             ])),
         ),
-        h = (0, c.ZP)(o.Z)(
-          A || (A = (0, a.Z)(['\n  margin-right: 1em !important;\n'])),
+        h = (0, o.ZP)(c.Z)(
+          r || (r = (0, E.Z)(['\n  margin-right: 1em !important;\n'])),
         ),
         k = (e) =>
           m().createElement(
             m().Fragment,
             null,
             m().createElement(
-              p,
+              B,
               null,
               m().createElement(
                 g.Z,
@@ -149,7 +149,7 @@
                     m().createElement(
                       'div',
                       { style: { display: 'flex' } },
-                      m().createElement(I.Z, { size: 'mini', src: s() }),
+                      m().createElement(I.Z, { size: 'mini', src: d() }),
                       m().createElement(
                         'p',
                         {
@@ -164,7 +164,7 @@
                       ),
                     ),
                     m().createElement(
-                      d,
+                      Z,
                       null,
                       'Envelope \u4f4e\u4ee3\u7801\u6574\u5408\u5e73\u53f0',
                       m().createElement('br', null),
@@ -201,7 +201,7 @@
                 m().createElement(
                   g.Z.Column,
                   { width: 2 },
-                  m().createElement(B.Z, { as: 'h4' }, '\u56e2\u961f'),
+                  m().createElement(s.Z, { as: 'h4' }, '\u56e2\u961f'),
                   m().createElement(u, null, '\u5173\u4e8e'),
                   m().createElement(u, null, '\u751f\u547d\u5468\u671f'),
                   m().createElement(u, null, '\u53c2\u8003'),
@@ -209,7 +209,7 @@
                 m().createElement(
                   g.Z.Column,
                   { width: 3 },
-                  m().createElement(B.Z, { as: 'h4' }, '\u4ea7\u54c1'),
+                  m().createElement(s.Z, { as: 'h4' }, '\u4ea7\u54c1'),
                   m().createElement(
                     u,
                     null,
@@ -234,7 +234,7 @@
                 m().createElement(
                   g.Z.Column,
                   { width: 3 },
-                  m().createElement(B.Z, { as: 'h4' }, '\u8d44\u6e90'),
+                  m().createElement(s.Z, { as: 'h4' }, '\u8d44\u6e90'),
                   m().createElement(
                     u,
                     null,
@@ -247,13 +247,13 @@
                 m().createElement(
                   g.Z.Column,
                   { width: 3 },
-                  m().createElement(B.Z, { as: 'h4' }, '\u66f4\u591a'),
+                  m().createElement(s.Z, { as: 'h4' }, '\u66f4\u591a'),
                   m().createElement(u, null, '\u8054\u7cfb\u6211\u4eec'),
                   m().createElement(u, null, 'GitHub'),
                   m().createElement(u, null, 'Gitee'),
                 ),
               ),
-              m().createElement(E.Z, { style: { marginTop: '7em' } }),
+              m().createElement(a.Z, { style: { marginTop: '7em' } }),
               m().createElement(
                 g.Z,
                 null,
@@ -290,21 +290,22 @@
       n.r(t),
         n.d(t, {
           default: function () {
-            return T;
+            return j;
           },
         });
       var l,
         i,
         C,
-        A,
+        r,
+        a,
         E,
-        a = n(12924),
-        r = n.n(a),
-        m = (e) =>
-          r().createElement(
-            r().Fragment,
+        A = n(12924),
+        m = n.n(A),
+        o = (e) =>
+          m().createElement(
+            m().Fragment,
             null,
-            r().createElement(
+            m().createElement(
               'svg',
               {
                 id: 'logo',
@@ -314,40 +315,40 @@
                 fill: 'none',
                 xmlns: 'http://www.w3.org/2000/svg',
               },
-              r().createElement('path', {
+              m().createElement('path', {
                 d: 'M1 64.2195V1H36.1661V7.79116H8.05599V29.1524H34.3452V35.9436H8.05599V57.4284H36.6214V64.2195H1Z',
                 stroke: 'black',
               }),
-              r().createElement('path', {
+              m().createElement('path', {
                 d: 'M54.6881 35.6966V64.2195H47.9735V16.8049H54.4605V24.2134H55.0295C56.0538 21.8056 57.6091 19.8712 59.6956 18.4101C61.782 16.9284 64.4754 16.1875 67.7758 16.1875C70.7348 16.1875 73.3239 16.846 75.5431 18.1631C77.7623 19.4596 79.4884 21.4352 80.7213 24.0899C81.9542 26.7241 82.5706 30.0579 82.5706 34.0915V64.2195H75.8561V34.5854C75.8561 30.8605 74.9646 27.9588 73.1816 25.8803C71.3986 23.7812 68.9518 22.7317 65.8411 22.7317C63.6978 22.7317 61.782 23.2359 60.0939 24.2443C58.4247 25.2527 57.1065 26.7241 56.1391 28.6585C55.1718 30.593 54.6881 32.939 54.6881 35.6966Z',
                 stroke: 'black',
               }),
-              r().createElement('path', {
+              m().createElement('path', {
                 d: 'M129.011 16.8049L112.85 64.2195H106.022L89.8613 16.8049H97.1449L109.208 54.5884H109.664L121.727 16.8049H129.011Z',
                 stroke: 'black',
               }),
-              r().createElement('path', {
+              m().createElement('path', {
                 d: 'M154.631 65.2073C150.421 65.2073 146.788 64.1989 143.734 62.1822C140.7 60.1448 138.357 57.3049 136.707 53.6623C135.076 49.9992 134.26 45.7393 134.26 40.8826C134.26 36.0259 135.076 31.7454 136.707 28.0412C138.357 24.3163 140.652 21.4146 143.592 19.3361C146.551 17.237 150.003 16.1875 153.948 16.1875C156.225 16.1875 158.472 16.5991 160.692 17.4223C162.911 18.2454 164.931 19.5831 166.752 21.4352C168.573 23.2668 170.024 25.6951 171.105 28.7203C172.186 31.7454 172.727 35.4703 172.727 39.8948V42.9817H139.04V36.6844H165.898C165.898 34.0091 165.405 31.6219 164.419 29.5229C163.451 27.4238 162.067 25.7671 160.265 24.553C158.482 23.3388 156.376 22.7317 153.948 22.7317C151.274 22.7317 148.96 23.452 147.006 24.8925C145.072 26.3125 143.583 28.1646 142.539 30.4489C141.496 32.7332 140.975 35.1822 140.975 37.7957V41.9939C140.975 45.5747 141.544 48.6101 142.682 51.1002C143.839 53.5697 145.441 55.4527 147.49 56.7492C149.539 58.0252 151.919 58.6631 154.631 58.6631C156.395 58.6631 157.989 58.3956 159.411 57.8605C160.853 57.3049 162.095 56.4817 163.138 55.391C164.182 54.2797 164.988 52.9009 165.557 51.2546L172.044 53.2302C171.361 55.6174 170.213 57.7165 168.601 59.5274C166.989 61.3178 164.997 62.7172 162.626 63.7256C160.255 64.7134 157.59 65.2073 154.631 65.2073Z',
                 stroke: 'black',
               }),
-              r().createElement('path', {
+              m().createElement('path', {
                 d: 'M189.655 1V64.2195H182.941V1H189.655Z',
                 stroke: 'black',
               }),
-              r().createElement('path', {
+              m().createElement('path', {
                 d: 'M219.707 65.2073C215.762 65.2073 212.3 64.1886 209.322 62.1513C206.363 60.1139 204.049 57.2637 202.38 53.6006C200.73 49.9375 199.905 45.657 199.905 40.7591C199.905 35.8201 200.73 31.5088 202.38 27.8251C204.049 24.1414 206.363 21.2809 209.322 19.2435C212.3 17.2062 215.762 16.1875 219.707 16.1875C223.652 16.1875 227.105 17.2062 230.064 19.2435C233.041 21.2809 235.356 24.1414 237.006 27.8251C238.675 31.5088 239.509 35.8201 239.509 40.7591C239.509 45.657 238.675 49.9375 237.006 53.6006C235.356 57.2637 233.041 60.1139 230.064 62.1513C227.105 64.1886 223.652 65.2073 219.707 65.2073ZM219.707 58.6631C222.704 58.6631 225.17 57.8296 227.105 56.1627C229.039 54.4958 230.471 52.3041 231.401 49.5876C232.33 46.8712 232.795 43.9283 232.795 40.7591C232.795 37.5899 232.33 34.6368 231.401 31.8998C230.471 29.1627 229.039 26.9505 227.105 25.263C225.17 23.5755 222.704 22.7317 219.707 22.7317C216.71 22.7317 214.244 23.5755 212.31 25.263C210.375 26.9505 208.943 29.1627 208.014 31.8998C207.084 34.6368 206.619 37.5899 206.619 40.7591C206.619 43.9283 207.084 46.8712 208.014 49.5876C208.943 52.3041 210.375 54.4958 212.31 56.1627C214.244 57.8296 216.71 58.6631 219.707 58.6631Z',
                 stroke: 'black',
               }),
-              r().createElement('path', {
+              m().createElement('path', {
                 d: 'M249.759 82V16.8049H256.246V24.3369H257.043C257.536 23.5137 258.219 22.4642 259.091 21.1883C259.983 19.8918 261.254 18.7393 262.904 17.7309C264.573 16.702 266.83 16.1875 269.675 16.1875C273.355 16.1875 276.598 17.1856 279.406 19.1818C282.213 21.178 284.404 24.0076 285.978 27.6707C287.552 31.3338 288.339 35.6555 288.339 40.6357C288.339 45.657 287.552 50.0095 285.978 53.6932C284.404 57.3563 282.222 60.1963 279.434 62.213C276.646 64.2092 273.431 65.2073 269.789 65.2073C266.982 65.2073 264.734 64.7031 263.046 63.6947C261.358 62.6658 260.059 61.503 259.148 60.2066C258.238 58.8895 257.536 57.7988 257.043 56.9345H256.474V82H249.759ZM256.36 40.5122C256.36 44.093 256.844 47.2519 257.811 49.9889C258.778 52.7054 260.191 54.8354 262.05 56.3788C263.909 57.9017 266.185 58.6631 268.879 58.6631C271.686 58.6631 274.028 57.8605 275.906 56.2553C277.803 54.6296 279.225 52.4482 280.174 49.7111C281.141 46.9535 281.625 43.8872 281.625 40.5122C281.625 37.1784 281.151 34.1738 280.202 31.4985C279.273 28.8026 277.86 26.6726 275.963 25.1086C274.085 23.524 271.724 22.7317 268.879 22.7317C266.147 22.7317 263.852 23.4828 261.993 24.9851C260.134 26.4668 258.731 28.5454 257.782 31.2207C256.834 33.8754 256.36 36.9726 256.36 40.5122Z',
                 stroke: 'black',
               }),
-              r().createElement('path', {
+              m().createElement('path', {
                 d: 'M316.905 65.2073C312.694 65.2073 309.062 64.1989 306.008 62.1822C302.973 60.1448 300.631 57.3049 298.98 53.6623C297.349 49.9992 296.533 45.7393 296.533 40.8826C296.533 36.0259 297.349 31.7454 298.98 28.0412C300.631 24.3163 302.926 21.4146 305.866 19.3361C308.825 17.237 312.277 16.1875 316.222 16.1875C318.498 16.1875 320.746 16.5991 322.965 17.4223C325.184 18.2454 327.204 19.5831 329.025 21.4352C330.846 23.2668 332.297 25.6951 333.378 28.7203C334.459 31.7454 335 35.4703 335 39.8948V42.9817H301.313V36.6844H328.172C328.172 34.0091 327.678 31.6219 326.692 29.5229C325.725 27.4238 324.34 25.7671 322.538 24.553C320.755 23.3388 318.65 22.7317 316.222 22.7317C313.548 22.7317 311.233 23.452 309.28 24.8925C307.345 26.3125 305.856 28.1646 304.813 30.4489C303.77 32.7332 303.248 35.1822 303.248 37.7957V41.9939C303.248 45.5747 303.817 48.6101 304.955 51.1002C306.112 53.5697 307.715 55.4527 309.763 56.7492C311.812 58.0252 314.192 58.6631 316.905 58.6631C318.669 58.6631 320.262 58.3956 321.685 57.8605C323.126 57.3049 324.369 56.4817 325.412 55.391C326.455 54.2797 327.261 52.9009 327.83 51.2546L334.317 53.2302C333.634 55.6174 332.487 57.7165 330.875 59.5274C329.262 61.3178 327.271 62.7172 324.9 63.7256C322.529 64.7134 319.864 65.2073 316.905 65.2073Z',
                 stroke: 'black',
               }),
             ),
-            r().createElement(
+            m().createElement(
               'svg',
               {
                 id: 'platform',
@@ -357,470 +358,548 @@
                 fill: 'none',
                 xmlns: 'http://www.w3.org/2000/svg',
               },
-              r().createElement('path', {
+              m().createElement('path', {
                 d: 'M0.164773 54V3.09091H17.3665C21.3603 3.09091 24.625 3.81179 27.1605 5.25355C29.7126 6.67874 31.6018 8.60938 32.8281 11.0455C34.0545 13.4815 34.6676 16.1993 34.6676 19.1989C34.6676 22.1984 34.0545 24.9245 32.8281 27.3771C31.6184 29.8298 29.7457 31.7853 27.2102 33.2436C24.6747 34.6854 21.4266 35.4062 17.4659 35.4062H5.13636V29.9375H17.267C20.0014 29.9375 22.1972 29.4652 23.8544 28.5206C25.5116 27.576 26.7131 26.3 27.4588 24.6925C28.2211 23.0684 28.6023 21.2372 28.6023 19.1989C28.6023 17.1605 28.2211 15.3376 27.4588 13.7301C26.7131 12.1226 25.5033 10.8632 23.8295 9.9517C22.1558 9.02367 19.9351 8.55966 17.1676 8.55966H6.32955V54H0.164773ZM49.6694 3.09091V54H43.8029V3.09091H49.6694ZM71.65 54.8949C69.2305 54.8949 67.0347 54.4392 65.0627 53.5277C63.0906 52.5997 61.5246 51.2656 60.3645 49.5256C59.2045 47.7689 58.6245 45.6477 58.6245 43.1619C58.6245 40.9744 59.0553 39.2012 59.9171 37.8423C60.7788 36.4669 61.9306 35.3897 63.3723 34.6108C64.8141 33.8319 66.405 33.2519 68.1451 32.8707C69.9017 32.473 71.6666 32.1581 73.4398 31.9261C75.7599 31.6278 77.6408 31.4041 79.0826 31.255C80.5409 31.0893 81.6015 30.8158 82.2644 30.4347C82.9438 30.0535 83.2836 29.3906 83.2836 28.446V28.2472C83.2836 25.7945 82.6124 23.8887 81.2701 22.5298C79.9443 21.1709 77.9308 20.4915 75.2296 20.4915C72.4289 20.4915 70.2331 21.1046 68.6422 22.331C67.0513 23.5573 65.9327 24.8665 65.2864 26.2585L59.7182 24.2699C60.7125 21.9498 62.0383 20.1435 63.6955 18.8509C65.3693 17.5417 67.1922 16.6302 69.1642 16.1165C71.1529 15.5862 73.1084 15.321 75.0307 15.321C76.257 15.321 77.6657 15.4702 79.2566 15.7685C80.8641 16.0502 82.4135 16.6385 83.905 17.5334C85.4131 18.4283 86.6642 19.7789 87.6586 21.5852C88.6529 23.3916 89.15 25.8111 89.15 28.8438V54H83.2836V48.8295H82.9853C82.5875 49.6581 81.9247 50.5447 80.9966 51.4893C80.0686 52.4339 78.834 53.2377 77.2928 53.9006C75.7516 54.5634 73.8707 54.8949 71.65 54.8949ZM72.5449 49.625C74.865 49.625 76.8205 49.1693 78.4114 48.2578C80.0189 47.3464 81.2286 46.1697 82.0407 44.728C82.8693 43.2862 83.2836 41.7699 83.2836 40.179V34.8097C83.035 35.108 82.4881 35.3814 81.6429 35.63C80.8143 35.862 79.8532 36.0691 78.7594 36.2514C77.6822 36.4171 76.6299 36.5663 75.6025 36.6989C74.5916 36.8149 73.7712 36.9143 73.1415 36.9972C71.6169 37.196 70.1917 37.5192 68.8659 37.9666C67.5568 38.3975 66.4962 39.0521 65.6841 39.9304C64.8887 40.7921 64.4909 41.9687 64.4909 43.4602C64.4909 45.4986 65.245 47.0398 66.753 48.0838C68.2776 49.1113 70.2083 49.625 72.5449 49.625ZM116.463 15.8182V20.7898H96.6758V15.8182H116.463ZM102.443 6.67045H108.309V43.0625C108.309 44.7197 108.55 45.9626 109.03 46.7912C109.527 47.6032 110.157 48.1501 110.919 48.4318C111.698 48.697 112.519 48.8295 113.38 48.8295C114.027 48.8295 114.557 48.7964 114.971 48.7301C115.386 48.6473 115.717 48.581 115.966 48.5312L117.159 53.8011C116.761 53.9503 116.206 54.0994 115.493 54.2486C114.781 54.4143 113.877 54.4972 112.784 54.4972C111.127 54.4972 109.502 54.1409 107.912 53.4283C106.337 52.7157 105.028 51.6302 103.984 50.1719C102.957 48.7135 102.443 46.8741 102.443 44.6534V6.67045ZM142.29 15.8182V20.7898H121.708V15.8182H142.29ZM127.873 54V10.5483C127.873 8.36079 128.386 6.53788 129.414 5.07954C130.441 3.62121 131.775 2.52746 133.416 1.79829C135.056 1.06913 136.788 0.704542 138.611 0.704542C140.053 0.704542 141.23 0.820547 142.141 1.05256C143.052 1.28456 143.732 1.5 144.179 1.69886L142.489 6.76988C142.191 6.67045 141.776 6.54616 141.246 6.39702C140.732 6.24787 140.053 6.17329 139.208 6.17329C137.269 6.17329 135.868 6.66217 135.007 7.63991C134.162 8.61766 133.739 10.0511 133.739 11.9403V54H127.873ZM164.451 54.7955C161.004 54.7955 157.98 53.9751 155.378 52.3345C152.793 50.6939 150.771 48.3987 149.312 45.4489C147.871 42.4991 147.15 39.0521 147.15 35.108C147.15 31.1307 147.871 27.6589 149.312 24.6925C150.771 21.7261 152.793 19.4226 155.378 17.782C157.98 16.1413 161.004 15.321 164.451 15.321C167.898 15.321 170.914 16.1413 173.499 17.782C176.101 19.4226 178.123 21.7261 179.565 24.6925C181.023 27.6589 181.752 31.1307 181.752 35.108C181.752 39.0521 181.023 42.4991 179.565 45.4489C178.123 48.3987 176.101 50.6939 173.499 52.3345C170.914 53.9751 167.898 54.7955 164.451 54.7955ZM164.451 49.5256C167.069 49.5256 169.224 48.8544 170.914 47.5121C172.604 46.1697 173.856 44.4048 174.668 42.2173C175.48 40.0298 175.886 37.66 175.886 35.108C175.886 32.5559 175.48 30.1778 174.668 27.9737C173.856 25.7696 172.604 23.9882 170.914 22.6293C169.224 21.2704 167.069 20.5909 164.451 20.5909C161.833 20.5909 159.678 21.2704 157.988 22.6293C156.298 23.9882 155.046 25.7696 154.234 27.9737C153.422 30.1778 153.016 32.5559 153.016 35.108C153.016 37.66 153.422 40.0298 154.234 42.2173C155.046 44.4048 156.298 46.1697 157.988 47.5121C159.678 48.8544 161.833 49.5256 164.451 49.5256ZM190.707 54V15.8182H196.375V21.5852H196.773C197.469 19.696 198.728 18.1631 200.551 16.9865C202.374 15.8099 204.429 15.2216 206.716 15.2216C207.147 15.2216 207.685 15.2299 208.331 15.2464C208.978 15.263 209.467 15.2879 209.798 15.321V21.2869C209.599 21.2372 209.144 21.1626 208.431 21.0632C207.735 20.9472 206.997 20.8892 206.219 20.8892C204.363 20.8892 202.705 21.2786 201.247 22.0575C199.805 22.8198 198.662 23.8804 197.817 25.2393C196.988 26.5817 196.574 28.1146 196.574 29.8381V54H190.707ZM216.752 54V15.8182H222.42V21.7841H222.917C223.712 19.7457 224.997 18.1631 226.77 17.0362C228.543 15.8928 230.673 15.321 233.158 15.321C235.677 15.321 237.774 15.8928 239.447 17.0362C241.138 18.1631 242.455 19.7457 243.4 21.7841H243.798C244.775 19.812 246.242 18.246 248.197 17.0859C250.153 15.9093 252.498 15.321 255.232 15.321C258.646 15.321 261.438 16.3899 263.609 18.5277C265.78 20.6489 266.866 23.955 266.866 28.446V54H260.999V28.446C260.999 25.6288 260.229 23.6153 258.688 22.4055C257.146 21.1958 255.332 20.5909 253.244 20.5909C250.559 20.5909 248.479 21.4029 247.004 23.027C245.529 24.6345 244.792 26.6728 244.792 29.142V54H238.826V27.8494C238.826 25.6785 238.122 23.9302 236.713 22.6044C235.304 21.2621 233.49 20.5909 231.269 20.5909C229.745 20.5909 228.319 20.9969 226.994 21.8089C225.684 22.621 224.624 23.7479 223.812 25.1896C223.016 26.6148 222.619 28.2637 222.619 30.1364V54H216.752Z',
                 fill: 'black',
               }),
             ),
           ),
-        c = m,
-        o = n(20310),
-        g = n(35766),
-        I = n(48237),
-        B = n(14309),
-        Z = n(60345),
-        s = n(49282),
-        p = n(87401),
-        d = n(12818),
-        u = n.n(d),
-        h = n(12788),
-        k = n(24632),
-        V = n.n(k),
-        L = n(9901),
-        Q = n.n(L),
-        R = n(41859),
-        F = n.n(R),
-        w = n(6956),
-        f = n.n(w),
-        x = n(72868),
-        W = n.n(x),
-        v = n(6639),
+        c = o,
+        g = n(20310),
+        I = n(35766),
+        s = n(48237),
+        p = n(76763),
+        d = n(14309),
+        B = n(60345),
+        Z = n(87401),
+        u = n(12818),
+        h = n.n(u),
+        k = n(12788),
+        V = n(24632),
+        L = n.n(V),
+        Q = n(20995),
+        R = n.n(Q),
+        w = n(9901),
+        F = n.n(w),
+        f = n(41859),
+        x = n.n(f),
+        v = n(6956),
         y = n.n(v),
-        Y = n(9816),
-        b = n.n(Y),
-        S = n(70182),
-        X = n(71720),
-        z = (0, h.ZP)(g.Z)(
-          l || (l = (0, o.Z)(['\n  padding-top: 5em !important;\n'])),
+        b = n(72868),
+        W = n.n(b),
+        Y = n(6639),
+        S = n.n(Y),
+        X = n(9816),
+        z = n.n(X),
+        H = n(70182),
+        M = n(71720),
+        J = (0, k.ZP)(I.Z)(
+          l || (l = (0, g.Z)(['\n  padding-top: 5em !important;\n'])),
         ),
-        H = h.ZP.h1(
-          i || (i = (0, o.Z)(['\n  color: ', ';\n  font-size: ', ';\n'])),
+        P = k.ZP.h1(
+          i || (i = (0, g.Z)(['\n  color: ', ';\n  font-size: ', ';\n'])),
           (e) => (void 0 === e.$color ? 'white' : e.$color),
           (e) => e.$fontSize,
         ),
-        M = h.ZP.p(
+        U = k.ZP.p(
           C ||
-            (C = (0, o.Z)([
+            (C = (0, g.Z)([
               '\n  color: rgba(0, 0, 0, 0.5);\n  font-size: ',
               ';\n',
             ])),
           (e) => e.$fontSize,
         ),
-        J = (0, h.ZP)(I.Z)(
-          A || (A = (0, o.Z)(['\n  margin-right: 4em !important;\n'])),
+        D = (0, k.ZP)(s.Z)(
+          r || (r = (0, g.Z)(['\n  margin-right: 4em !important;\n'])),
         ),
-        U = h.ZP.div(
-          E ||
-            (E = (0, o.Z)([
+        G = k.ZP.div(
+          a ||
+            (a = (0, g.Z)([
               '\n  border-radius: 4px;\n  overflow: hidden;\n  max-width: 800px;\n  margin: auto;\n  background: #fff;\n  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);\n  video {\n    display: block;\n    margin: auto;\n  }\n',
             ])),
         ),
-        P = { maxWidth: '350px', paddingTop: '7.5em', margin: 'auto' },
-        D = (e) =>
-          r().createElement(
-            r().Fragment,
-            null,
-            r().createElement(
-              'div',
+        K = { maxWidth: '350px', paddingTop: '7.5em', margin: 'auto' },
+        T = k.ZP.section(
+          E ||
+            (E = (0, g.Z)([
+              '\n  position: fixed;\n  width: 100%;\n  height: 4.5em;\n  background: rgba(34, 53, 73, 1);\n  z-index: 999 !important;\n',
+            ])),
+        ),
+        q = (e) => {
+          var t = (0, A.useRef)(null),
+            n = (0, A.useCallback)((e) => {
+              var n = document.getElementById('homepage').scrollTop;
+              n >= 400
+                ? ((t.current.style.boxShadow =
+                    'rgba(100, 100, 111, 0.2) 0px 7px 29px 0px'),
+                  (t.current.style.opacity = '0.6'))
+                : ((t.current.style.boxShadow = 'none'),
+                  (t.current.style.opacity = ''.concat((3e3 - 3 * n) / 3e3)));
+            }, []);
+          return (
+            (0, A.useEffect)(() => {
+              var e = document.getElementById('homepage');
+              return (
+                e.addEventListener('scroll', n),
+                () => e.removeEventListener('scroll', n)
+              );
+            }, [n]),
+            m().createElement(
+              m().Fragment,
               null,
-              r().createElement(
-                'section',
-                { className: 'bg', style: { height: '100vh' } },
-                r().createElement('div', { style: { paddingTop: '6.5em' } }),
-                r().createElement(
-                  'div',
-                  { style: { paddingLeft: '9em', paddingTop: '2.5em' } },
-                  r().createElement(
-                    B.Z,
-                    null,
-                    r().createElement(
-                      B.Z.Column,
-                      { width: 8 },
-                      r().createElement(
-                        H,
-                        { $fontSize: '65px' },
-                        'Envelope\xa0\xa0Platform',
-                      ),
-                      r().createElement(
-                        H,
-                        { $fontSize: '55px' },
-                        '\u5145\u6ee1\u65e0\u9650\u53ef\u80fd\u7684',
-                        r().createElement('br', null),
-                        '\u4f4e\u4ee3\u7801\u6574\u5408\u5e73\u53f0',
-                      ),
-                      r().createElement(Z.Z, { hidden: !0 }),
-                      r().createElement(
-                        M,
-                        { $fontSize: '18px' },
-                        '\u63d0\u4f9bH5\u5e94\u7528\u3001\u54cd\u5e94\u5f0f\u7f51\u7ad9\u3001\u6a21\u677f\u7f51\u7ad9\u3001\u6570\u636e\u53ef\u89c6\u5316\u7b49\u4f4e\u4ee3\u7801\u642d\u5efa',
-                      ),
-                      r().createElement(
-                        I.Z,
-                        { size: 'large' },
-                        '\u4e0b\u8f7d\u5ba2\u6237\u7aef',
-                      ),
-                      r().createElement(
-                        I.Z,
-                        {
-                          size: 'large',
-                          color: 'teal',
-                          onClick: () => {
-                            X.m8.push('/inner');
-                          },
-                        },
-                        '\u7acb\u5373\u4f7f\u7528',
-                      ),
-                    ),
-                    r().createElement(
-                      B.Z.Column,
-                      { width: 8 },
-                      r().createElement(s.Z, { src: u() }),
-                      r().createElement(J, {
-                        floated: 'right',
-                        circular: !0,
-                        color: 'facebook',
-                        icon: 'facebook',
-                      }),
-                      r().createElement(I.Z, {
-                        floated: 'right',
-                        circular: !0,
-                        color: 'twitter',
-                        icon: 'twitter',
-                      }),
-                      r().createElement(I.Z, {
-                        floated: 'right',
-                        circular: !0,
-                        color: 'linkedin',
-                        icon: 'linkedin',
-                      }),
-                      r().createElement(I.Z, {
-                        floated: 'right',
-                        circular: !0,
-                        color: 'google plus',
-                        icon: 'google plus',
-                      }),
-                    ),
-                  ),
-                ),
-              ),
-              r().createElement(
-                'section',
-                {
-                  style: {
-                    paddingTop: '4em',
-                    marginTop: '6em',
-                    height: '100vh',
-                  },
-                },
-                r().createElement(
-                  g.Z,
-                  { basic: !0, textAlign: 'center' },
-                  r().createElement(
-                    H,
-                    { $color: 'black', $fontSize: '40px' },
-                    'Envelope \u8d85\u4e4e\u60f3\u8c61\u7684\u6d3b\u529b',
-                  ),
-                  r().createElement(
-                    M,
-                    { $fontSize: '20px' },
-                    'CI / CD \uff0c \u6301\u7eed\u96c6\u6210 \u6301\u7eed\u4ea4\u4ed8',
-                  ),
-                  r().createElement('div', { style: { marginTop: '6em' } }),
-                  r().createElement(
-                    U,
-                    null,
-                    r().createElement(
-                      V(),
-                      {
-                        loop: !0,
-                        width: '100%',
-                        poster:
-                          'https://zos.alipayobjects.com/rmsportal/HZgzhugQZkqUwBVeNyfz.jpg',
-                      },
-                      r().createElement('source', {
-                        src: 'https://os.alipayobjects.com/rmsportal/EejaUGsyExkXyXr.mp4',
-                        type: 'video/mp4',
-                      }),
-                    ),
-                  ),
-                ),
-              ),
-              r().createElement(
-                'section',
-                {
-                  style: {
-                    height: '100vh',
-                    background: 'rgba(232,229,229,0.6)',
-                  },
-                },
-                r().createElement(
-                  g.Z,
-                  { basic: !0, textAlign: 'center' },
-                  r().createElement('div', { style: { paddingTop: '3em' } }),
-                  r().createElement(p.Z, { color: 'teal' }, 'FEATURE'),
-                  r().createElement(Z.Z, { hidden: !0 }),
-                  r().createElement(
-                    H,
-                    { $fontSize: '35px', $color: 'black' },
-                    '\u96c6\u6210\u4e09\u5927\u5f15\u64ce',
-                  ),
-                  r().createElement(
-                    M,
-                    { $fontSize: '18px', style: { textAlign: 'center' } },
-                    'Envelope \u4f4e\u4ee3\u7801\u6574\u5408\u5e73\u53f0\u65e8\u5728\u63d0\u4f9b\u591a\u79cd\u591a\u6837\u7684\u4f4e\u4ee3\u7801\u6784\u5efa\u65b9\u5f0f\uff0c\u56e0\u6b64\u96c6\u6210\u66f4\u591a\u7684\u4f4e\u4ee3\u7801\u5f15\u64ce',
-                    r().createElement('br', null),
-                    '\u53ea\u4e3a\u7ed9\u4f60\u5e26\u6765\u6700\u68d2\u7684\u4f7f\u7528\u4f53\u9a8c\u3002',
-                  ),
-                  r().createElement(
-                    B.Z,
-                    null,
-                    r().createElement(
-                      B.Z.Row,
-                      { columns: 'equal' },
-                      r().createElement(
-                        B.Z.Column,
-                        null,
-                        r().createElement(
-                          'div',
-                          { style: P },
-                          r().createElement(s.Z, {
-                            centered: !0,
-                            size: 'tiny',
-                            src: Q(),
-                          }),
-                          r().createElement(
-                            H,
-                            { $fontSize: '19px', $color: 'black' },
-                            'Envelope \u539f\u751f\u5f15\u64ce',
-                          ),
-                          r().createElement(
-                            M,
-                            { $fontSize: '14px' },
-                            'Envelope \u56e2\u961f\u81ea\u7814\u7684\u539f\u751f\u4f4e\u4ee3\u7801\u5f15\u64ce\uff0c\u57fa\u4e8e umi \u6846\u67b6\u7684\u52a8\u6001\u52a0\u8f7d\u6280\u672f\uff0c\u4f7f\u7528 dva \u4ee5\u53ca JSON schema \u5b9e\u73b0\u4f4e\u4ee3\u7801\u5143\u4ef6\u7684\u7f16\u8f91\u4e0e\u8bbe\u8ba1\u3002 \u539f\u751f\u5f15\u64ce\u91c7\u7528 Antd\u3001Semantic\u3001\u539f\u751fUI\u4e09\u5957\u6837\u5f0f\uff0c\u5728 H5 \u79fb\u52a8\u7aef\u8868\u73b0\u6548\u679c\u826f\u597d\uff0c\u540c\u65f6\u5177\u5907\u6a21\u677f\u7f51\u9875\u642d\u5efa\u6280\u672f\u3002',
-                          ),
-                        ),
-                      ),
-                      r().createElement(
-                        B.Z.Column,
-                        null,
-                        r().createElement(
-                          'div',
-                          { style: P },
-                          r().createElement(s.Z, {
-                            centered: !0,
-                            size: 'tiny',
-                            src: F(),
-                          }),
-                          r().createElement(
-                            H,
-                            { $fontSize: '19px', $color: 'black' },
-                            'Lowcode Engine \u4e8c\u6b21\u5f00\u53d1',
-                          ),
-                          r().createElement(
-                            M,
-                            { $fontSize: '14px' },
-                            '\u4e3a\u89e3\u51b3\u539f\u751f\u5f15\u64ce\u5728\u5927\u5c4f\u5e55\u8bbe\u5907\u4e0a\u7684\u8868\u73b0\u4e0d\u8db3\uff0c\u5bf9Lowcode-Engine\u8fdb\u884c\u4e8c\u6b21\u5f00\u53d1\uff0c\u7f16\u8f91\u6ce8\u5165\u63d2\u4ef6\u4ee5\u53ca\u7269\u6599\uff0c\u5b9e\u73b0\u652f\u6301\u54cd\u5e94\u5f0f\u6805\u683c\u5e03\u5c40\u7684\u4f4e\u4ee3\u7801\u8bbe\u8ba1\u5668\u3002',
-                          ),
-                        ),
-                      ),
-                      r().createElement(
-                        B.Z.Column,
-                        null,
-                        r().createElement(
-                          'div',
-                          { style: P },
-                          r().createElement(s.Z, {
-                            centered: !0,
-                            size: 'tiny',
-                            src: f(),
-                          }),
-                          r().createElement(
-                            H,
-                            { $fontSize: '19px', $color: 'black' },
-                            'AntV \u6570\u636e\u53ef\u89c6\u5316',
-                          ),
-                          r().createElement(
-                            M,
-                            { $fontSize: '14px' },
-                            'Envelope Platform \u96c6\u6210 Antv / x6 \u56fe\u5f15\u64ce\uff0c\u5728 x6 \u63d0\u4f9b\u7684 API \u57fa\u7840\u4e0a\u8fdb\u884c\u4e8c\u6b21\u5f00\u53d1\uff0c\u5b9e\u73b0\u6d41\u7a0b\u56fe\uff0c E-R \u56fe\uff0cUML\u7edf\u4e00\u7c7b\u56fe\u7b49\u591a\u79cd\u56fe\u8868\u7ed8\u5236\uff0c \u5b9e\u73b0\u6570\u636e\u53ef\u89c6\u5316\u9700\u6c42\uff0c\u652f\u6301\u5bfc\u51fa JSON\u3002',
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              r().createElement(
-                'section',
-                { style: { paddingTop: '6em' } },
-                r().createElement('div', null),
-                r().createElement(
-                  'div',
-                  { style: { paddingTop: '3em', paddingBottom: '3em' } },
-                  r().createElement(
-                    B.Z,
-                    null,
-                    r().createElement(
-                      B.Z.Column,
-                      { width: 9 },
-                      r().createElement(s.Z, {
-                        size: 'large',
-                        centered: !0,
-                        src: W(),
-                      }),
-                    ),
-                    r().createElement(
-                      B.Z.Column,
-                      { width: 7 },
-                      r().createElement(
-                        'div',
-                        { style: { marginTop: '3em' } },
-                        r().createElement(
-                          p.Z,
-                          { color: 'pink' },
-                          'UI FRAMEWORK',
-                        ),
-                        r().createElement(Z.Z, { hidden: !0 }),
-                        r().createElement(
-                          H,
-                          { $fontSize: '34px', $color: 'black' },
-                          '\u591a\u5957 UI\uff0c',
-                          r().createElement('br', null),
-                          '\u591a\u79cd\u9009\u62e9 !',
-                        ),
-                        r().createElement(
-                          M,
-                          { $fontSize: '15px', style: { maxWidth: '430px' } },
-                          'Envelope Platform \u63d0\u4f9b\u4e86\u591a\u5957 UI \u6846\u67b6\uff0c\u5176\u4e2d\u5305\u542bEnvelope \u4f4e\u4ee3\u7801\u6574\u5408\u5e73\u53f0\u7684\u5185\u7f6e UI \u6846\u67b6 Love Letter UI\uff0c UI \u6846\u67b6\u79c9\u627f\u72ec\u7acb\u5f00\u53d1\uff0c\u7edf\u4e00\u96c6\u6210\u7684\u601d\u60f3\uff0c\u4e24\u5957\u7cfb\u7edf\u5e76\u884c\u5f00\u53d1\uff0c\u5e76\u5b9e\u73b0\u5b8c\u7f8e\u5bf9\u63a5\u3002 \u6846\u67b6\u6253\u5305\u4e0a\u4f20 npm \uff0c\u5f00\u7bb1\u5373\u7528\uff0c\u53ef\u4ee5\u5728\u5e73\u53f0\u5916\u72ec\u7acb\u4f7f\u7528 ...',
-                        ),
-                        r().createElement(
-                          M,
-                          { $fontSize: '15px', style: { maxWidth: '430px' } },
-                          '\u5e73\u53f0\u5bf9Ant Design \u4ee5\u53ca Semantic UI \u8fdb\u884c\u4e8c\u6b21\u5c01\u88c5\uff0c\u57fa\u4e8edumi\u6587\u6863\uff0c\u5c55\u793a\u5c01\u88c5\u540e\u5143\u4ef6\u4e24\u5927 UI \u6846\u67b6\u5c01\u88c5\u540e\u603b\u8ba1\u66b4\u9732 60+ \u4e0d\u540c\u7684\u4ea4\u4e92\u7ec4\u4ef6...',
-                        ),
-                        r().createElement(Z.Z, { hidden: !0 }),
-                        r().createElement(
-                          I.Z,
-                          { color: 'teal' },
-                          '\u539f\u751f\u7ec4\u4ef6\u5e93',
-                        ),
-                        r().createElement(
-                          I.Z,
-                          { primary: !0 },
-                          '\u5c01\u88c5\u7ec4\u4ef6\u5e93',
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-                r().createElement(
-                  'div',
-                  { style: { marginTop: '8em' } },
-                  r().createElement(
-                    B.Z,
-                    null,
-                    r().createElement(
-                      B.Z.Column,
-                      { width: 7 },
-                      r().createElement(
-                        'div',
-                        { style: { paddingLeft: '14em' } },
-                        r().createElement(p.Z, { color: 'pink' }, 'ASSETS'),
-                        r().createElement(Z.Z, { hidden: !0 }),
-                        r().createElement(
-                          H,
-                          { $fontSize: '34px', $color: 'black' },
-                          '\u8d44\u6e90\u3001\u8bbe\u8ba1\u3001\u6e90\u7801',
-                          r().createElement('br', null),
-                          '\u5b8c\u5168\u5f00\u6e90 !',
-                        ),
-                        r().createElement(
-                          M,
-                          { $fontSize: '15px', style: { maxWidth: '430px' } },
-                          'Envelope Platform \u79c9\u627f\u5f00\u6e90\u601d\u60f3\uff0cEnvelope \u5f00\u53d1\u4e2d\u6240\u6709\u4ea7\u751f\u7684\u7269\u6599\u90fd\u5df2\u5728GitHub\u7b49\u4ed3\u5e93\u5f00\u6e90\u3002 Envelope \u63d0\u4f9b\u4e86\u5b8c\u5584\u7684\u8bbe\u8ba1\u624b\u7a3f\uff0c\u5305\u542b\u539f\u751f\u5f15\u64ce\u8bbe\u8ba1\u6587\u6863\uff0c\u539f\u751f\u5f15\u64ce\u529f\u80fd\u6d41\u56fe\u3002\u63d0\u4f9b\u4e86\u8f6f\u4ef6\u5de5\u7a0b\u5f00\u53d1\u5168\u5468\u671f\u7684\u5404\u9879\u8d44\u6599\uff0c \u652f\u6301\u5176\u4f59\u7231\u597d\u8005\u8fdb\u884c\u72ec\u7acb\u4e8c\u6b21\u5f00\u53d1 ...',
-                        ),
-                        r().createElement(
-                          M,
-                          { $fontSize: '15px', style: { maxWidth: '430px' } },
-                          'Envelope Platform \u8bbe\u8ba1\u4e2d\u4ea7\u51fa\u7684\u6240\u6709\u8bbe\u8ba1\u6587\u7a3f\u5747\u91c7\u5bfc\u51fa\u4e3a Figma \u6587\u6863\uff0c\u5305\u542b\u8bbe\u8ba1\u4e2d\u6240\u6709\u53c2\u8003\u7684 Figma \u8bbe\u8ba1\u9879\u76ee\uff0c \u76ee\u524d\u5747\u4ee5\u4e0a\u4f20 GitHub \u4f9b\u5404\u4f4d\u53c2\u8003\u67e5\u9605 ...',
-                        ),
-                        r().createElement(Z.Z, { hidden: !0 }),
-                        r().createElement(I.Z, { primary: !0 }, 'GitHub'),
-                      ),
-                    ),
-                    r().createElement(
-                      B.Z.Column,
-                      { width: 9 },
-                      r().createElement(s.Z, {
-                        size: 'large',
-                        centered: !0,
-                        src: b(),
-                      }),
-                    ),
-                  ),
-                ),
-              ),
-              r().createElement(
-                'section',
-                { style: { marginTop: '6em', background: '#6A7EDA' } },
-                r().createElement(
-                  B.Z,
-                  null,
-                  r().createElement(
-                    B.Z.Row,
-                    null,
-                    r().createElement(
-                      B.Z.Column,
-                      { width: 12 },
-                      r().createElement(
-                        z,
-                        { basic: !0, textAlign: 'center' },
-                        r().createElement(
-                          H,
-                          { $fontSize: '30px' },
-                          '\u66f4\u591a\u7279\u6027',
-                        ),
-                        r().createElement(
-                          M,
-                          { $fontSize: '16px', style: { color: 'white' } },
-                          'UI\u6846\u67b6\u3001\u7528\u6237\u624b\u518c\u3001\u8bbe\u8ba1\u624b\u7a3f\u3001\u8bbe\u8ba1\u8d44\u6e90\u3001\u53ef\u89c6\u5316\u7f16\u7a0b\u3001\u66f4\u591a\u7684\u4f4e\u4ee3\u7801\u4ea7\u54c1',
-                          r().createElement('br', null),
-                          '\u6301\u7eed\u96c6\u6210 \u6301\u7eed\u4ea4\u4ed8 \u7ed9\u4f60\u6700\u68d2\u7684\u4f4e\u4ee3\u7801\u4f53\u9a8c',
-                        ),
-                        r().createElement(
-                          I.Z,
-                          { color: 'orange' },
-                          '\u7acb\u523b\u8bbf\u95ee',
-                        ),
-                      ),
-                    ),
-                    r().createElement(
-                      B.Z.Column,
-                      { width: 4 },
-                      r().createElement(s.Z, { size: 'massive', src: y() }),
-                    ),
-                  ),
-                ),
-              ),
-              r().createElement(S.Z, null),
-            ),
-          ),
-        G = n(14777),
-        K = (e) => {
-          var t = (0, a.useContext)(G.ctx);
-          return r().createElement(
-            r().Fragment,
-            null,
-            !t &&
-              r().createElement(
+              m().createElement(
                 'div',
-                { style: { width: '100vw', height: '100vh' } },
-                r().createElement(c, null),
+                {
+                  id: 'homepage',
+                  style: {
+                    height: '100%',
+                    overflowY: 'auto',
+                    overflowX: 'hidden',
+                  },
+                },
+                m().createElement(
+                  T,
+                  { ref: t },
+                  m().createElement(
+                    'div',
+                    {
+                      style: {
+                        position: 'absolute',
+                        marginTop: '1em',
+                        marginLeft: '1em',
+                      },
+                    },
+                    m().createElement(p.Z, { src: R(), size: 'mini' }),
+                  ),
+                  m().createElement(
+                    'div',
+                    {
+                      style: {
+                        position: 'absolute',
+                        marginTop: '1em',
+                        marginRight: '2em',
+                        right: '10px',
+                      },
+                    },
+                    m().createElement(
+                      s.Z,
+                      {
+                        onClick: () => {
+                          M.m8.push('/login');
+                        },
+                      },
+                      '\u767b\u5f55',
+                    ),
+                  ),
+                ),
+                m().createElement(
+                  'section',
+                  { className: 'bg', style: { height: '100vh' } },
+                  m().createElement('div', { style: { paddingTop: '6.5em' } }),
+                  m().createElement(
+                    'div',
+                    { style: { paddingLeft: '9em', paddingTop: '2.5em' } },
+                    m().createElement(
+                      d.Z,
+                      null,
+                      m().createElement(
+                        d.Z.Column,
+                        { width: 8 },
+                        m().createElement(
+                          P,
+                          { $fontSize: '65px' },
+                          'Envelope\xa0\xa0Platform',
+                        ),
+                        m().createElement(
+                          P,
+                          { $fontSize: '55px' },
+                          '\u5145\u6ee1\u65e0\u9650\u53ef\u80fd\u7684',
+                          m().createElement('br', null),
+                          '\u4f4e\u4ee3\u7801\u6574\u5408\u5e73\u53f0',
+                        ),
+                        m().createElement(B.Z, { hidden: !0 }),
+                        m().createElement(
+                          U,
+                          { $fontSize: '18px' },
+                          '\u63d0\u4f9bH5\u5e94\u7528\u3001\u54cd\u5e94\u5f0f\u7f51\u7ad9\u3001\u6a21\u677f\u7f51\u7ad9\u3001\u6570\u636e\u53ef\u89c6\u5316\u7b49\u4f4e\u4ee3\u7801\u642d\u5efa',
+                        ),
+                        m().createElement(
+                          s.Z,
+                          {
+                            size: 'large',
+                            onClick: () => {
+                              window.open(
+                                'https://github.com/XIYExi/Envelope/releases/tag/Envelope2.0.0',
+                                'blank',
+                              );
+                            },
+                          },
+                          '\u4e0b\u8f7d\u5ba2\u6237\u7aef',
+                        ),
+                        m().createElement(
+                          s.Z,
+                          {
+                            size: 'large',
+                            color: 'teal',
+                            onClick: () => {
+                              M.m8.push('/inner');
+                            },
+                          },
+                          '\u7acb\u5373\u4f7f\u7528',
+                        ),
+                      ),
+                      m().createElement(
+                        d.Z.Column,
+                        { width: 8 },
+                        m().createElement(p.Z, { src: h() }),
+                        m().createElement(D, {
+                          floated: 'right',
+                          circular: !0,
+                          color: 'facebook',
+                          icon: 'facebook',
+                        }),
+                        m().createElement(s.Z, {
+                          floated: 'right',
+                          circular: !0,
+                          color: 'twitter',
+                          icon: 'twitter',
+                        }),
+                        m().createElement(s.Z, {
+                          floated: 'right',
+                          circular: !0,
+                          color: 'linkedin',
+                          icon: 'linkedin',
+                        }),
+                        m().createElement(s.Z, {
+                          floated: 'right',
+                          circular: !0,
+                          color: 'google plus',
+                          icon: 'google plus',
+                        }),
+                      ),
+                    ),
+                  ),
+                ),
+                m().createElement(
+                  'section',
+                  {
+                    style: {
+                      paddingTop: '4em',
+                      marginTop: '6em',
+                      height: '100vh',
+                    },
+                  },
+                  m().createElement(
+                    I.Z,
+                    { basic: !0, textAlign: 'center' },
+                    m().createElement(
+                      P,
+                      { $color: 'black', $fontSize: '40px' },
+                      'Envelope \u8d85\u4e4e\u60f3\u8c61\u7684\u6d3b\u529b',
+                    ),
+                    m().createElement(
+                      U,
+                      { $fontSize: '20px' },
+                      'CI / CD \uff0c \u6301\u7eed\u96c6\u6210 \u6301\u7eed\u4ea4\u4ed8',
+                    ),
+                    m().createElement('div', { style: { marginTop: '6em' } }),
+                    m().createElement(
+                      G,
+                      null,
+                      m().createElement(
+                        L(),
+                        {
+                          loop: !0,
+                          width: '100%',
+                          poster:
+                            'https://zos.alipayobjects.com/rmsportal/HZgzhugQZkqUwBVeNyfz.jpg',
+                        },
+                        m().createElement('source', {
+                          src: 'https://os.alipayobjects.com/rmsportal/EejaUGsyExkXyXr.mp4',
+                          type: 'video/mp4',
+                        }),
+                      ),
+                    ),
+                  ),
+                ),
+                m().createElement(
+                  'section',
+                  {
+                    style: {
+                      height: '100vh',
+                      background: 'rgba(232,229,229,0.6)',
+                    },
+                  },
+                  m().createElement(
+                    I.Z,
+                    { basic: !0, textAlign: 'center' },
+                    m().createElement('div', { style: { paddingTop: '3em' } }),
+                    m().createElement(Z.Z, { color: 'teal' }, 'FEATURE'),
+                    m().createElement(B.Z, { hidden: !0 }),
+                    m().createElement(
+                      P,
+                      { $fontSize: '35px', $color: 'black' },
+                      '\u96c6\u6210\u4e09\u5927\u5f15\u64ce',
+                    ),
+                    m().createElement(
+                      U,
+                      { $fontSize: '18px', style: { textAlign: 'center' } },
+                      'Envelope \u4f4e\u4ee3\u7801\u6574\u5408\u5e73\u53f0\u65e8\u5728\u63d0\u4f9b\u591a\u79cd\u591a\u6837\u7684\u4f4e\u4ee3\u7801\u6784\u5efa\u65b9\u5f0f\uff0c\u56e0\u6b64\u96c6\u6210\u66f4\u591a\u7684\u4f4e\u4ee3\u7801\u5f15\u64ce',
+                      m().createElement('br', null),
+                      '\u53ea\u4e3a\u7ed9\u4f60\u5e26\u6765\u6700\u68d2\u7684\u4f7f\u7528\u4f53\u9a8c\u3002',
+                    ),
+                    m().createElement(
+                      d.Z,
+                      null,
+                      m().createElement(
+                        d.Z.Row,
+                        { columns: 'equal' },
+                        m().createElement(
+                          d.Z.Column,
+                          null,
+                          m().createElement(
+                            'div',
+                            { style: K },
+                            m().createElement(p.Z, {
+                              centered: !0,
+                              size: 'tiny',
+                              src: F(),
+                            }),
+                            m().createElement(
+                              P,
+                              { $fontSize: '19px', $color: 'black' },
+                              'Envelope \u539f\u751f\u5f15\u64ce',
+                            ),
+                            m().createElement(
+                              U,
+                              { $fontSize: '14px' },
+                              'Envelope \u56e2\u961f\u81ea\u7814\u7684\u539f\u751f\u4f4e\u4ee3\u7801\u5f15\u64ce\uff0c\u57fa\u4e8e umi \u6846\u67b6\u7684\u52a8\u6001\u52a0\u8f7d\u6280\u672f\uff0c\u4f7f\u7528 dva \u4ee5\u53ca JSON schema \u5b9e\u73b0\u4f4e\u4ee3\u7801\u5143\u4ef6\u7684\u7f16\u8f91\u4e0e\u8bbe\u8ba1\u3002 \u539f\u751f\u5f15\u64ce\u91c7\u7528 Antd\u3001Semantic\u3001\u539f\u751fUI\u4e09\u5957\u6837\u5f0f\uff0c\u5728 H5 \u79fb\u52a8\u7aef\u8868\u73b0\u6548\u679c\u826f\u597d\uff0c\u540c\u65f6\u5177\u5907\u6a21\u677f\u7f51\u9875\u642d\u5efa\u6280\u672f\u3002',
+                            ),
+                          ),
+                        ),
+                        m().createElement(
+                          d.Z.Column,
+                          null,
+                          m().createElement(
+                            'div',
+                            { style: K },
+                            m().createElement(p.Z, {
+                              centered: !0,
+                              size: 'tiny',
+                              src: x(),
+                            }),
+                            m().createElement(
+                              P,
+                              { $fontSize: '19px', $color: 'black' },
+                              'Lowcode Engine \u4e8c\u6b21\u5f00\u53d1',
+                            ),
+                            m().createElement(
+                              U,
+                              { $fontSize: '14px' },
+                              '\u4e3a\u89e3\u51b3\u539f\u751f\u5f15\u64ce\u5728\u5927\u5c4f\u5e55\u8bbe\u5907\u4e0a\u7684\u8868\u73b0\u4e0d\u8db3\uff0c\u5bf9Lowcode-Engine\u8fdb\u884c\u4e8c\u6b21\u5f00\u53d1\uff0c\u7f16\u8f91\u6ce8\u5165\u63d2\u4ef6\u4ee5\u53ca\u7269\u6599\uff0c\u5b9e\u73b0\u652f\u6301\u54cd\u5e94\u5f0f\u6805\u683c\u5e03\u5c40\u7684\u4f4e\u4ee3\u7801\u8bbe\u8ba1\u5668\u3002',
+                            ),
+                          ),
+                        ),
+                        m().createElement(
+                          d.Z.Column,
+                          null,
+                          m().createElement(
+                            'div',
+                            { style: K },
+                            m().createElement(p.Z, {
+                              centered: !0,
+                              size: 'tiny',
+                              src: y(),
+                            }),
+                            m().createElement(
+                              P,
+                              { $fontSize: '19px', $color: 'black' },
+                              'AntV \u6570\u636e\u53ef\u89c6\u5316',
+                            ),
+                            m().createElement(
+                              U,
+                              { $fontSize: '14px' },
+                              'Envelope Platform \u96c6\u6210 Antv / x6 \u56fe\u5f15\u64ce\uff0c\u5728 x6 \u63d0\u4f9b\u7684 API \u57fa\u7840\u4e0a\u8fdb\u884c\u4e8c\u6b21\u5f00\u53d1\uff0c\u5b9e\u73b0\u6d41\u7a0b\u56fe\uff0c E-R \u56fe\uff0cUML\u7edf\u4e00\u7c7b\u56fe\u7b49\u591a\u79cd\u56fe\u8868\u7ed8\u5236\uff0c \u5b9e\u73b0\u6570\u636e\u53ef\u89c6\u5316\u9700\u6c42\uff0c\u652f\u6301\u5bfc\u51fa JSON\u3002',
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                m().createElement(
+                  'section',
+                  { style: { paddingTop: '6em' } },
+                  m().createElement('div', null),
+                  m().createElement(
+                    'div',
+                    { style: { paddingTop: '3em', paddingBottom: '3em' } },
+                    m().createElement(
+                      d.Z,
+                      null,
+                      m().createElement(
+                        d.Z.Column,
+                        { width: 9 },
+                        m().createElement(p.Z, {
+                          size: 'large',
+                          centered: !0,
+                          src: W(),
+                        }),
+                      ),
+                      m().createElement(
+                        d.Z.Column,
+                        { width: 7 },
+                        m().createElement(
+                          'div',
+                          { style: { marginTop: '3em' } },
+                          m().createElement(
+                            Z.Z,
+                            { color: 'pink' },
+                            'UI FRAMEWORK',
+                          ),
+                          m().createElement(B.Z, { hidden: !0 }),
+                          m().createElement(
+                            P,
+                            { $fontSize: '34px', $color: 'black' },
+                            '\u591a\u5957 UI\uff0c',
+                            m().createElement('br', null),
+                            '\u591a\u79cd\u9009\u62e9 !',
+                          ),
+                          m().createElement(
+                            U,
+                            { $fontSize: '15px', style: { maxWidth: '430px' } },
+                            'Envelope Platform \u63d0\u4f9b\u4e86\u591a\u5957 UI \u6846\u67b6\uff0c\u5176\u4e2d\u5305\u542bEnvelope \u4f4e\u4ee3\u7801\u6574\u5408\u5e73\u53f0\u7684\u5185\u7f6e UI \u6846\u67b6 Love Letter UI\uff0c UI \u6846\u67b6\u79c9\u627f\u72ec\u7acb\u5f00\u53d1\uff0c\u7edf\u4e00\u96c6\u6210\u7684\u601d\u60f3\uff0c\u4e24\u5957\u7cfb\u7edf\u5e76\u884c\u5f00\u53d1\uff0c\u5e76\u5b9e\u73b0\u5b8c\u7f8e\u5bf9\u63a5\u3002 \u6846\u67b6\u6253\u5305\u4e0a\u4f20 npm \uff0c\u5f00\u7bb1\u5373\u7528\uff0c\u53ef\u4ee5\u5728\u5e73\u53f0\u5916\u72ec\u7acb\u4f7f\u7528 ...',
+                          ),
+                          m().createElement(
+                            U,
+                            { $fontSize: '15px', style: { maxWidth: '430px' } },
+                            '\u5e73\u53f0\u5bf9Ant Design \u4ee5\u53ca Semantic UI \u8fdb\u884c\u4e8c\u6b21\u5c01\u88c5\uff0c\u57fa\u4e8edumi\u6587\u6863\uff0c\u5c55\u793a\u5c01\u88c5\u540e\u5143\u4ef6\u4e24\u5927 UI \u6846\u67b6\u5c01\u88c5\u540e\u603b\u8ba1\u66b4\u9732 60+ \u4e0d\u540c\u7684\u4ea4\u4e92\u7ec4\u4ef6...',
+                          ),
+                          m().createElement(B.Z, { hidden: !0 }),
+                          m().createElement(
+                            s.Z,
+                            { color: 'teal' },
+                            '\u539f\u751f\u7ec4\u4ef6\u5e93',
+                          ),
+                          m().createElement(
+                            s.Z,
+                            { primary: !0 },
+                            '\u5c01\u88c5\u7ec4\u4ef6\u5e93',
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  m().createElement(
+                    'div',
+                    { style: { marginTop: '8em' } },
+                    m().createElement(
+                      d.Z,
+                      null,
+                      m().createElement(
+                        d.Z.Column,
+                        { width: 7 },
+                        m().createElement(
+                          'div',
+                          { style: { paddingLeft: '14em' } },
+                          m().createElement(Z.Z, { color: 'pink' }, 'ASSETS'),
+                          m().createElement(B.Z, { hidden: !0 }),
+                          m().createElement(
+                            P,
+                            { $fontSize: '34px', $color: 'black' },
+                            '\u8d44\u6e90\u3001\u8bbe\u8ba1\u3001\u6e90\u7801',
+                            m().createElement('br', null),
+                            '\u5b8c\u5168\u5f00\u6e90 !',
+                          ),
+                          m().createElement(
+                            U,
+                            { $fontSize: '15px', style: { maxWidth: '430px' } },
+                            'Envelope Platform \u79c9\u627f\u5f00\u6e90\u601d\u60f3\uff0cEnvelope \u5f00\u53d1\u4e2d\u6240\u6709\u4ea7\u751f\u7684\u7269\u6599\u90fd\u5df2\u5728GitHub\u7b49\u4ed3\u5e93\u5f00\u6e90\u3002 Envelope \u63d0\u4f9b\u4e86\u5b8c\u5584\u7684\u8bbe\u8ba1\u624b\u7a3f\uff0c\u5305\u542b\u539f\u751f\u5f15\u64ce\u8bbe\u8ba1\u6587\u6863\uff0c\u539f\u751f\u5f15\u64ce\u529f\u80fd\u6d41\u56fe\u3002\u63d0\u4f9b\u4e86\u8f6f\u4ef6\u5de5\u7a0b\u5f00\u53d1\u5168\u5468\u671f\u7684\u5404\u9879\u8d44\u6599\uff0c \u652f\u6301\u5176\u4f59\u7231\u597d\u8005\u8fdb\u884c\u72ec\u7acb\u4e8c\u6b21\u5f00\u53d1 ...',
+                          ),
+                          m().createElement(
+                            U,
+                            { $fontSize: '15px', style: { maxWidth: '430px' } },
+                            'Envelope Platform \u8bbe\u8ba1\u4e2d\u4ea7\u51fa\u7684\u6240\u6709\u8bbe\u8ba1\u6587\u7a3f\u5747\u91c7\u5bfc\u51fa\u4e3a Figma \u6587\u6863\uff0c\u5305\u542b\u8bbe\u8ba1\u4e2d\u6240\u6709\u53c2\u8003\u7684 Figma \u8bbe\u8ba1\u9879\u76ee\uff0c \u76ee\u524d\u5747\u4ee5\u4e0a\u4f20 GitHub \u4f9b\u5404\u4f4d\u53c2\u8003\u67e5\u9605 ...',
+                          ),
+                          m().createElement(B.Z, { hidden: !0 }),
+                          m().createElement(s.Z, { primary: !0 }, 'GitHub'),
+                        ),
+                      ),
+                      m().createElement(
+                        d.Z.Column,
+                        { width: 9 },
+                        m().createElement(p.Z, {
+                          size: 'large',
+                          centered: !0,
+                          src: z(),
+                        }),
+                      ),
+                    ),
+                  ),
+                ),
+                m().createElement(
+                  'section',
+                  { style: { marginTop: '6em', background: '#6A7EDA' } },
+                  m().createElement(
+                    d.Z,
+                    null,
+                    m().createElement(
+                      d.Z.Row,
+                      null,
+                      m().createElement(
+                        d.Z.Column,
+                        { width: 12 },
+                        m().createElement(
+                          J,
+                          { basic: !0, textAlign: 'center' },
+                          m().createElement(
+                            P,
+                            { $fontSize: '30px' },
+                            '\u66f4\u591a\u7279\u6027',
+                          ),
+                          m().createElement(
+                            U,
+                            { $fontSize: '16px', style: { color: 'white' } },
+                            'UI\u6846\u67b6\u3001\u7528\u6237\u624b\u518c\u3001\u8bbe\u8ba1\u624b\u7a3f\u3001\u8bbe\u8ba1\u8d44\u6e90\u3001\u53ef\u89c6\u5316\u7f16\u7a0b\u3001\u66f4\u591a\u7684\u4f4e\u4ee3\u7801\u4ea7\u54c1',
+                            m().createElement('br', null),
+                            '\u6301\u7eed\u96c6\u6210 \u6301\u7eed\u4ea4\u4ed8 \u7ed9\u4f60\u6700\u68d2\u7684\u4f4e\u4ee3\u7801\u4f53\u9a8c',
+                          ),
+                          m().createElement(
+                            s.Z,
+                            { color: 'orange' },
+                            '\u7acb\u523b\u8bbf\u95ee',
+                          ),
+                        ),
+                      ),
+                      m().createElement(
+                        d.Z.Column,
+                        { width: 4 },
+                        m().createElement(p.Z, { size: 'massive', src: S() }),
+                      ),
+                    ),
+                  ),
+                ),
+                m().createElement(H.Z, null),
               ),
-            t && r().createElement(D, null),
+            )
           );
         },
-        T = K;
+        N = n(14777),
+        O = (e) => {
+          var t = (0, A.useContext)(N.ctx);
+          return m().createElement(
+            m().Fragment,
+            null,
+            !t &&
+              m().createElement(
+                'div',
+                { style: { width: '100vw', height: '100vh' } },
+                m().createElement(c, null),
+              ),
+            t && m().createElement(q, null),
+          );
+        },
+        j = O;
     },
     20995: function (e) {
       e.exports =

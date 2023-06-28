@@ -1,5 +1,5 @@
 (self['webpackChunkenvelope'] = self['webpackChunkenvelope'] || []).push([
-  [5218, 3809, 862],
+  [5218, 862],
   {
     52683: function () {},
     64139: function () {},
@@ -145,11 +145,11 @@
         f = m,
         p = (n(94233), n(51890)),
         d = (n(12968), n(6122)),
-        v = n(57337),
+        v = n(2824),
         g = n(93224),
         E = n(49054),
         h = n.n(E),
-        y = n(86023),
+        y = n(71706),
         x = ['isTpl'],
         Z = (e) => {
           var t = e.isTpl,

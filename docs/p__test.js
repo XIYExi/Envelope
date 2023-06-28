@@ -1,40 +1,34 @@
 (self['webpackChunkenvelope'] = self['webpackChunkenvelope'] || []).push([
   [7357],
   {
-    79662: function (e, t, n) {
+    34621: function () {},
+    95370: function (e, t, n) {
       'use strict';
-      n.r(t),
-        n.d(t, {
-          default: function () {
-            return S;
-          },
-        });
-      n(49111);
-      var o = n(19650),
-        a = (n(57663), n(71577)),
-        r = (n(402), n(55672)),
-        c = n(12924),
-        i = n.n(c),
-        l = n(8870),
-        s = n(55733),
-        p = n.n(s),
-        u = n(93162),
-        d =
+      n.d(t, {
+        Y: function () {
+          return m;
+        },
+      });
+      var r = n(8870),
+        a = n(55733),
+        c = n.n(a),
+        o = n(93162),
+        i =
           '# \u5982\u4f55\u4f7f\u7528\uff1a\n\n- umi \u91cc\u5982\u4f55\u4f7f\u7528[\u8bf7\u67e5\u770b](https://landing.ant.design/docs/use/umi)\u3002\n- \u5176\u5b83\u811a\u624b\u67b6\u4f7f\u7528[\u8bf7\u67e5\u770b](https://landing.ant.design/docs/use/getting-started)\u3002\n',
-        m = (e) => {
+        l = (e) => {
           var t = e,
             n = '',
-            o = t.match(/import\s+logo\s+from\s+'(.+?)';/g);
-          o && o.length && (n = t.replace(o[0], ''));
+            r = t.match(/import\s+logo\s+from\s+'(.+?)';/g);
+          r && r.length && (n = t.replace(r[0], ''));
           var a = t.match(/import\s+{(.+?)}\s+from\s+'@\/(.+?)';/g);
           a && a.length && (n = n.replace(a[0], ''));
-          var r = t.match(
+          var c = t.match(
             /\/\*begin\s+to\s+delete\*\/+[^]*;\n+\/\*end\s+to\s+delete\*\//g,
           );
-          r && r.length && (n = n.replace(r[0], ''));
-          var c = t.match(/:\s+FC<(.+?)>/g);
+          c && c.length && (n = n.replace(c[0], ''));
+          var o = t.match(/:\s+FC<(.+?)>/g);
           return (
-            c && c.length && (n = n.replace(c[0], '')),
+            o && o.length && (n = n.replace(o[0], '')),
             (n = n.replace(
               'logo',
               "'https://s1.ax1x.com/2023/03/10/ppnq09s.png'",
@@ -42,77 +36,83 @@
             n
           );
         },
-        f = (e) => {
+        s = (e) => {
           var t = '',
             n = '',
-            o = e,
+            r = e,
             a = [];
-          o.map((e, o) => {
-            var r = e.item,
-              c = r.type,
+          r.map((e, r) => {
+            var c = e.item,
+              o = c.type,
               i = e.id,
-              l = r.datasourceName;
-            -1 === a.indexOf(c) &&
-              ((t += 'import A'.concat(c, " from './").concat(c, "';\n")),
-              a.push(c)),
+              l = c.datasourceName;
+            -1 === a.indexOf(o) &&
+              ((t += 'import A'.concat(o, " from './").concat(o, "';\n")),
+              a.push(o)),
               (n += '<A'
-                .concat(c, ' id="')
+                .concat(o, ' id="')
                 .concat(i, '" key="')
                 .concat(i, '" isTpl={false} {...')
                 .concat(l, '}/>,\n'));
           });
-          var r = 'import {\n'.concat(
-            o.map((e) => '\t'.concat(e.item.datasourceName)).join(',\n'),
+          var c = 'import {\n'.concat(
+            r.map((e) => '\t'.concat(e.item.datasourceName)).join(',\n'),
             "\n} from './data.source'",
           );
           return (
             (n = 'const children = ['.concat(n, ']')),
-            { childStr: n, dataSourceStr: r, importStr: t }
+            { childStr: n, dataSourceStr: c, importStr: t }
           );
         },
-        g = (e, t, n, o) => {
-          var a = new (p())(),
-            r = "import React from 'react';\n",
-            c = [],
-            i = r;
+        p = (e, t, n, r) => {
+          var a = new (c())(),
+            l = "import React from 'react';\n",
+            s = [],
+            p = l;
           e.forEach((e) => {
             var t = e.item,
               n = t.type;
-            if (-1 === c.indexOf(n)) {
-              c.push(n);
-              var o = ''.concat(n, '.jsx'),
-                r = t.templateStr;
-              a.file(o, r), (i += t.props + '\n');
-            } else i += t.props + '\n';
+            if (-1 === s.indexOf(n)) {
+              s.push(n);
+              var r = ''.concat(n, '.jsx'),
+                c = t.templateStr;
+              a.file(r, c), (p += t.props + '\n');
+            } else p += t.props + '\n';
           }),
-            a.file('data.source.js', i);
-          var l = r;
-          (l += o + '\n'), (l += n + '\n');
-          var s =
+            a.file('data.source.js', p);
+          var m = l;
+          (m += r + '\n'), (m += n + '\n');
+          var u =
             '\nexport default class Home extends React.Component{\n  render(){\n    '.concat(
               t,
               ';\n    return (\n      <div>\n        {children}\n      </div>\n    )\n  }\n}\n',
             );
-          (l += s),
-            a.file('index.js', l),
-            a.file('README.md', d),
+          (m += u),
+            a.file('index.js', m),
+            a.file('README.md', i),
             a.generateAsync({ type: 'blob' }).then((e) => {
-              (0, u.saveAs)(e, 'Home.zip');
+              (0, o.saveAs)(e, 'Home.zip');
             });
         };
-      function v(e, t, n) {
-        var o = e,
-          a = {};
+      function m(e, t, n) {
+        console.log('\u5f00\u59cb\u5de5\u4f5c', e);
+        var a = e,
+          c = {};
         e.map((e, t) => {
           var n = e.id,
-            r = e.item,
-            c = ''.concat(r.type).concat(n, 'DataSource');
-          o[t]['item']['datasourceName'] = c;
-          var i = 'export const '
-            .concat(r.type)
+            o = e.item,
+            i = ''.concat(o.type).concat(n, 'DataSource');
+          console.log('\u5f53\u524ddatasourceName\uff1a ', i),
+            (a[t]['item'] = (0, r.Z)(
+              (0, r.Z)({}, a[t]['item']),
+              {},
+              { datasourceName: i },
+            ));
+          var s = 'export const '
+            .concat(o.type)
             .concat(n, 'DataSource = ')
             .concat(
-              JSON.stringify(r.config)
+              JSON.stringify(o.config)
                 .replace(/\\n/g, '')
                 .replace(/href="(.*?)"/g, 'href=\\"$1\\"')
                 .replace(/<br>/g, '<br />')
@@ -123,80 +123,91 @@
                 )
                 .replace(/\\"/g, '"'),
             );
-          (a[''.concat(r.type)] = (0, l.Z)(
-            (0, l.Z)({}, a[''.concat(r.type)]),
+          (c[''.concat(o.type)] = (0, r.Z)(
+            (0, r.Z)({}, c[''.concat(o.type)]),
             {},
-            { ['PROPS-'.concat(t)]: i },
+            { ['PROPS-'.concat(t)]: s },
           )),
-            (o[t]['item'] = (0, l.Z)(
-              (0, l.Z)({}, o[t]['item']),
+            (a[t]['item'] = (0, r.Z)(
+              (0, r.Z)({}, a[t]['item']),
               {},
-              { props: i },
+              { props: s },
             ));
-          var s = m(r.templateStr);
-          (a[''.concat(r.type)] = (0, l.Z)(
-            (0, l.Z)({}, a[''.concat(r.type)]),
+          var p = l(o.templateStr);
+          (c[''.concat(o.type)] = (0, r.Z)(
+            (0, r.Z)({}, c[''.concat(o.type)]),
             {},
-            { ['JS-'.concat(t)]: s },
+            { ['JS-'.concat(t)]: p },
           )),
-            (o[t]['item']['templateStr'] = s);
+            (a[t]['item']['templateStr'] = p);
         }),
-          localStorage.setItem('promiseObject', JSON.stringify(o));
-        var r = f(o),
-          c = r.childStr,
-          i = r.dataSourceStr,
-          s = r.importStr;
+          localStorage.setItem('promiseObject', JSON.stringify(a));
+        var o = s(a),
+          i = o.childStr,
+          m = o.dataSourceStr,
+          u = o.importStr;
         try {
-          g(o, c, i, s);
-        } catch (p) {
-          console.log('\u4ee3\u7801\u751f\u6210\u5931\u8d25', p);
+          p(a, i, m, u);
+        } catch (d) {
+          console.log('\u4ee3\u7801\u751f\u6210\u5931\u8d25', d);
         }
       }
-      var h = (e) => {
+    },
+    98590: function (e, t, n) {
+      'use strict';
+      n.r(t);
+      n(49111);
+      var r = n(19650),
+        a = (n(57663), n(71577)),
+        c = (n(402), n(55672)),
+        o = n(12924),
+        i = n.n(o),
+        l = n(95370),
+        s = (e) => {
           var t = () => {
               var e = localStorage.getItem('userData');
-              null != e && (e = JSON.parse(e)), v(e);
+              null != e && (e = JSON.parse(e)), (0, l.Y)(e);
             },
             n = () => {
               var e = localStorage.getItem('userData');
-              null != e && (e = JSON.parse(e)), v(e);
+              null != e && (e = JSON.parse(e)), (0, l.Y)(e);
             },
-            c = () => {
+            o = () => {
               var e,
                 t = '',
                 n = '',
-                o = localStorage.getItem('promiseObject');
-              null != o && (e = JSON.parse(o));
+                r = localStorage.getItem('promiseObject');
+              null != r && (e = JSON.parse(r));
               var a = [];
-              e.map((e, o) => {
-                var r = e.item,
-                  c = r.type,
+              e.map((e, r) => {
+                var c = e.item,
+                  o = c.type,
                   i = e.id,
-                  l = r.datasourceName;
-                -1 === a.indexOf(c) &&
-                  ((t += 'import A'.concat(c, " from './").concat(c, "';\n")),
-                  a.push(c)),
+                  l = c.datasourceName;
+                -1 === a.indexOf(o) &&
+                  ((t += 'import A'.concat(o, " from './").concat(o, "';\n")),
+                  a.push(o)),
                   (n += '<A'
-                    .concat(c, ' id="')
+                    .concat(o, ' id="')
                     .concat(i, '" key="')
                     .concat(i, '" isTpl={false} {...')
                     .concat(l, '}/>,\n'));
               });
-              var r = 'import {\n'.concat(
+              var c = 'import {\n'.concat(
                 e.map((e) => '\t'.concat(e.item.datasourceName)).join(',\n'),
                 "\n} from './data.source'",
               );
               (n = 'const children = ['.concat(n, ']')),
                 console.log('importStr:\n', t),
                 console.log('childStr:\n', n),
-                console.log('dataSourceStr:\n', r);
+                console.log('dataSourceStr:\n', c);
             };
           return i().createElement(
             'div',
             null,
-            i().createElement(r.Z.Title, null, 'This Page is for test'),
+            i().createElement(c.Z.Title, null, 'This Page is for test'),
             i().createElement(
-              o.Z,
+              r.Z,
               null,
               i().createElement(
                 a.Z,
@@ -204,174 +215,254 @@
                 'Click to show templateStr.',
               ),
               i().createElement(a.Z, { onClick: n }, 'Click to show Data.'),
-              i().createElement(a.Z, { onClick: c }, 'Show ImportStr.'),
+              i().createElement(a.Z, { onClick: o }, 'Show ImportStr.'),
             ),
+          );
+        };
+      t['default'] = s;
+    },
+    98082: function (e, t, n) {
+      'use strict';
+      var r = n(28481),
+        a = n(12924),
+        c = n(31808);
+      t['Z'] = function () {
+        var e = a.useState(!1),
+          t = (0, r.Z)(e, 2),
+          n = t[0],
+          o = t[1];
+        return (
+          a.useEffect(function () {
+            o((0, c.fk)());
+          }, []),
+          n
+        );
+      };
+    },
+    31808: function (e, t, n) {
+      'use strict';
+      n.d(t, {
+        jD: function () {
+          return c;
+        },
+        fk: function () {
+          return o;
+        },
+      });
+      var r,
+        a = n(98924),
+        c = function () {
+          return (0, a.Z)() && window.document.documentElement;
+        },
+        o = function () {
+          if (!c()) return !1;
+          if (void 0 !== r) return r;
+          var e = document.createElement('div');
+          return (
+            (e.style.display = 'flex'),
+            (e.style.flexDirection = 'column'),
+            (e.style.rowGap = '1px'),
+            e.appendChild(document.createElement('div')),
+            e.appendChild(document.createElement('div')),
+            document.body.appendChild(e),
+            (r = 1 === e.scrollHeight),
+            document.body.removeChild(e),
+            r
+          );
+        };
+    },
+    19650: function (e, t, n) {
+      'use strict';
+      n.d(t, {
+        u: function () {
+          return v;
+        },
+        Z: function () {
+          return x;
+        },
+      });
+      var r = n(22122),
+        a = n(96156),
+        c = n(28481),
+        o = n(94184),
+        i = n.n(o),
+        l = n(50344),
+        s = n(12924),
+        p = n(53124),
+        m = n(98082);
+      function u(e) {
+        var t = e.className,
+          n = e.direction,
+          c = e.index,
+          o = e.marginDirection,
+          i = e.children,
+          l = e.split,
+          p = e.wrap,
+          m = s.useContext(v),
+          u = m.horizontalSize,
+          d = m.verticalSize,
+          f = m.latestIndex,
+          g = m.supportFlexGap,
+          h = {};
+        return (
+          g ||
+            ('vertical' === n
+              ? c < f && (h = { marginBottom: u / (l ? 2 : 1) })
+              : (h = (0, r.Z)(
+                  (0, r.Z)({}, c < f && (0, a.Z)({}, o, u / (l ? 2 : 1))),
+                  p && { paddingBottom: d },
+                ))),
+          null === i || void 0 === i
+            ? null
+            : s.createElement(
+                s.Fragment,
+                null,
+                s.createElement('div', { className: t, style: h }, i),
+                c < f &&
+                  l &&
+                  s.createElement(
+                    'span',
+                    { className: ''.concat(t, '-split'), style: h },
+                    l,
+                  ),
+              )
+        );
+      }
+      var d = n(4173),
+        f = function (e, t) {
+          var n = {};
+          for (var r in e)
+            Object.prototype.hasOwnProperty.call(e, r) &&
+              t.indexOf(r) < 0 &&
+              (n[r] = e[r]);
+          if (null != e && 'function' === typeof Object.getOwnPropertySymbols) {
+            var a = 0;
+            for (r = Object.getOwnPropertySymbols(e); a < r.length; a++)
+              t.indexOf(r[a]) < 0 &&
+                Object.prototype.propertyIsEnumerable.call(e, r[a]) &&
+                (n[r[a]] = e[r[a]]);
+          }
+          return n;
+        },
+        v = s.createContext({
+          latestIndex: 0,
+          horizontalSize: 0,
+          verticalSize: 0,
+          supportFlexGap: !1,
+        }),
+        g = { small: 8, middle: 16, large: 24 };
+      function h(e) {
+        return 'string' === typeof e ? g[e] : e || 0;
+      }
+      var y = function (e) {
+          var t,
+            n = s.useContext(p.E_),
+            o = n.getPrefixCls,
+            d = n.space,
+            g = n.direction,
+            y = e.size,
+            S =
+              void 0 === y
+                ? (null === d || void 0 === d ? void 0 : d.size) || 'small'
+                : y,
+            x = e.align,
+            Z = e.className,
+            E = e.children,
+            C = e.direction,
+            O = void 0 === C ? 'horizontal' : C,
+            b = e.prefixCls,
+            w = e.split,
+            N = e.style,
+            k = e.wrap,
+            z = void 0 !== k && k,
+            j = f(e, [
+              'size',
+              'align',
+              'className',
+              'children',
+              'direction',
+              'prefixCls',
+              'split',
+              'style',
+              'wrap',
+            ]),
+            D = (0, m.Z)(),
+            A = s.useMemo(
+              function () {
+                return (Array.isArray(S) ? S : [S, S]).map(function (e) {
+                  return h(e);
+                });
+              },
+              [S],
+            ),
+            I = (0, c.Z)(A, 2),
+            P = I[0],
+            G = I[1],
+            J = (0, l.Z)(E, { keepEmpty: !0 }),
+            F = void 0 === x && 'horizontal' === O ? 'center' : x,
+            R = o('space', b),
+            T = i()(
+              R,
+              ''.concat(R, '-').concat(O),
+              ((t = {}),
+              (0, a.Z)(t, ''.concat(R, '-rtl'), 'rtl' === g),
+              (0, a.Z)(t, ''.concat(R, '-align-').concat(F), F),
+              t),
+              Z,
+            ),
+            B = ''.concat(R, '-item'),
+            H = 'rtl' === g ? 'marginLeft' : 'marginRight',
+            M = 0,
+            Y = J.map(function (e, t) {
+              null !== e && void 0 !== e && (M = t);
+              var n = (e && e.key) || ''.concat(B, '-').concat(t);
+              return s.createElement(
+                u,
+                {
+                  className: B,
+                  key: n,
+                  direction: O,
+                  index: t,
+                  marginDirection: H,
+                  split: w,
+                  wrap: z,
+                },
+                e,
+              );
+            }),
+            q = s.useMemo(
+              function () {
+                return {
+                  horizontalSize: P,
+                  verticalSize: G,
+                  latestIndex: M,
+                  supportFlexGap: D,
+                };
+              },
+              [P, G, M, D],
+            );
+          if (0 === J.length) return null;
+          var L = {};
+          return (
+            z && ((L.flexWrap = 'wrap'), D || (L.marginBottom = -G)),
+            D && ((L.columnGap = P), (L.rowGap = G)),
+            s.createElement(
+              'div',
+              (0, r.Z)(
+                { className: T, style: (0, r.Z)((0, r.Z)({}, L), N) },
+                j,
+              ),
+              s.createElement(v.Provider, { value: q }, Y),
+            )
           );
         },
-        S = h;
+        S = y;
+      S.Compact = d.ZP;
+      var x = S;
     },
-    93162: function (e, t, n) {
-      var o, a, r;
-      (function (n, c) {
-        (a = []),
-          (o = c),
-          (r = 'function' === typeof o ? o.apply(t, a) : o),
-          void 0 === r || (e.exports = r);
-      })(0, function () {
-        'use strict';
-        function t(e, t) {
-          return (
-            'undefined' == typeof t
-              ? (t = { autoBom: !1 })
-              : 'object' != typeof t &&
-                (console.warn(
-                  'Deprecated: Expected third argument to be a object',
-                ),
-                (t = { autoBom: !t })),
-            t.autoBom &&
-            /^\s*(?:text\/\S*|application\/xml|\S*\/\S*\+xml)\s*;.*charset\s*=\s*utf-8/i.test(
-              e.type,
-            )
-              ? new Blob(['\ufeff', e], { type: e.type })
-              : e
-          );
-        }
-        function o(e, t, n) {
-          var o = new XMLHttpRequest();
-          o.open('GET', e),
-            (o.responseType = 'blob'),
-            (o.onload = function () {
-              l(o.response, t, n);
-            }),
-            (o.onerror = function () {
-              console.error('could not download file');
-            }),
-            o.send();
-        }
-        function a(e) {
-          var t = new XMLHttpRequest();
-          t.open('HEAD', e, !1);
-          try {
-            t.send();
-          } catch (e) {}
-          return 200 <= t.status && 299 >= t.status;
-        }
-        function r(e) {
-          try {
-            e.dispatchEvent(new MouseEvent('click'));
-          } catch (o) {
-            var t = document.createEvent('MouseEvents');
-            t.initMouseEvent(
-              'click',
-              !0,
-              !0,
-              window,
-              0,
-              0,
-              0,
-              80,
-              20,
-              !1,
-              !1,
-              !1,
-              !1,
-              0,
-              null,
-            ),
-              e.dispatchEvent(t);
-          }
-        }
-        var c =
-            'object' == typeof window && window.window === window
-              ? window
-              : 'object' == typeof self && self.self === self
-              ? self
-              : 'object' == typeof n.g && n.g.global === n.g
-              ? n.g
-              : void 0,
-          i =
-            c.navigator &&
-            /Macintosh/.test(navigator.userAgent) &&
-            /AppleWebKit/.test(navigator.userAgent) &&
-            !/Safari/.test(navigator.userAgent),
-          l =
-            c.saveAs ||
-            ('object' != typeof window || window !== c
-              ? function () {}
-              : 'download' in HTMLAnchorElement.prototype && !i
-              ? function (e, t, n) {
-                  var i = c.URL || c.webkitURL,
-                    l = document.createElement('a');
-                  (t = t || e.name || 'download'),
-                    (l.download = t),
-                    (l.rel = 'noopener'),
-                    'string' == typeof e
-                      ? ((l.href = e),
-                        l.origin === location.origin
-                          ? r(l)
-                          : a(l.href)
-                          ? o(e, t, n)
-                          : r(l, (l.target = '_blank')))
-                      : ((l.href = i.createObjectURL(e)),
-                        setTimeout(function () {
-                          i.revokeObjectURL(l.href);
-                        }, 4e4),
-                        setTimeout(function () {
-                          r(l);
-                        }, 0));
-                }
-              : 'msSaveOrOpenBlob' in navigator
-              ? function (e, n, c) {
-                  if (((n = n || e.name || 'download'), 'string' != typeof e))
-                    navigator.msSaveOrOpenBlob(t(e, c), n);
-                  else if (a(e)) o(e, n, c);
-                  else {
-                    var i = document.createElement('a');
-                    (i.href = e),
-                      (i.target = '_blank'),
-                      setTimeout(function () {
-                        r(i);
-                      });
-                  }
-                }
-              : function (e, t, n, a) {
-                  if (
-                    ((a = a || open('', '_blank')),
-                    a &&
-                      (a.document.title = a.document.body.innerText =
-                        'downloading...'),
-                    'string' == typeof e)
-                  )
-                    return o(e, t, n);
-                  var r = 'application/octet-stream' === e.type,
-                    l = /constructor/i.test(c.HTMLElement) || c.safari,
-                    s = /CriOS\/[\d]+/.test(navigator.userAgent);
-                  if (
-                    (s || (r && l) || i) &&
-                    'undefined' != typeof FileReader
-                  ) {
-                    var p = new FileReader();
-                    (p.onloadend = function () {
-                      var e = p.result;
-                      (e = s
-                        ? e
-                        : e.replace(/^data:[^;]*;/, 'data:attachment/file;')),
-                        a ? (a.location.href = e) : (location = e),
-                        (a = null);
-                    }),
-                      p.readAsDataURL(e);
-                  } else {
-                    var u = c.URL || c.webkitURL,
-                      d = u.createObjectURL(e);
-                    a ? (a.location = d) : (location.href = d),
-                      (a = null),
-                      setTimeout(function () {
-                        u.revokeObjectURL(d);
-                      }, 4e4);
-                  }
-                });
-        (c.saveAs = l.saveAs = l), (e.exports = l);
-      });
+    49111: function (e, t, n) {
+      'use strict';
+      n(38663), n(34621);
     },
   },
 ]);

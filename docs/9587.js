@@ -34,7 +34,7 @@
         i = n.n(c),
         r = n(21843),
         s = n.n(r),
-        d = n(86023),
+        d = n(71706),
         u = ['isTpl'],
         h = (e) => {
           var t = e.isTpl,
@@ -45,22 +45,18 @@
             g = n.disabled,
             p = n.ghost,
             f = (n.href, n.iconLocation),
-            m = n.icon,
-            b = n.loading,
-            k = n.shape;
+            b = n.icon,
+            k = n.loading,
+            m = n.shape;
           return i().createElement(
             i().Fragment,
             null,
             t &&
-              i().createElement(
-                'div',
-                null,
-                i().createElement(a.Z, {
-                  preview: !1,
-                  src: s(),
-                  alt: 'Antd Button',
-                }),
-              ),
+              i().createElement(a.Z, {
+                preview: !1,
+                src: s(),
+                alt: 'Antd Button',
+              }),
             !t &&
               i().createElement(
                 l.Z,
@@ -70,13 +66,13 @@
                   ghost: p,
                   danger: h,
                   disabled: g,
-                  loading: b,
-                  shape: k,
+                  loading: k,
+                  shape: m,
                   onClick: e.onClick,
                 },
-                m.length > 0 && 'left' === f && i().createElement(d[m]),
+                b.length > 0 && 'left' === f && i().createElement(d[b]),
                 c,
-                m.length > 0 && 'right' === f && i().createElement(d[m]),
+                b.length > 0 && 'right' === f && i().createElement(d[b]),
               ),
           );
         };

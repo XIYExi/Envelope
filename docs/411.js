@@ -9,7 +9,7 @@
             return b;
           },
         });
-      var l = r(57337),
+      var l = r(2824),
         n = r(93224),
         t = r(12924),
         s = r.n(t),
@@ -116,7 +116,7 @@
         (Q.Line = f),
         (Q.Paragraph = I);
       var N = Q,
-        F = r(49282),
+        F = r(76763),
         G = ['isTpl'],
         Y = (e) => {
           var a = e.isTpl,

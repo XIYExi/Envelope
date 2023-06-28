@@ -80,6 +80,157 @@
         formIpt: 'formIpt___3Nf1v',
       };
     },
+    95370: function (e, t, n) {
+      'use strict';
+      n.d(t, {
+        Y: function () {
+          return m;
+        },
+      });
+      var a = n(8870),
+        o = n(55733),
+        r = n.n(o),
+        l = n(93162),
+        i =
+          '# \u5982\u4f55\u4f7f\u7528\uff1a\n\n- umi \u91cc\u5982\u4f55\u4f7f\u7528[\u8bf7\u67e5\u770b](https://landing.ant.design/docs/use/umi)\u3002\n- \u5176\u5b83\u811a\u624b\u67b6\u4f7f\u7528[\u8bf7\u67e5\u770b](https://landing.ant.design/docs/use/getting-started)\u3002\n',
+        s = (e) => {
+          var t = e,
+            n = '',
+            a = t.match(/import\s+logo\s+from\s+'(.+?)';/g);
+          a && a.length && (n = t.replace(a[0], ''));
+          var o = t.match(/import\s+{(.+?)}\s+from\s+'@\/(.+?)';/g);
+          o && o.length && (n = n.replace(o[0], ''));
+          var r = t.match(
+            /\/\*begin\s+to\s+delete\*\/+[^]*;\n+\/\*end\s+to\s+delete\*\//g,
+          );
+          r && r.length && (n = n.replace(r[0], ''));
+          var l = t.match(/:\s+FC<(.+?)>/g);
+          return (
+            l && l.length && (n = n.replace(l[0], '')),
+            (n = n.replace(
+              'logo',
+              "'https://s1.ax1x.com/2023/03/10/ppnq09s.png'",
+            )),
+            n
+          );
+        },
+        c = (e) => {
+          var t = '',
+            n = '',
+            a = e,
+            o = [];
+          a.map((e, a) => {
+            var r = e.item,
+              l = r.type,
+              i = e.id,
+              s = r.datasourceName;
+            -1 === o.indexOf(l) &&
+              ((t += 'import A'.concat(l, " from './").concat(l, "';\n")),
+              o.push(l)),
+              (n += '<A'
+                .concat(l, ' id="')
+                .concat(i, '" key="')
+                .concat(i, '" isTpl={false} {...')
+                .concat(s, '}/>,\n'));
+          });
+          var r = 'import {\n'.concat(
+            a.map((e) => '\t'.concat(e.item.datasourceName)).join(',\n'),
+            "\n} from './data.source'",
+          );
+          return (
+            (n = 'const children = ['.concat(n, ']')),
+            { childStr: n, dataSourceStr: r, importStr: t }
+          );
+        },
+        d = (e, t, n, a) => {
+          var o = new (r())(),
+            s = "import React from 'react';\n",
+            c = [],
+            d = s;
+          e.forEach((e) => {
+            var t = e.item,
+              n = t.type;
+            if (-1 === c.indexOf(n)) {
+              c.push(n);
+              var a = ''.concat(n, '.jsx'),
+                r = t.templateStr;
+              o.file(a, r), (d += t.props + '\n');
+            } else d += t.props + '\n';
+          }),
+            o.file('data.source.js', d);
+          var m = s;
+          (m += a + '\n'), (m += n + '\n');
+          var p =
+            '\nexport default class Home extends React.Component{\n  render(){\n    '.concat(
+              t,
+              ';\n    return (\n      <div>\n        {children}\n      </div>\n    )\n  }\n}\n',
+            );
+          (m += p),
+            o.file('index.js', m),
+            o.file('README.md', i),
+            o.generateAsync({ type: 'blob' }).then((e) => {
+              (0, l.saveAs)(e, 'Home.zip');
+            });
+        };
+      function m(e, t, n) {
+        console.log('\u5f00\u59cb\u5de5\u4f5c', e);
+        var o = e,
+          r = {};
+        e.map((e, t) => {
+          var n = e.id,
+            l = e.item,
+            i = ''.concat(l.type).concat(n, 'DataSource');
+          console.log('\u5f53\u524ddatasourceName\uff1a ', i),
+            (o[t]['item'] = (0, a.Z)(
+              (0, a.Z)({}, o[t]['item']),
+              {},
+              { datasourceName: i },
+            ));
+          var c = 'export const '
+            .concat(l.type)
+            .concat(n, 'DataSource = ')
+            .concat(
+              JSON.stringify(l.config)
+                .replace(/\\n/g, '')
+                .replace(/href="(.*?)"/g, 'href=\\"$1\\"')
+                .replace(/<br>/g, '<br />')
+                .replace(/"(<.*?>)"/g, (e, t) =>
+                  ''.concat(
+                    t.replace(/\{/g, '&#123;').replace(/\}/g, '&#125;'),
+                  ),
+                )
+                .replace(/\\"/g, '"'),
+            );
+          (r[''.concat(l.type)] = (0, a.Z)(
+            (0, a.Z)({}, r[''.concat(l.type)]),
+            {},
+            { ['PROPS-'.concat(t)]: c },
+          )),
+            (o[t]['item'] = (0, a.Z)(
+              (0, a.Z)({}, o[t]['item']),
+              {},
+              { props: c },
+            ));
+          var d = s(l.templateStr);
+          (r[''.concat(l.type)] = (0, a.Z)(
+            (0, a.Z)({}, r[''.concat(l.type)]),
+            {},
+            { ['JS-'.concat(t)]: d },
+          )),
+            (o[t]['item']['templateStr'] = d);
+        }),
+          localStorage.setItem('promiseObject', JSON.stringify(o));
+        var l = c(o),
+          i = l.childStr,
+          m = l.dataSourceStr,
+          p = l.importStr;
+        try {
+          d(o, i, m, p);
+        } catch (u) {
+          console.log('\u4ee3\u7801\u751f\u6210\u5931\u8d25', u);
+        }
+      }
+    },
     6350: function (e, t, n) {
       'use strict';
       n(43358);
@@ -89,7 +240,7 @@
         l,
         i = n(9e3),
         s = (n(14965), n(11448)),
-        c = n(57337),
+        c = n(2824),
         d = (n(63185), n(9676)),
         m = (n(77883), n(85986)),
         p = (n(47673), n(4107)),
@@ -326,7 +477,7 @@
           },
         });
       var a =
-          "import React, { FC, memo } from 'react';\nimport { IAlertConfig } from '@/materials/absolute-antd/base/Alert/schema';\nimport { Alert, Image } from 'antd';\nimport logo from '../../../../assets/absolute/Logo.png';\n\n/*begin to delete*/\nexport type IAlertPrpConfig = IAlertConfig & {\n  isTpl: boolean;\n};\n/*end to delete*/\n\nconst AAlert: FC<IAlertPrpConfig> = (props) => {\n  const { isTpl, ...restProps } = props;\n\n  const { message } = props;\n\n  return (\n    <React.Fragment>\n      {isTpl && (\n        <div>\n          <Image src={logo} alt=\"\" />\n        </div>\n      )}\n      {!isTpl && (\n        // @ts-ignore\n        <Alert message={message} {...restProps} />\n      )}\n    </React.Fragment>\n  );\n};\n\nexport default memo(AAlert);\n",
+          "import React, { FC, memo } from 'react';\nimport { IAlertConfig } from '@/materials/absolute-antd/base/Alert/schema';\nimport { Alert, Image } from 'antd';\nimport logo from '../../../../assets/absolute/alertImage.png';\n\n/*begin to delete*/\nexport type IAlertPrpConfig = IAlertConfig & {\n  isTpl: boolean;\n};\n/*end to delete*/\n\nconst AAlert: FC<IAlertPrpConfig> = (props) => {\n  const { isTpl, ...restProps } = props;\n\n  const { message } = props;\n\n  return (\n    <React.Fragment>\n      {isTpl && (\n        <div>\n          <Image src={logo} alt=\"\" />\n        </div>\n      )}\n      {!isTpl && (\n        // @ts-ignore\n        <Alert message={message} {...restProps} />\n      )}\n    </React.Fragment>\n  );\n};\n\nexport default memo(AAlert);\n",
         o = {
           editData: [
             {
@@ -387,7 +538,7 @@
           },
         });
       var a =
-          "import { Carousel } from 'antd';\nimport React, { FC, memo, PropsWithChildren } from 'react';\nimport styled from 'styled-components';\nimport { ICarouselConfig } from './schema';\nimport logo from '../../../../assets/absolute/banner.png';\n\n/*begin to delete*/\ninterface CarouselTypes extends ICarouselConfig {\n  isTpl: boolean;\n}\n/*end to delete*/\n\nconst PicItem = styled.div`\n  display: inline-block;\n  width: 100%;\n  max-height: 220px;\n  overflow: hidden;\n  vertical-align: top;\n  img {\n    width: 100%;\n  }\n`;\n\nconst ACarouselWrapper = styled.div`\n  width: 100%;\n  overflow: hidden;\n`;\n\nconst ACarousel: FC<CarouselTypes> = (props) => {\n  const { isTpl, ...restProps } = props;\n\n  const { direction, effect, autoPlay, imgList, round } = restProps;\n\n  const contentRender = () => {\n    return imgList.map((item, i) => {\n      return (\n        <PicItem key={+i} style={{ borderRadius: round + 'px' }}>\n          <a href={item.link}>\n            <img\n              src={item.imgUrl.length > 0 ? item.imgUrl[0].url : ''}\n              alt=\"\"\n            />\n          </a>\n        </PicItem>\n      );\n    });\n  };\n\n  return (\n    <ACarouselWrapper>\n      {isTpl ? (\n        <PicItem>\n          <img src={logo} alt=\"?\" />\n        </PicItem>\n      ) : (\n        <Carousel dotPosition={direction} effect={effect} autoplay={autoPlay}>\n          {contentRender()}\n        </Carousel>\n      )}\n    </ACarouselWrapper>\n  );\n};\n\nexport default memo(ACarousel);\n",
+          "import { Carousel } from 'antd';\nimport React, { FC, memo, PropsWithChildren } from 'react';\nimport styled from 'styled-components';\nimport { ICarouselConfig } from './schema';\nimport logo from '../../../../assets/absolute/carouselImage.png';\n\n/*begin to delete*/\ninterface CarouselTypes extends ICarouselConfig {\n  isTpl: boolean;\n}\n/*end to delete*/\n\nconst PicItem = styled.div`\n  display: inline-block;\n  width: 100%;\n  max-height: 220px;\n  overflow: hidden;\n  vertical-align: top;\n  img {\n    width: 100%;\n  }\n`;\n\nconst ACarouselWrapper = styled.div`\n  width: 100%;\n  overflow: hidden;\n`;\n\nconst ACarousel: FC<CarouselTypes> = (props) => {\n  const { isTpl, ...restProps } = props;\n\n  const { direction, effect, autoPlay, imgList, round } = restProps;\n\n  const contentRender = () => {\n    return imgList.map((item, i) => {\n      return (\n        <PicItem key={+i} style={{ borderRadius: round + 'px' }}>\n          <a>\n            <img\n              src={item.imgUrl.length > 0 ? item.imgUrl[0].url : ''}\n              alt=\"\"\n            />\n          </a>\n        </PicItem>\n      );\n    });\n  };\n\n  return (\n    <ACarouselWrapper>\n      {isTpl ? (\n        <PicItem>\n          <img src={logo} alt=\"?\" />\n        </PicItem>\n      ) : (\n        <Carousel dotPosition={direction} effect={effect} autoplay={autoPlay}>\n          {contentRender()}\n        </Carousel>\n      )}\n    </ACarouselWrapper>\n  );\n};\n\nexport default memo(ACarousel);\n",
         o = {
           editData: [
             {
@@ -438,7 +589,7 @@
                     uid: '001',
                     name: 'image.png',
                     status: 'done',
-                    url: 'http://h5.dooring.cn/uploads/1_1740bd7c3dc.png',
+                    url: 'https://s1.ax1x.com/2023/06/28/pCd3IGn.png',
                   },
                 ],
               },
@@ -452,12 +603,12 @@
                     uid: '001',
                     name: 'image.png',
                     status: 'done',
-                    url: 'http://h5.dooring.cn/uploads/1_1740bd7c3dc.png',
+                    url: 'https://s1.ax1x.com/2023/06/28/pCd3IGn.png',
                   },
                 ],
               },
             ],
-            tplImg: 'http://h5.dooring.cn/uploads/1_1740bd7c3dc.png',
+            tplImg: 'https://s1.ax1x.com/2023/06/28/pCd3IGn.png',
           },
           templateStr: a,
         },
@@ -675,7 +826,7 @@
       var a = n(8870),
         o = n(92183),
         r =
-          "import React, { FC, memo, useState } from 'react';\nimport Logo from '../../../../assets/absolute/Logo.png';\nimport { Avatar, Button, Image } from 'antd';\nimport styled from 'styled-components';\nimport { IHeaderConfig } from '@/materials/absolute-antd/base/Header/schema';\n\nconst HeaderWrapper = styled.div`\n  font-family: 'Nunito Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif;\n  border-bottom: 1px solid rgba(0, 0, 0, 0.1);\n  padding: 15px 20px;\n  display: flex;\n  align-items: center;\n  justify-content: space-between;\n\n  & button + button {\n    margin-left: 10px;\n  }\n`;\n\nconst WelcomeWrapper = styled.div`\n  color: #333;\n  font-size: 14px;\n  margin-right: 10px;\n`;\n\nconst Svg = styled.div`\n  margin-right: 10px;\n  max-width: 160px;\n  max-height: 46px;\n  height: 46px;\n  overflow: hidden;\n  img {\n    height: 100%;\n    object-fit: contain;\n  }\n`;\n\nconst H1 = styled.h1<{\n  $color: string;\n  $fontSize: number;\n}>`\n  font-weight: 900;\n  line-height: 1;\n  margin: 6px 0 6px 10px;\n  display: inline-block;\n  vertical-align: top;\n  color: ${(props) => props.$color};\n  font-size: ${(props) => props.$fontSize};\n`;\n\nconst Index = styled.header<{ props: IHeaderConfig }>`\n  box-sizing: content-box;\n  padding: 3px 12px;\n  display: flex;\n  align-items: center;\n  height: 50px;\n  overflow: hidden;\n  position: absolute;\n  background-color: ${(props) => props.props.bgColor};\n  width: ${(props) => props.props.baseWidth}%;\n  height: ${(props) => props.props.baseHeight}%;\n  border-radius: ${(props) => props.props.baseRadius};\n  transform: translate(\n      ${(props) => props.props.baseLeft}px,\n      ${(props) => props.props.baseTop}\n    )\n    scale(${(props) => props.props.baseScale / 100})\n    rotate(${(props) => props.props.baseRadius}deg);\n`;\n\n/*begin to delete*/\nexport interface IHeaderProProps extends IHeaderConfig {\n  onLogin?: () => void;\n  onLogout?: () => void;\n  onCreateAccount?: () => void;\n}\n/*end to delete*/\n\nexport const AHeader: FC<IHeaderProProps> = (props) => {\n  const { isTpl, ...restProps } = props;\n\n  const {\n    user,\n    title,\n    logo,\n    fontSize,\n    color,\n    size,\n    shape,\n    onLogin,\n    onLogout,\n    onCreateAccount,\n  } = restProps;\n\n  const [name, setName] = useState(user);\n\n  const handleOnLogout = () => {\n    setName('');\n    onLogout && onLogout();\n  };\n\n  const handleOnLogin = () => {\n    //TODO... \u4f7f\u7528redux\u7b49\u7ec4\u4ef6\uff0c\u52a8\u6001\u66f4\u65b0\u7528\u6237\u540d\n    setName('xiye');\n    onLogin && onLogin();\n  };\n\n  const handleOnCreateAccount = () => {\n    //TODO... \u4f7f\u7528redux\u7b49\u7ec4\u4ef6\uff0c\u52a8\u6001\u66f4\u65b0\u7528\u6237\u540d\n    setName('xiye');\n    onCreateAccount && onCreateAccount();\n  };\n\n  return (\n    <React.Fragment>\n      {isTpl && (\n        <div>\n          <Image preview={false} src={Logo} alt=\"\" />\n        </div>\n      )}\n      {!isTpl && (\n        <Index props={props}>\n          <HeaderWrapper>\n            <div style={{ display: 'flex' }}>\n              <Svg>\n                <Avatar\n                  shape={shape}\n                  size={size}\n                  src={logo && logo[0].url}\n                  alt={title}\n                />\n              </Svg>\n              <H1 $fontSize={fontSize} $color={color}>\n                {title}\n              </H1>\n            </div>\n            <div>\n              {name.length > 0 ? (\n                <>\n                  <WelcomeWrapper>\n                    Welcome, <b>{name}</b>!\n                  </WelcomeWrapper>\n                  <Button size=\"small\" onClick={handleOnLogout}>\n                    Log out\n                  </Button>\n                </>\n              ) : (\n                <>\n                  <Button size=\"small\" onClick={handleOnLogin}>\n                    Log in\n                  </Button>\n                  <Button\n                    type={'primary'}\n                    size=\"small\"\n                    onClick={handleOnCreateAccount}\n                  >\n                    Sign up\n                  </Button>\n                </>\n              )}\n            </div>\n          </HeaderWrapper>\n        </Index>\n      )}\n    </React.Fragment>\n  );\n};\n\nexport default memo(AHeader);\n",
+          "import React, { FC, memo, useState } from 'react';\nimport Logo from '../../../../assets/absolute/headerImage.png';\nimport { Avatar, Button, Image } from 'antd';\nimport styled from 'styled-components';\nimport { IHeaderConfig } from '@/materials/absolute-antd/base/Header/schema';\n\nconst HeaderWrapper = styled.div`\n  font-family: 'Nunito Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif;\n  border-bottom: 1px solid rgba(0, 0, 0, 0.1);\n  padding: 15px 20px;\n  display: flex;\n  align-items: center;\n  justify-content: space-between;\n\n  & button + button {\n    margin-left: 10px;\n  }\n`;\n\nconst WelcomeWrapper = styled.div`\n  color: #333;\n  font-size: 14px;\n  margin-right: 10px;\n`;\n\nconst Svg = styled.div`\n  margin-right: 10px;\n  max-width: 160px;\n  max-height: 46px;\n  height: 46px;\n  overflow: hidden;\n  img {\n    height: 100%;\n    object-fit: contain;\n  }\n`;\n\nconst H1 = styled.h1<{\n  $color: string;\n  $fontSize: number;\n}>`\n  font-weight: 900;\n  line-height: 1;\n  margin: 6px 0 6px 10px;\n  display: inline-block;\n  vertical-align: top;\n  color: ${(props) => props.$color};\n  font-size: ${(props) => props.$fontSize};\n`;\n\nconst Index = styled.header<{ props: IHeaderConfig }>`\n  box-sizing: content-box;\n  padding: 3px 12px;\n  display: flex;\n  align-items: center;\n  height: 50px;\n  overflow: hidden;\n  position: absolute;\n  background-color: ${(props) => props.props.bgColor};\n  width: ${(props) => props.props.baseWidth}%;\n  height: ${(props) => props.props.baseHeight}%;\n  border-radius: ${(props) => props.props.baseRadius};\n  transform: translate(\n      ${(props) => props.props.baseLeft}px,\n      ${(props) => props.props.baseTop}\n    )\n    scale(${(props) => props.props.baseScale / 100})\n    rotate(${(props) => props.props.baseRadius}deg);\n`;\n\n/*begin to delete*/\nexport interface IHeaderProProps extends IHeaderConfig {\n  onLogin?: () => void;\n  onLogout?: () => void;\n  onCreateAccount?: () => void;\n}\n/*end to delete*/\n\nexport const AHeader: FC<IHeaderProProps> = (props) => {\n  const { isTpl, ...restProps } = props;\n\n  const {\n    user,\n    title,\n    logo,\n    fontSize,\n    color,\n    size,\n    shape,\n    onLogin,\n    onLogout,\n    onCreateAccount,\n  } = restProps;\n\n  const [name, setName] = useState(user);\n\n  const handleOnLogout = () => {\n    setName('');\n    onLogout && onLogout();\n  };\n\n  const handleOnLogin = () => {\n    //TODO... \u4f7f\u7528redux\u7b49\u7ec4\u4ef6\uff0c\u52a8\u6001\u66f4\u65b0\u7528\u6237\u540d\n    setName('xiye');\n    onLogin && onLogin();\n  };\n\n  const handleOnCreateAccount = () => {\n    //TODO... \u4f7f\u7528redux\u7b49\u7ec4\u4ef6\uff0c\u52a8\u6001\u66f4\u65b0\u7528\u6237\u540d\n    setName('xiye');\n    onCreateAccount && onCreateAccount();\n  };\n\n  return (\n    <React.Fragment>\n      {isTpl && (\n        <div>\n          <Image preview={false} src={Logo} alt=\"\" />\n        </div>\n      )}\n      {!isTpl && (\n        <Index props={props}>\n          <HeaderWrapper>\n            <div style={{ display: 'flex' }}>\n              <Svg>\n                <Avatar\n                  shape={shape}\n                  size={size}\n                  src={logo && logo[0].url}\n                  alt={title}\n                />\n              </Svg>\n              <H1 $fontSize={fontSize} $color={color}>\n                {title}\n              </H1>\n            </div>\n            <div>\n              {name.length > 0 ? (\n                <>\n                  <WelcomeWrapper>\n                    Welcome, <b>{name}</b>!\n                  </WelcomeWrapper>\n                  <Button size=\"small\" onClick={handleOnLogout}>\n                    Log out\n                  </Button>\n                </>\n              ) : (\n                <>\n                  <Button size=\"small\" onClick={handleOnLogin}>\n                    Log in\n                  </Button>\n                  <Button\n                    type={'primary'}\n                    size=\"small\"\n                    onClick={handleOnCreateAccount}\n                  >\n                    Sign up\n                  </Button>\n                </>\n              )}\n            </div>\n          </HeaderWrapper>\n        </Index>\n      )}\n    </React.Fragment>\n  );\n};\n\nexport default memo(AHeader);\n",
         l = {
           editData: [
             { key: 'bgColor', name: '\u80cc\u666f\u8272', type: 'Color' },
@@ -762,7 +913,7 @@
       var a = n(8870),
         o = n(92183),
         r =
-          "import React, { FC, memo, useState } from 'react';\nimport styled from 'styled-components';\nimport { Image } from 'antd';\nimport logo from '../../../../assets/absolute/img.png';\nimport { TTextSelectKeyType } from '@/materials/absolute-antd/base/Text/schema';\nimport { IImageConfig } from '@/materials/absolute-antd/base/Image/schema';\n\nconst AImageWrapper = styled.div<{\n  $baseWidth: number;\n  $baseHeight: number;\n  $borderRadius: number;\n  $baseLeft: number;\n  $baseTop: number;\n  $baseScale: number;\n  $baseRotate: number;\n}>`\n  overflow: hidden;\n  position: absolute;\n  width: ${(props) => props.$baseWidth + '%'};\n  height: ${(props) => props.$baseHeight + '%'};\n  border-radius: ${(props) => props.$borderRadius};\n  transform: ${(props) => `translate(${props.$baseLeft}px,${props.$baseTop}px)\n      scale(${props.$baseScale / 100})\n      rotate(${props.$baseRotate}deg)`};\n`;\n\nconst AImageContainer = styled.div<{ round: number }>`\n  border-radius: ${(props) => props.round};\n  width: 100%;\n  text-align: center;\n  overflow: hidden;\n  position: relative;\n`;\n\ntype TSelectDefaultType<KeyType> = KeyType;\nconst ASubTextWrapper = styled.div<{\n  $translate: [number | undefined, number | undefined];\n  $textAlign: TSelectDefaultType<TTextSelectKeyType>;\n}>`\n  position: absolute;\n  width: 100%;\n  top: 50%;\n  left: 50%;\n  transform: translate(-50%, -50%);\n  margin-left: ${(props) => props.translate && props.translate[0]};\n  margin-top: ${(props) => props.translate && props.translate[1]};\n  text-align: ${(props) => props.$textAlign};\n`;\n\n/*begin to delete*/\ninterface IImageProps extends IImageConfig {\n  isTpl: boolean;\n}\n/*end to delete*/\n\nconst AImage: FC<IImageProps> = (props) => {\n  const { isTpl, ...restProps } = props;\n\n  const {\n    imgUrl,\n    round = 0,\n    translate,\n    align,\n    titText,\n    titFontSize,\n    titColor,\n    titFontWeight,\n    subTitText,\n    subTitFontSize,\n    subTitColor,\n    subTitFontWeight,\n  } = restProps;\n\n  const [visible, setVisible] = useState<boolean>(false);\n\n  return (\n    <React.Fragment>\n      {props.isTpl && (\n        <div>\n          <img src={logo} alt=\"\" />\n        </div>\n      )}\n      {!props.isTpl && (\n        <AImageWrapper\n          $baseWidth={props.baseWidth}\n          $baseHeight={props.baseHeight}\n          $borderRadius={props.baseRadius}\n          $baseLeft={props.baseLeft}\n          $baseRotate={props.baseLeft}\n          $baseScale={props.baseScale}\n          $baseTop={props.baseTop}\n        >\n          <AImageContainer round={round}>\n            <ASubTextWrapper $textAlign={align} $translate={translate}>\n              <div\n                style={{\n                  fontSize: titFontSize,\n                  color: titColor,\n                  fontWeight: +titFontWeight,\n                }}\n              >\n                {titText}\n              </div>\n              <div\n                style={{\n                  fontSize: subTitFontSize,\n                  color: subTitColor,\n                  fontWeight: +subTitFontWeight,\n                  lineHeight: 2.6,\n                }}\n              >\n                {subTitText}\n              </div>\n            </ASubTextWrapper>\n            {imgUrl.length <= 1 ? (\n              <Image\n                src={imgUrl && imgUrl[0].url}\n                alt=\"\"\n                style={{ width: '100%' }}\n              />\n            ) : (\n              <React.Fragment>\n                <Image\n                  preview={{ visible: false }}\n                  style={{ width: '100%' }}\n                  src={imgUrl && imgUrl[0].url}\n                  onClick={() => setVisible(true)}\n                />\n                <div style={{ display: 'none' }}>\n                  <Image.PreviewGroup\n                    preview={{\n                      visible,\n                      onVisibleChange: (vis) => setVisible(vis),\n                    }}\n                  >\n                    {imgUrl.map((item, i) => (\n                      <Image src={item.url} key={i} style={{ width: '100%' }} />\n                    ))}\n                  </Image.PreviewGroup>\n                </div>\n              </React.Fragment>\n            )}\n          </AImageContainer>\n        </AImageWrapper>\n      )}\n    </React.Fragment>\n  );\n};\n\nexport default memo(AImage);\n",
+          "import React, { FC, memo, useState } from 'react';\nimport styled from 'styled-components';\nimport { Image } from 'antd';\nimport logo from '../../../../assets/absolute/imageImage.png';\nimport { TTextSelectKeyType } from '@/materials/absolute-antd/base/Text/schema';\nimport { IImageConfig } from '@/materials/absolute-antd/base/Image/schema';\n\nconst AImageWrapper = styled.div<{\n  $baseWidth: number;\n  $baseHeight: number;\n  $borderRadius: number;\n  $baseLeft: number;\n  $baseTop: number;\n  $baseScale: number;\n  $baseRotate: number;\n}>`\n  overflow: hidden;\n  position: absolute;\n  width: ${(props) => props.$baseWidth + '%'};\n  height: ${(props) => props.$baseHeight + '%'};\n  border-radius: ${(props) => props.$borderRadius};\n  transform: ${(props) => `translate(${props.$baseLeft}px,${props.$baseTop}px)\n      scale(${props.$baseScale / 100})\n      rotate(${props.$baseRotate}deg)`};\n`;\n\nconst AImageContainer = styled.div<{ round: number }>`\n  border-radius: ${(props) => props.round};\n  width: 100%;\n  text-align: center;\n  overflow: hidden;\n  position: relative;\n`;\n\ntype TSelectDefaultType<KeyType> = KeyType;\nconst ASubTextWrapper = styled.div<{\n  $translate: [number | undefined, number | undefined];\n  $textAlign: TSelectDefaultType<TTextSelectKeyType>;\n}>`\n  position: absolute;\n  width: 100%;\n  top: 50%;\n  left: 50%;\n  transform: translate(-50%, -50%);\n  margin-left: ${(props) => props.translate && props.translate[0]};\n  margin-top: ${(props) => props.translate && props.translate[1]};\n  text-align: ${(props) => props.$textAlign};\n`;\n\n/*begin to delete*/\ninterface IImageProps extends IImageConfig {\n  isTpl: boolean;\n}\n/*end to delete*/\n\nconst AImage: FC<IImageProps> = (props) => {\n  const { isTpl, ...restProps } = props;\n\n  const {\n    imgUrl,\n    round = 0,\n    translate,\n    align,\n    titText,\n    titFontSize,\n    titColor,\n    titFontWeight,\n    subTitText,\n    subTitFontSize,\n    subTitColor,\n    subTitFontWeight,\n  } = restProps;\n\n  const [visible, setVisible] = useState<boolean>(false);\n\n  return (\n    <React.Fragment>\n      {props.isTpl && (\n        <div>\n          <Image preview={false} src={logo} alt=\"\" />\n        </div>\n      )}\n      {!props.isTpl && (\n        <AImageWrapper\n          $baseWidth={props.baseWidth}\n          $baseHeight={props.baseHeight}\n          $borderRadius={props.baseRadius}\n          $baseLeft={props.baseLeft}\n          $baseRotate={props.baseLeft}\n          $baseScale={props.baseScale}\n          $baseTop={props.baseTop}\n        >\n          <AImageContainer round={round}>\n            <ASubTextWrapper $textAlign={align} $translate={translate}>\n              <div\n                style={{\n                  fontSize: titFontSize,\n                  color: titColor,\n                  fontWeight: +titFontWeight,\n                }}\n              >\n                {titText}\n              </div>\n              <div\n                style={{\n                  fontSize: subTitFontSize,\n                  color: subTitColor,\n                  fontWeight: +subTitFontWeight,\n                  lineHeight: 2.6,\n                }}\n              >\n                {subTitText}\n              </div>\n            </ASubTextWrapper>\n            {imgUrl.length <= 1 ? (\n              <Image\n                src={imgUrl && imgUrl[0].url}\n                alt=\"\"\n                style={{ width: '100%' }}\n              />\n            ) : (\n              <React.Fragment>\n                <Image\n                  preview={{ visible: false }}\n                  style={{ width: '100%' }}\n                  src={imgUrl && imgUrl[0].url}\n                  onClick={() => setVisible(true)}\n                />\n                <div style={{ display: 'none' }}>\n                  <Image.PreviewGroup\n                    preview={{\n                      visible,\n                      onVisibleChange: (vis) => setVisible(vis),\n                    }}\n                  >\n                    {imgUrl.map((item, i) => (\n                      <Image src={item.url} key={i} style={{ width: '100%' }} />\n                    ))}\n                  </Image.PreviewGroup>\n                </div>\n              </React.Fragment>\n            )}\n          </AImageContainer>\n        </AImageWrapper>\n      )}\n    </React.Fragment>\n  );\n};\n\nexport default memo(AImage);\n",
         l = {
           editData: [
             { key: 'translate', name: '\u6587\u5b57\u504f\u79fb', type: 'Pos' },
@@ -896,7 +1047,7 @@
       var a = n(8870),
         o = n(92183),
         r =
-          "import React, { FC, memo, useEffect, useState } from 'react';\nimport styled from 'styled-components';\nimport logo from '../../../../assets/absolute/list.png';\nimport { IListConfig } from '@/materials/absolute-antd/base/List/schema';\nimport { Avatar, Divider, Image, List } from 'antd';\nimport { PaginationConfig } from 'antd/es/pagination';\n\nconst SourceItem = styled.div`\n  display: flex;\n  align-items: center;\n  margin-bottom: 16px;\n`;\n\nconst ListWrapper = styled.div<{\n  props: any;\n}>`\n  margin: 10px auto;\n  width: 100%;\n  overflow: hidden;\n  position: absolute;\n  width: ${(props) => props.props.baseWidth};\n  height: ${(props) => props.props.baseHeight};\n  border-radius: ${(props) => props.props.baseRadius};\n  transform: translate(\n      ${(props) => props.props.baseLeft}px,\n      ${(props) => props.props.baseTop}px\n    )\n    scale(${(props) => props.props.baseScale / 100})\n    rotate(${(props) => props.props.baseRotate}deg);\n`;\n\n/*begin to delete*/\ninterface IListProps extends IListConfig {\n  isTpl: boolean;\n}\n/*end to delete*/\n\nconst AList: FC<IListProps> = (props) => {\n  const { isTpl, ...restProps } = props;\n\n  const {\n    bordered,\n    header = '',\n    footer = '',\n    sourceData,\n    itemLayout,\n    loading,\n    size,\n    split,\n    pagination,\n    grid,\n  } = restProps;\n\n  const [gridCol, setGridCol] = useState<any>({});\n\n  useEffect(() => {\n    let copy: any = {};\n    grid.map((item, i) => {\n      if (item.type === 'Number') {\n        if (item.id === 'column') copy['column'] = Number(item.placeholder);\n        if (item.id === 'gutter') copy['gutter'] = Number(item.placeholder);\n        if (item.id === 'xs') copy['xs'] = Number(item.placeholder);\n        if (item.id === 'sm') copy['sm'] = Number(item.placeholder);\n        if (item.id === 'md') copy['md'] = Number(item.placeholder);\n        if (item.id === 'lg') copy['lg'] = Number(item.placeholder);\n        if (item.id === 'xl') copy['xl'] = Number(item.placeholder);\n        if (item.id === 'xxl') copy['xxl'] = Number(item.placeholder);\n      }\n    });\n    console.log(copy);\n    setGridCol(copy);\n  }, [grid]);\n\n  return (\n    <React.Fragment>\n      {isTpl && (\n        <div>\n          <Image preview={false} src={logo} alt=\"\" />\n        </div>\n      )}\n      {!isTpl && (\n        <ListWrapper props={props}>\n          <List\n            bordered={bordered}\n            header={header.length > 0 ? header : <></>}\n            footer={footer.length > 0 ? footer : <></>}\n            itemLayout={itemLayout}\n            loading={loading}\n            size={size}\n            split={split}\n            pagination={pagination as false | PaginationConfig | undefined}\n            grid={gridCol}\n          >\n            {sourceData.map((item, i) => {\n              return (\n                <List.Item key={i}>\n                  {item.imgUrl.length > 0 ? (\n                    <React.Fragment>\n                      <List.Item.Meta\n                        avatar={<Avatar src={item.imgUrl[0].url} />}\n                        title={<a href={item.link}>{item.title}</a>}\n                        description={item.desc}\n                      />\n                      {item.content}\n                    </React.Fragment>\n                  ) : (\n                    <React.Fragment>\n                      <List.Item.Meta\n                        title={<a href={item.link}>{item.title}</a>}\n                        description={item.desc}\n                      />\n                      {item.content}\n                    </React.Fragment>\n                  )}\n                  {split && <Divider />}\n                </List.Item>\n              );\n            })}\n          </List>\n        </ListWrapper>\n      )}\n    </React.Fragment>\n  );\n};\n\nexport default memo(AList);\n",
+          "import React, { FC, memo, useEffect, useState } from 'react';\nimport styled from 'styled-components';\nimport logo from '../../../../assets/absolute/listImage.png';\nimport { IListConfig } from '@/materials/absolute-antd/base/List/schema';\nimport { Avatar, Divider, Image, List } from 'antd';\nimport { PaginationConfig } from 'antd/es/pagination';\n\nconst SourceItem = styled.div`\n  display: flex;\n  align-items: center;\n  margin-bottom: 16px;\n`;\n\nconst ListWrapper = styled.div<{\n  props: any;\n}>`\n  margin: 10px auto;\n  width: 100%;\n  overflow: hidden;\n  position: absolute;\n  width: ${(props) => props.props.baseWidth};\n  height: ${(props) => props.props.baseHeight};\n  border-radius: ${(props) => props.props.baseRadius};\n  transform: translate(\n      ${(props) => props.props.baseLeft}px,\n      ${(props) => props.props.baseTop}px\n    )\n    scale(${(props) => props.props.baseScale / 100})\n    rotate(${(props) => props.props.baseRotate}deg);\n`;\n\n/*begin to delete*/\ninterface IListProps extends IListConfig {\n  isTpl: boolean;\n}\n/*end to delete*/\n\nconst AList: FC<IListProps> = (props) => {\n  const { isTpl, ...restProps } = props;\n\n  const {\n    bordered,\n    header = '',\n    footer = '',\n    sourceData,\n    itemLayout,\n    loading,\n    size,\n    split,\n    pagination,\n    grid,\n  } = restProps;\n\n  const [gridCol, setGridCol] = useState<any>({});\n\n  useEffect(() => {\n    let copy: any = {};\n    grid.map((item, i) => {\n      if (item.type === 'Number') {\n        if (item.id === 'column') copy['column'] = Number(item.placeholder);\n        if (item.id === 'gutter') copy['gutter'] = Number(item.placeholder);\n        if (item.id === 'xs') copy['xs'] = Number(item.placeholder);\n        if (item.id === 'sm') copy['sm'] = Number(item.placeholder);\n        if (item.id === 'md') copy['md'] = Number(item.placeholder);\n        if (item.id === 'lg') copy['lg'] = Number(item.placeholder);\n        if (item.id === 'xl') copy['xl'] = Number(item.placeholder);\n        if (item.id === 'xxl') copy['xxl'] = Number(item.placeholder);\n      }\n    });\n    console.log(copy);\n    setGridCol(copy);\n  }, [grid]);\n\n  return (\n    <React.Fragment>\n      {isTpl && (\n        <div>\n          <Image preview={false} src={logo} alt=\"\" />\n        </div>\n      )}\n      {!isTpl && (\n        <ListWrapper props={props}>\n          <List\n            bordered={bordered}\n            header={header.length > 0 ? header : <></>}\n            footer={footer.length > 0 ? footer : <></>}\n            itemLayout={itemLayout}\n            loading={loading}\n            size={size}\n            split={split}\n            pagination={pagination as false | PaginationConfig | undefined}\n            grid={gridCol}\n          >\n            {sourceData.map((item, i) => {\n              return (\n                <List.Item key={i}>\n                  {item.imgUrl.length > 0 ? (\n                    <React.Fragment>\n                      <List.Item.Meta\n                        avatar={<Avatar src={item.imgUrl[0].url} />}\n                        title={<a href={item.link}>{item.title}</a>}\n                        description={item.desc}\n                      />\n                      {item.content}\n                    </React.Fragment>\n                  ) : (\n                    <React.Fragment>\n                      <List.Item.Meta\n                        title={<a href={item.link}>{item.title}</a>}\n                        description={item.desc}\n                      />\n                      {item.content}\n                    </React.Fragment>\n                  )}\n                  {split && <Divider />}\n                </List.Item>\n              );\n            })}\n          </List>\n        </ListWrapper>\n      )}\n    </React.Fragment>\n  );\n};\n\nexport default memo(AList);\n",
         l = {
           editData: [
             {
@@ -1173,7 +1324,7 @@
           },
         });
       var a =
-          "import React, { FC, memo } from 'react';\nimport logo from '../../../../assets/absolute/Logo.png';\nimport { Image } from 'antd';\nimport styled from 'styled-components';\nimport { IQrcodeConfig } from '@/materials/absolute-antd/base/Qrcode/schema';\n\nconst QrCodeWrapper = styled.div`\n  width: 100%;\n  max-width: 220px;\n  margin: 16px auto;\n`;\n\nconst QrCodeTextWrapper = styled.div<{\n  $color: string;\n  $fontSize: number;\n}>`\n  text-align: center;\n  color: ${(props) => props.$color};\n  font-size: ${(props) => props.$fontSize};\n  padding: 8px;\n`;\n\n/*begin to delete*/\ninterface IQrcodeProps extends IQrcodeConfig {\n  isTpl: boolean;\n}\n/*end to delete*/\n\nconst AQrcode: FC<IQrcodeProps> = (props) => {\n  const { isTpl, ...restProps } = props;\n\n  const { qrcode, text, color, fontSize = 14 } = restProps;\n\n  return (\n    <React.Fragment>\n      {isTpl ? (\n        <div>\n          <Image preview={false} src={logo} alt=\"\" />\n        </div>\n      ) : (\n        <QrCodeWrapper>\n          <Image\n            preview={false}\n            src={qrcode && qrcode[0].url}\n            alt={text}\n            style={{ width: '100%' }}\n          />\n          <QrCodeTextWrapper $color={color} $fontSize={fontSize}>\n            {text}\n          </QrCodeTextWrapper>\n        </QrCodeWrapper>\n      )}\n    </React.Fragment>\n  );\n};\n\nexport default memo(AQrcode);\n",
+          "import React, { FC, memo } from 'react';\nimport logo from '../../../../assets/absolute/qrcodeImage.png';\nimport { Image } from 'antd';\nimport styled from 'styled-components';\nimport { IQrcodeConfig } from '@/materials/absolute-antd/base/Qrcode/schema';\n\nconst QrCodeWrapper = styled.div`\n  width: 100%;\n  max-width: 220px;\n  margin: 16px auto;\n`;\n\nconst QrCodeTextWrapper = styled.div<{\n  $color: string;\n  $fontSize: number;\n}>`\n  text-align: center;\n  color: ${(props) => props.$color};\n  font-size: ${(props) => props.$fontSize};\n  padding: 8px;\n`;\n\n/*begin to delete*/\ninterface IQrcodeProps extends IQrcodeConfig {\n  isTpl: boolean;\n}\n/*end to delete*/\n\nconst AQrcode: FC<IQrcodeProps> = (props) => {\n  const { isTpl, ...restProps } = props;\n\n  const { qrcode, text, color, fontSize = 14 } = restProps;\n\n  return (\n    <React.Fragment>\n      {isTpl ? (\n        <div>\n          <Image preview={false} src={logo} alt=\"\" />\n        </div>\n      ) : (\n        <QrCodeWrapper>\n          <Image\n            preview={false}\n            src={qrcode && qrcode[0].url}\n            alt={text}\n            style={{ width: '100%' }}\n          />\n          <QrCodeTextWrapper $color={color} $fontSize={fontSize}>\n            {text}\n          </QrCodeTextWrapper>\n        </QrCodeWrapper>\n      )}\n    </React.Fragment>\n  );\n};\n\nexport default memo(AQrcode);\n",
         o = {
           editData: [
             {
@@ -1566,7 +1717,7 @@
           },
         });
       var a =
-          "import React, { FC, memo } from 'react';\nimport { IButtonConfig } from '@/materials/absolute-antd/control/Button/schema';\nimport logo from '../../../../assets/absolute/Button.svg';\nimport { Button, Image } from 'antd';\nimport * as Icon from '@ant-design/icons';\n\n/*begin to delete*/\ninterface IButtonProProp extends IButtonConfig {\n  isTpl: boolean;\n  onClick?: (e: any) => void;\n}\n/*end to delete*/\n\nconst AButton: FC<IButtonProProp> = (props) => {\n  const { isTpl, ...restProps } = props;\n\n  const {\n    text,\n    block,\n    danger,\n    disabled,\n    ghost,\n    href,\n    iconLocation,\n    icon,\n    loading,\n    shape,\n  } = restProps;\n\n  return (\n    <React.Fragment>\n      {isTpl && (\n        <div>\n          <Image preview={false} src={logo} alt={'Antd Button'} />\n        </div>\n      )}\n      {!isTpl && (\n        <Button\n          id='antd button'\n          block={block}\n          ghost={ghost}\n          danger={danger}\n          disabled={disabled}\n          loading={loading}\n          shape={shape}\n          onClick={props.onClick}\n        >\n          {icon.length > 0 &&\n            iconLocation === 'left' &&\n            /*<div dangerouslySetInnerHTML={{__html: icon}}/>*/\n            // @ts-ignore\n            React.createElement(Icon[icon])}\n          {text}\n          {icon.length > 0 &&\n            iconLocation === 'right' &&\n            // @ts-ignore\n            React.createElement(Icon[icon])}\n        </Button>\n      )}\n    </React.Fragment>\n  );\n};\n\nexport default memo(AButton);\n",
+          "import React, { FC, memo } from 'react';\nimport { IButtonConfig } from '@/materials/absolute-antd/control/Button/schema';\nimport logo from '../../../../assets/absolute/Button.svg';\nimport { Button, Image } from 'antd';\nimport * as Icon from '@ant-design/icons';\n\n/*begin to delete*/\ninterface IButtonProProp extends IButtonConfig {\n  isTpl: boolean;\n  onClick?: (e: any) => void;\n}\n/*end to delete*/\n\nconst AButton: FC<IButtonProProp> = (props) => {\n  const { isTpl, ...restProps } = props;\n\n  const {\n    text,\n    block,\n    danger,\n    disabled,\n    ghost,\n    href,\n    iconLocation,\n    icon,\n    loading,\n    shape,\n  } = restProps;\n\n  return (\n    <React.Fragment>\n      {isTpl && <Image preview={false} src={logo} alt={'Antd Button'} />}\n      {!isTpl && (\n        <Button\n          id=\"antd button\"\n          block={block}\n          ghost={ghost}\n          danger={danger}\n          disabled={disabled}\n          loading={loading}\n          shape={shape}\n          onClick={props.onClick}\n        >\n          {icon.length > 0 &&\n            iconLocation === 'left' &&\n            /*<div dangerouslySetInnerHTML={{__html: icon}}/>*/\n            // @ts-ignore\n            React.createElement(Icon[icon])}\n          {text}\n          {icon.length > 0 &&\n            iconLocation === 'right' &&\n            // @ts-ignore\n            React.createElement(Icon[icon])}\n        </Button>\n      )}\n    </React.Fragment>\n  );\n};\n\nexport default memo(AButton);\n",
         o = {
           editData: [
             { key: 'text', name: '\u6587\u672c', type: 'Text' },
@@ -5037,7 +5188,7 @@
       n.r(t),
         n.d(t, {
           default: function () {
-            return Xa;
+            return eo;
           },
         });
       var a,
@@ -5086,8 +5237,8 @@
         U = n(35288),
         q = n(91896),
         Q = (n(57106), n(6129)),
-        K = n(8870),
-        G = n(57337),
+        G = n(8870),
+        K = n(2824),
         J = (n(18106), n(86629)),
         Y = n(99889),
         X = n(29934),
@@ -5317,7 +5468,7 @@
         _e = (0, O.memo)(Ze),
         De = (n(71194), n(50146)),
         Le = (n(34792), n(48086)),
-        Ne = (n(43185), n(14125)),
+        Ne = (n(43185), n(93349)),
         ze = n(49101),
         Me = n(38819),
         Be = n(59918),
@@ -5363,7 +5514,7 @@
               '\n  display: flex;\n  flex-wrap: wrap;\n  max-height: 520px;\n  overflow: auto;\n',
             ])),
         ),
-        Ke = (e) => {
+        Ge = (e) => {
           var t = e.action,
             n =
               void 0 === t
@@ -5380,30 +5531,30 @@
             c = void 0 === s ? 375 / 158 : s,
             d = e.isCrop,
             m = (0, O.useState)(!1),
-            p = (0, G.Z)(m, 2),
+            p = (0, K.Z)(m, 2),
             u = p[0],
             g = p[1],
             b = (0, O.useState)(''),
-            y = (0, G.Z)(b, 2),
+            y = (0, K.Z)(b, 2),
             f = y[0],
             h = y[1],
             x = (0, O.useState)(!1),
-            k = (0, G.Z)(x, 2),
+            k = (0, K.Z)(x, 2),
             v = k[0],
             C = k[1],
             S = (0, O.useState)(''),
-            T = (0, G.Z)(S, 2),
+            T = (0, K.Z)(S, 2),
             I = T[0],
             w = T[1],
             P = (0, O.useState)(Oe),
-            E = (0, G.Z)(P, 2),
+            E = (0, K.Z)(P, 2),
             R = E[0],
             F = (E[1], (0, O.useState)('')),
-            A = (0, G.Z)(F, 2),
+            A = (0, K.Z)(F, 2),
             Z = A[0],
             _ = A[1],
             D = (0, O.useState)(e.fileList || []),
-            L = (0, G.Z)(D, 2),
+            L = (0, K.Z)(D, 2),
             N = L[0],
             z = L[1],
             M = () => {
@@ -5526,7 +5677,7 @@
                       listType: 'picture-card',
                       action: n,
                       withCredentials: r,
-                      headers: (0, K.Z)(
+                      headers: (0, G.Z)(
                         {
                           'x-requested-with':
                             localStorage.getItem('user') || '',
@@ -5549,7 +5700,7 @@
                     listType: 'picture-card',
                     action: n,
                     withCredentials: r,
-                    headers: (0, K.Z)(
+                    headers: (0, G.Z)(
                       {
                         'x-requested-with': localStorage.getItem('user') || '',
                         authorization: localStorage.getItem('token') || '',
@@ -5628,7 +5779,7 @@
             ),
           );
         },
-        Ge = (0, O.memo)(Ke),
+        Ke = (0, O.memo)(Ge),
         Je = Te.Z.Option,
         Ye = (e) => (Array.isArray(e) ? e : e && e.fileList),
         Xe = { labelCol: { span: 6 }, wrapperCol: { span: 14 } },
@@ -5638,7 +5789,7 @@
             a = e.visible,
             o = (e.onCancel, e.cropRate),
             r = ve.Z.useForm(),
-            l = (0, G.Z)(r, 1),
+            l = (0, K.Z)(r, 1),
             i = l[0];
           (0, O.useEffect)(() => {
             i && t && a && i.resetFields();
@@ -5733,7 +5884,7 @@
                       valuePropName: 'fileList',
                       getValueFromEvent: Ye,
                     },
-                    V().createElement(Ge, { cropRate: o, isCrop: !0 }),
+                    V().createElement(Ke, { cropRate: o, isCrop: !0 }),
                   ),
                 ),
               ),
@@ -5865,15 +6016,15 @@
             a = e.connectDropTarget,
             o = e.cropRate,
             r = (0, O.useState)(n),
-            l = (0, G.Z)(r, 2),
+            l = (0, K.Z)(r, 2),
             i = l[0],
             s = l[1],
             c = (0, O.useState)(!1),
-            d = (0, G.Z)(c, 2),
+            d = (0, K.Z)(c, 2),
             m = d[0],
             p = d[1],
             u = (0, O.useState)(),
-            g = (0, G.Z)(u, 2),
+            g = (0, K.Z)(u, 2),
             b = g[0],
             y = g[1],
             f = (e) => {
@@ -6005,11 +6156,11 @@
         ),
         wt = (e) => {
           var t = (0, O.useState)(!1),
-            n = (0, G.Z)(t, 2),
+            n = (0, K.Z)(t, 2),
             a = n[0],
             o = n[1],
             r = (0, O.useState)((0, He.Ub)(e.value)),
-            l = (0, G.Z)(r, 2),
+            l = (0, K.Z)(r, 2),
             i = l[0],
             s = l[1],
             c = () => {
@@ -6083,7 +6234,7 @@
             n = e.icons,
             a = e.onChange,
             o = (0, O.useState)(t),
-            r = (0, G.Z)(o, 2),
+            r = (0, K.Z)(o, 2),
             l = r[0],
             i = r[1],
             s = (e) => {
@@ -6125,7 +6276,7 @@
           e.index;
           var t = (0, Nt.Z)(e, Bt),
             n = ve.Z.useForm(),
-            a = (0, G.Z)(n, 1),
+            a = (0, K.Z)(n, 1),
             o = a[0];
           return V().createElement(
             V().Fragment,
@@ -6151,7 +6302,7 @@
             i = (0, Nt.Z)(e, Ht),
             s = (0, O.useContext)(Wt),
             c = (0, O.useState)(!1),
-            d = (0, G.Z)(c, 2),
+            d = (0, K.Z)(c, 2),
             m = d[0],
             p = d[1],
             u = (0, O.useRef)(null);
@@ -6177,7 +6328,7 @@
                           case 3:
                             (t = e.sent),
                               g(),
-                              l((0, K.Z)((0, K.Z)({}, r), t)),
+                              l((0, G.Z)((0, G.Z)({}, r), t)),
                               (e.next = 11);
                             break;
                           case 8:
@@ -6240,21 +6391,21 @@
             ])),
         ),
         Ut = (e) => {
-          var t = e.data && e.data.map((e, t) => (0, K.Z)({ key: t + '' }, e)),
+          var t = e.data && e.data.map((e, t) => (0, G.Z)({ key: t + '' }, e)),
             n = (0, O.useState)(t),
-            a = (0, G.Z)(n, 2),
+            a = (0, K.Z)(n, 2),
             o = a[0],
             r = a[1],
             l = (0, O.useState)(!1),
-            i = (0, G.Z)(l, 2),
+            i = (0, K.Z)(l, 2),
             s = i[0],
             c = i[1],
             d = (0, O.useState)(!1),
-            m = (0, G.Z)(d, 2),
+            m = (0, K.Z)(d, 2),
             p = m[0],
             u = m[1],
             g = (0, O.useState)(''),
-            b = (0, G.Z)(g, 2),
+            b = (0, K.Z)(g, 2),
             y = b[0],
             f = b[1],
             h = [
@@ -6307,7 +6458,7 @@
               var n = [...o],
                 a = n.findIndex((e) => e.key === t.key),
                 l = n[a];
-              n.splice(a, 1, (0, K.Z)((0, K.Z)({}, l), t)),
+              n.splice(a, 1, (0, G.Z)((0, G.Z)({}, l), t)),
                 r(n),
                 e.onChange && e.onChange(n);
             },
@@ -6329,7 +6480,7 @@
                 var n = y[t];
                 n &&
                   n instanceof Array &&
-                  ((n = n.map((e, t) => (0, K.Z)({ key: t + '' }, e))),
+                  ((n = n.map((e, t) => (0, G.Z)({ key: t + '' }, e))),
                   r(n),
                   e.onChange && e.onChange(n)),
                   u(!1);
@@ -6362,8 +6513,8 @@
             A = { body: { row: $t, cell: Ot } },
             Z = h.map((e) =>
               e.editable
-                ? (0, K.Z)(
-                    (0, K.Z)({}, e),
+                ? (0, G.Z)(
+                    (0, G.Z)({}, e),
                     {},
                     {
                       onCell: (t) => ({
@@ -6536,8 +6687,8 @@
               '\n  margin-right: 3px;\n  font-size: inherit;\n  font-family: inherit;\n',
             ])),
         ),
-        Kt = ge.ZP.div(R || (R = (0, me.Z)(['\n  margin-right: 10px;\n']))),
-        Gt = ge.ZP.div(
+        Gt = ge.ZP.div(R || (R = (0, me.Z)(['\n  margin-right: 10px;\n']))),
+        Kt = ge.ZP.div(
           F ||
             (F = (0, me.Z)([
               '\n  display: flex;\n  justify-content: flex-end;\n  margin-right: -10px;\n  padding: 0;\n  position: relative;\n',
@@ -6547,11 +6698,11 @@
           var t = e.value,
             n = e.onChange,
             a = (0, O.useState)(t && t[0]),
-            o = (0, G.Z)(a, 2),
+            o = (0, K.Z)(a, 2),
             r = o[0],
             l = o[1],
             i = (0, O.useState)(t && t[1]),
-            s = (0, G.Z)(i, 2),
+            s = (0, K.Z)(i, 2),
             c = s[0],
             d = s[1],
             m = (e, a) => {
@@ -6562,10 +6713,10 @@
             V().Fragment,
             null,
             V().createElement(
-              Gt,
+              Kt,
               null,
               V().createElement(
-                Kt,
+                Gt,
                 null,
                 V().createElement(Qt, null, 'X: '),
                 V().createElement(Ce.Z, {
@@ -6575,7 +6726,7 @@
                 }),
               ),
               V().createElement(
-                Kt,
+                Gt,
                 null,
                 V().createElement(Qt, null, 'Y: '),
                 V().createElement(Ce.Z, {
@@ -6614,7 +6765,7 @@
           var t = e.value,
             n = e.onChange,
             a = (0, O.useState)(en().createEditorState(t)),
-            o = (0, G.Z)(a, 2),
+            o = (0, K.Z)(a, 2),
             r = o[0],
             l = o[1];
           (0, O.useEffect)(() => {
@@ -6673,7 +6824,7 @@
             n = e.onSave,
             a = e.visible,
             o = ve.Z.useForm(),
-            r = (0, G.Z)(o, 1),
+            r = (0, K.Z)(o, 1),
             l = r[0];
           (0, O.useEffect)(() => {
             l && t && a && l.resetFields();
@@ -6994,26 +7145,26 @@
             n = e.onChange,
             a = e.rightPannelRef,
             o = (0, O.useState)(t || []),
-            r = (0, G.Z)(o, 2),
+            r = (0, K.Z)(o, 2),
             l = r[0],
             i = r[1],
             s = (0, O.useState)(!1),
-            c = (0, G.Z)(s, 2),
+            c = (0, K.Z)(s, 2),
             d = c[0],
             m = c[1],
             p = (0, O.useState)(),
-            u = (0, G.Z)(p, 2),
+            u = (0, K.Z)(p, 2),
             g = u[0],
             b = u[1],
             y = (0, O.useState)({ force: () => {} }),
-            f = (0, G.Z)(y, 2),
+            f = (0, K.Z)(y, 2),
             h = f[0],
             x = f[1],
             k = (e) => {
               var t = xn.find((t) => t.type === e.type),
                 a = [
                   ...l,
-                  (0, K.Z)((0, K.Z)({}, t), {}, { id: (0, He.Vj)(6, 10) }),
+                  (0, G.Z)((0, G.Z)({}, t), {}, { id: (0, He.Vj)(6, 10) }),
                 ];
               i(a), n && n(a), h.force();
             },
@@ -7150,7 +7301,7 @@
             o = e.uid,
             r = e.rightPannelRef,
             l = (0, Ie.cI)(),
-            i = (0, G.Z)(l, 1),
+            i = (0, K.Z)(l, 1),
             s = i[0],
             c = (e) => {
               a && a(e);
@@ -7260,7 +7411,7 @@
                       valuePropName: 'fileList',
                       getValueFromEvent: Dn,
                     },
-                    V().createElement(Ge, {
+                    V().createElement(Ke, {
                       cropRate: e.cropRate,
                       isCrop: e.isCrop,
                     }),
@@ -7336,8 +7487,8 @@
         };
       }
       n(22385);
-      var Kn = n(94199),
-        Gn = (n(54029), n(79166)),
+      var Gn = n(94199),
+        Kn = (n(54029), n(79166)),
         Jn = (n(12968), n(6122)),
         Yn = n(25046),
         Xn = n.n(Yn),
@@ -7357,8 +7508,9 @@
         ua = n(93162),
         ga = n(94701),
         ba = n.n(ga),
-        ya = De.Z.confirm,
-        fa = (0, O.memo)((e) => {
+        ya = n(95370),
+        fa = De.Z.confirm,
+        ha = (0, O.memo)((e) => {
           var t = e.pointData,
             n = e.location,
             a = e.clearData,
@@ -7366,16 +7518,16 @@
             r = e.redohandler,
             l = e.importTpl,
             i = (0, O.useState)(''),
-            s = (0, G.Z)(i, 2),
+            s = (0, K.Z)(i, 2),
             c = s[0],
             d = s[1],
             m = (0, O.useRef)(null),
             p = (0, O.useState)(!1),
-            u = (0, G.Z)(p, 2),
+            u = (0, K.Z)(p, 2),
             g = u[0],
             b = u[1],
             y = (0, O.useState)(!1),
-            f = (0, G.Z)(y, 2),
+            f = (0, K.Z)(y, 2),
             h = f[0],
             x = f[1],
             k = () => {
@@ -7392,13 +7544,15 @@
             },
             C = () => {
               console.log(t);
+              var e = localStorage.getItem('userData');
+              null != e && (e = JSON.parse(e)), (0, ya.Y)(e);
             },
             S = () => {
               window.open('/login');
             },
             T = (e) => {},
             I = () => {
-              ya({
+              fa({
                 title: '\u786e\u5b9a\u8981\u4fdd\u5b58\u5417\uff1f',
                 content: V().createElement(
                   'div',
@@ -7670,14 +7824,14 @@
                 V().createElement(sa.Z, null),
               ),
               V().createElement(
-                Kn.Z,
+                Gn.Z,
                 {
                   placement: 'bottom',
                   title:
                     '\u4e00\u952e\u751f\u6210\u6d77\u62a5\u5206\u4eab\u56fe',
                 },
                 V().createElement(
-                  Gn.Z,
+                  Kn.Z,
                   { dot: !0, offset: [-18, 10] },
                   V().createElement(
                     we.Z,
@@ -7762,73 +7916,73 @@
             ),
           );
         }),
-        ha = fa,
-        xa = (n(20136), n(55241)),
-        ka = n(32165),
-        va = n(62602),
-        Ca = n(61193),
-        Sa = n.n(Ca),
-        Ta = n(25542),
-        Ia = n.n(Ta),
-        wa = V().createElement(
+        xa = ha,
+        ka = (n(20136), n(55241)),
+        va = n(32165),
+        Ca = n(62602),
+        Sa = n(61193),
+        Ta = n.n(Sa),
+        Ia = n(25542),
+        wa = n.n(Ia),
+        Pa = V().createElement(
           'div',
-          { className: Ia().fastMenu },
+          { className: wa().fastMenu },
           V().createElement(
             'div',
-            { className: Ia().boardTit },
+            { className: wa().boardTit },
             '\u5feb\u6377\u952e',
           ),
           V().createElement(
             'div',
-            { className: Ia().keyRow },
+            { className: wa().keyRow },
             V().createElement(
               'span',
-              { className: Ia().key },
+              { className: wa().key },
               V().createElement('code', null, 'command + c'),
               V().createElement('code', null, 'ctrl + c'),
             ),
             V().createElement(
               'span',
-              { className: Ia().text },
+              { className: wa().text },
               '\u590d\u5236\u7ec4\u4ef6',
             ),
           ),
           V().createElement(
             'div',
-            { className: Ia().keyRow },
+            { className: wa().keyRow },
             V().createElement(
               'span',
-              { className: Ia().key },
+              { className: wa().key },
               V().createElement('code', null, 'delete'),
               V().createElement('code', null, 'backspace'),
             ),
             V().createElement(
               'span',
-              { className: Ia().text },
+              { className: wa().text },
               '\u5220\u9664\u7ec4\u4ef6',
             ),
           ),
           V().createElement(
             'div',
-            { className: Ia().keyRow },
+            { className: wa().keyRow },
             V().createElement(
               'span',
-              { className: Ia().key },
+              { className: wa().key },
               V().createElement('code', null, 'command + h'),
               V().createElement('code', null, 'ctrl +h'),
             ),
             V().createElement(
               'span',
-              { className: Ia().text },
+              { className: wa().text },
               '\u663e\u793a/\u9690\u85cf\u7f51\u683c\u7ebf',
             ),
           ),
           V().createElement(
             'div',
-            { className: Ia().keyRow },
+            { className: wa().keyRow },
             V().createElement(
               'span',
-              { className: Ia().key },
+              { className: wa().key },
               V().createElement(
                 'code',
                 null,
@@ -7842,17 +7996,17 @@
             ),
             V().createElement(
               'span',
-              { className: Ia().text },
+              { className: wa().text },
               '\u663e\u793a/\u9690\u85cf\u7f51\u683c\u7ebf',
             ),
           ),
         ),
-        Pa = (e) => {
+        Ea = (e) => {
           var t = e.scaleNum,
             n = e.handleSlider,
             a = e.backSize,
             o = (0, O.useState)(!0),
-            r = (0, G.Z)(o, 2),
+            r = (0, K.Z)(o, 2),
             l = r[0],
             i = r[1];
           return (
@@ -7862,23 +8016,23 @@
               }, 5e3);
             }, []),
             V().createElement(
-              Sa(),
+              Ta(),
               null,
               V().createElement(
                 'div',
-                { className: Ia().sliderWrap },
+                { className: wa().sliderWrap },
                 V().createElement(
-                  Kn.Z,
+                  Gn.Z,
                   {
                     title: '\u652f\u6301\u81ea\u7531\u62d6\u62fd\u5566',
                     visible: l,
                   },
-                  V().createElement('span', { className: Ia().showTip }),
+                  V().createElement('span', { className: wa().showTip }),
                 ),
                 V().createElement(
                   'span',
                   {
-                    className: Ia().sliderBtn,
+                    className: wa().sliderBtn,
                     onClick: n.bind(void 0, 1),
                     style:
                       1.5 === t
@@ -7891,7 +8045,7 @@
                 V().createElement(
                   'span',
                   {
-                    className: Ia().sliderBtn,
+                    className: wa().sliderBtn,
                     style:
                       0.5 === t
                         ? { pointerEvents: 'none' }
@@ -7902,35 +8056,35 @@
                 ),
                 V().createElement(
                   'span',
-                  { className: Ia().backSize },
+                  { className: wa().backSize },
                   V().createElement(
-                    xa.Z,
+                    ka.Z,
                     {
                       placement: 'bottom',
                       title: null,
-                      content: wa,
+                      content: Pa,
                       trigger: 'hover',
                     },
-                    V().createElement(ka.Z, null),
+                    V().createElement(va.Z, null),
                   ),
                 ),
                 V().createElement(
                   'span',
-                  { className: Ia().backSize },
-                  V().createElement(va.Z, { onClick: a }),
+                  { className: wa().backSize },
+                  V().createElement(Ca.Z, { onClick: a }),
                 ),
               ),
             )
           );
         },
-        Ea = Pa,
-        Ra = n(88980),
-        Fa = n.n(Ra);
-      function Aa(e) {
+        Ra = Ea,
+        Fa = n(88980),
+        Aa = n.n(Fa);
+      function Za(e) {
         var t = e.direction,
           n = e.multiple,
           a = (0, O.useState)({ width: 0, height: 0 }),
-          o = (0, G.Z)(a, 2),
+          o = (0, K.Z)(a, 2),
           r = o[0],
           l = o[1],
           i = (0, O.useRef)(null),
@@ -8024,12 +8178,12 @@
                     })));
             }
           }, [r.height, r.width, t, n]),
-          V().createElement('div', { className: Fa().calibration, ref: i })
+          V().createElement('div', { className: Aa().calibration, ref: i })
         );
       }
-      var Za = n(56915),
-        _a = n(3975),
-        Da = (e) => {
+      var _a = n(56915),
+        Da = n(3975),
+        La = (e) => {
           var t = e.pstate,
             n = e.scaleNum,
             a = e.canvasId,
@@ -8042,14 +8196,14 @@
             d = t ? t.pointData : [],
             m = s ? s.pointData : [],
             p = (0, O.useState)([]),
-            u = (0, G.Z)(p, 2),
+            u = (0, K.Z)(p, 2),
             g = u[0],
             b = u[1],
             y = (0, O.useState)(!0),
-            f = (0, G.Z)(y, 2),
+            f = (0, K.Z)(y, 2),
             h = f[0],
             x = f[1],
-            k = (0, Za.L)({
+            k = (0, _a.L)({
               accept: o,
               drop: (e, t) => {
                 var n = document.getElementById(a),
@@ -8084,7 +8238,7 @@
                 item: e.getItem(),
               }),
             }),
-            v = (0, G.Z)(k, 2),
+            v = (0, K.Z)(k, 2),
             C = v[0].isOver,
             S = v[1],
             T = (0, O.useMemo)(
@@ -8092,8 +8246,8 @@
                 var i = d.filter((e) => e.id === n.i)[0];
                 r({
                   type: 'editorModal/modPointData',
-                  payload: (0, K.Z)(
-                    (0, K.Z)({}, i),
+                  payload: (0, G.Z)(
+                    (0, G.Z)({}, i),
                     {},
                     { point: n, status: 'inToCanvas' },
                   ),
@@ -8106,8 +8260,8 @@
                 var i = d.filter((e) => e.id === n.i)[0];
                 r({
                   type: 'editorModal/modPointData',
-                  payload: (0, K.Z)(
-                    (0, K.Z)({}, i),
+                  payload: (0, G.Z)(
+                    (0, G.Z)({}, i),
                     {},
                     { status: 'inToCanvas' },
                   ),
@@ -8120,8 +8274,8 @@
                 var i = d.filter((e) => e.id === n.i)[0];
                 r({
                   type: 'editorModal/modPointData',
-                  payload: (0, K.Z)(
-                    (0, K.Z)({}, i),
+                  payload: (0, G.Z)(
+                    (0, G.Z)({}, i),
                     {},
                     { point: n, status: 'inToCanvas' },
                   ),
@@ -8149,15 +8303,15 @@
             F = (0, O.useCallback)(
               () =>
                 V().createElement(
-                  _a.v2,
+                  Da.v2,
                   { id: 'menu_id' },
                   V().createElement(
-                    _a.ck,
+                    Da.ck,
                     { onClick: () => R('copy') },
                     '\u590d\u5236',
                   ),
                   V().createElement(
-                    _a.ck,
+                    Da.ck,
                     { onClick: () => R('del') },
                     '\u5220\u9664',
                   ),
@@ -8182,7 +8336,7 @@
             Z = (0, O.useMemo)(
               () =>
                 V().createElement(
-                  Sa(),
+                  Ta(),
                   {
                     position: l,
                     handle: '.js_box',
@@ -8194,7 +8348,7 @@
                     'div',
                     { className: Mn().canvasBox },
                     V().createElement(
-                      _a.Kb,
+                      Da.Kb,
                       { id: 'menu_id' },
                       V().createElement(
                         'div',
@@ -8238,14 +8392,14 @@
             V().createElement(F, null),
           );
         },
-        La = (0, Bn.connect)((e) => ({
+        Na = (0, Bn.connect)((e) => ({
           pstate: e.present.editorModal,
           cstate: e.present.editorPcModal,
-        }))(Da),
-        Na = n(92601),
-        za = (0, O.memo)((e) => {
+        }))(La),
+        za = n(92601),
+        Ma = (0, O.memo)((e) => {
           var t = e.item,
-            n = (0, Na.c)({
+            n = (0, za.c)({
               item: {
                 type: t.type,
                 config: Vn.default[t.type].config,
@@ -8257,7 +8411,7 @@
               },
               collect: (e) => ({ isDragging: e.isDragging() }),
             }),
-            a = (0, G.Z)(n, 2),
+            a = (0, K.Z)(n, 2),
             o = a[0].isDragging,
             r = a[1],
             l = (0, O.useMemo)(
@@ -8272,7 +8426,7 @@
               { className: Mn().listWrap },
               V().createElement(
                 'div',
-                { className: Mn().module, style: (0, K.Z)({}, l), ref: r },
+                { className: Mn().module, style: (0, G.Z)({}, l), ref: r },
                 V().createElement(
                   'div',
                   {
@@ -8283,6 +8437,7 @@
                       alignItems: 'center',
                       flexDirection: 'column',
                       overflow: 'hidden',
+                      padding: '0.7em',
                     },
                   },
                   e.children,
@@ -8304,33 +8459,33 @@
             ),
           );
         }),
-        Ma = za,
-        Ba = J.Z.TabPane,
-        Ha = (e) => {
+        Ba = Ma,
+        Ha = J.Z.TabPane,
+        Wa = (e) => {
           var t = (0, O.useState)(!1),
-            n = (0, G.Z)(t, 2),
+            n = (0, K.Z)(t, 2),
             a = n[0],
             o = n[1],
             r = (0, O.useState)(!0),
-            l = (0, G.Z)(r, 2),
+            l = (0, K.Z)(r, 2),
             i = l[0],
             s = l[1],
             c = (0, O.useState)(1),
-            d = (0, G.Z)(c, 2),
+            d = (0, K.Z)(c, 2),
             m = d[0],
             p = d[1],
             u = (0, O.useState)({ x: 0, y: 0 }),
-            g = (0, G.Z)(u, 2),
+            g = (0, K.Z)(u, 2),
             b = g[0],
             y = g[1],
             f = (0, O.useRef)(null),
             h = (0, O.useRef)(null),
             x = (0, O.useState)({ start: { x: 0, y: 0 }, move: !1 }),
-            k = (0, G.Z)(x, 2),
+            k = (0, K.Z)(x, 2),
             v = k[0],
             C = k[1],
             S = (0, O.useState)('1'),
-            T = (0, G.Z)(S, 2),
+            T = (0, K.Z)(S, 2),
             I = T[0],
             w = T[1],
             P = e.pstate,
@@ -8386,10 +8541,10 @@
               () => (e) => {
                 R({
                   type: 'editorModal/modPointData',
-                  payload: (0, K.Z)(
-                    (0, K.Z)({}, D),
+                  payload: (0, G.Z)(
+                    (0, G.Z)({}, D),
                     {},
-                    { item: (0, K.Z)((0, K.Z)({}, D.item), {}, { config: e }) },
+                    { item: (0, G.Z)((0, G.Z)({}, D.item), {}, { config: e }) },
                   ),
                 });
               },
@@ -8499,19 +8654,19 @@
                   ? V().createElement(
                       V().Fragment,
                       null,
-                      V().createElement(Ba, { tab: M('base', ''), key: '1' }),
-                      V().createElement(Ba, {
+                      V().createElement(Ha, { tab: M('base', ''), key: '1' }),
+                      V().createElement(Ha, {
                         tab: M('control', ''),
                         key: '2',
                       }),
-                      V().createElement(Ba, { tab: M('media', ''), key: '3' }),
-                      V().createElement(Ba, { tab: M('social', ''), key: '4' }),
+                      V().createElement(Ha, { tab: M('media', ''), key: '3' }),
+                      V().createElement(Ha, { tab: M('social', ''), key: '4' }),
                     )
                   : V().createElement(
                       V().Fragment,
                       null,
                       V().createElement(
-                        Ba,
+                        Ha,
                         { tab: M('base', ''), key: '1' },
                         V().createElement(
                           'div',
@@ -8520,7 +8675,7 @@
                         ),
                         Hn.default.map((e, t) =>
                           V().createElement(
-                            Ma,
+                            Ba,
                             { item: e, key: t, canvasId: L },
                             V().createElement(
                               de,
@@ -8533,7 +8688,7 @@
                         ),
                       ),
                       V().createElement(
-                        Ba,
+                        Ha,
                         { tab: M('control', ''), key: '2' },
                         V().createElement(
                           'div',
@@ -8542,7 +8697,7 @@
                         ),
                         Wn.default.map((e, t) =>
                           V().createElement(
-                            Ma,
+                            Ba,
                             { item: e, key: t, canvasId: L },
                             V().createElement(
                               de,
@@ -8555,7 +8710,7 @@
                         ),
                       ),
                       V().createElement(
-                        Ba,
+                        Ha,
                         { tab: M('media', ''), key: '3' },
                         V().createElement(
                           'div',
@@ -8564,7 +8719,7 @@
                         ),
                         $n.default.map((e, t) =>
                           V().createElement(
-                            Ma,
+                            Ba,
                             { item: e, key: t, canvasId: L },
                             V().createElement(
                               de,
@@ -8577,7 +8732,7 @@
                         ),
                       ),
                       V().createElement(
-                        Ba,
+                        Ha,
                         { tab: M('social', ''), key: '4' },
                         V().createElement(
                           'div',
@@ -8586,7 +8741,7 @@
                         ),
                         On.default.map((e, t) =>
                           V().createElement(
-                            Ma,
+                            Ba,
                             { item: e, key: t, canvasId: L },
                             V().createElement(
                               de,
@@ -8658,7 +8813,7 @@
             V().createElement(
               'div',
               { className: Mn().editorWrap },
-              V().createElement(ha, {
+              V().createElement(xa, {
                 redohandler: j,
                 undohandler: U,
                 pointData: F,
@@ -8733,7 +8888,7 @@
                   V().createElement(
                     'div',
                     { className: Mn().tickMarkTop },
-                    V().createElement(Aa, {
+                    V().createElement(Za, {
                       direction: 'up',
                       id: 'calibrationUp',
                       multiple: m,
@@ -8742,13 +8897,13 @@
                   V().createElement(
                     'div',
                     { className: Mn().tickMarkLeft },
-                    V().createElement(Aa, {
+                    V().createElement(Za, {
                       direction: 'right',
                       id: 'calibrationRight',
                       multiple: m,
                     }),
                   ),
-                  V().createElement(La, {
+                  V().createElement(Na, {
                     dragState: b,
                     setDragState: y,
                     scaleNum: m,
@@ -8756,7 +8911,7 @@
                     allType: re,
                     ui: 'antd',
                   }),
-                  V().createElement(Ea, {
+                  V().createElement(Ra, {
                     scaleNum: m,
                     handleSlider: B,
                     backSize: N,
@@ -8789,30 +8944,30 @@
             )
           );
         },
-        Wa = (0, Bn.connect)((e) => ({
+        $a = (0, Bn.connect)((e) => ({
           pstate: e.present.editorModal,
           cstate: e.present.editorPcModal,
-        }))(Ha),
-        $a = n(44014),
-        Oa = n(38679),
-        Va = n(19177),
-        ja = n(6),
-        Ua = n(48803),
-        qa = (0, O.memo)((e) => {
+        }))(Wa),
+        Oa = n(44014),
+        Va = n(38679),
+        ja = n(19177),
+        Ua = n(6),
+        qa = n(48803),
+        Qa = (0, O.memo)((e) => {
           var t = e.item,
-            n = (0, Na.c)({
+            n = (0, za.c)({
               item: {
                 type: t.type,
-                config: Ua.default[t.type].config,
+                config: qa.default[t.type].config,
                 h: t.h,
-                editableEl: Ua.default[t.type].editData,
-                templateStr: Ua.default[t.type].templateStr,
+                editableEl: qa.default[t.type].editData,
+                templateStr: qa.default[t.type].templateStr,
                 category: t.category,
                 x: t.x || 0,
               },
               collect: (e) => ({ isDragging: e.isDragging() }),
             }),
-            a = (0, G.Z)(n, 2),
+            a = (0, K.Z)(n, 2),
             o = a[0].isDragging,
             r = a[1],
             l = (0, O.useMemo)(
@@ -8827,7 +8982,7 @@
               { className: Mn().listWrap },
               V().createElement(
                 'div',
-                { className: Mn().module, style: (0, K.Z)({}, l), ref: r },
+                { className: Mn().module, style: (0, G.Z)({}, l), ref: r },
                 V().createElement(
                   'div',
                   {
@@ -8859,33 +9014,33 @@
             ),
           );
         }),
-        Qa = qa,
+        Ga = Qa,
         Ka = J.Z.TabPane,
-        Ga = (e) => {
+        Ja = (e) => {
           var t = (0, O.useState)(!1),
-            n = (0, G.Z)(t, 2),
+            n = (0, K.Z)(t, 2),
             a = n[0],
             o = n[1],
             r = (0, O.useState)(!0),
-            l = (0, G.Z)(r, 2),
+            l = (0, K.Z)(r, 2),
             i = l[0],
             s = l[1],
             c = (0, O.useState)(1),
-            d = (0, G.Z)(c, 2),
+            d = (0, K.Z)(c, 2),
             m = d[0],
             p = d[1],
             u = (0, O.useState)({ x: 0, y: 0 }),
-            g = (0, G.Z)(u, 2),
+            g = (0, K.Z)(u, 2),
             b = g[0],
             y = g[1],
             f = (0, O.useRef)(null),
             h = (0, O.useRef)(null),
             x = (0, O.useState)({ start: { x: 0, y: 0 }, move: !1 }),
-            k = (0, G.Z)(x, 2),
+            k = (0, K.Z)(x, 2),
             v = k[0],
             C = k[1],
             S = (0, O.useState)('1'),
-            T = (0, G.Z)(S, 2),
+            T = (0, K.Z)(S, 2),
             I = T[0],
             w = T[1],
             P = e.pstate,
@@ -8941,10 +9096,10 @@
               () => (e) => {
                 R({
                   type: 'editorModal/modPointData',
-                  payload: (0, K.Z)(
-                    (0, K.Z)({}, D),
+                  payload: (0, G.Z)(
+                    (0, G.Z)({}, D),
                     {},
-                    { item: (0, K.Z)((0, K.Z)({}, D.item), {}, { config: e }) },
+                    { item: (0, G.Z)((0, G.Z)({}, D.item), {}, { config: e }) },
                   ),
                 });
               },
@@ -8983,6 +9138,9 @@
           var re = (0, O.useMemo)(() => {
             var e = [];
             return (
+              Ua.default.map((t) => {
+                e.push(t.type);
+              }),
               ja.default.map((t) => {
                 e.push(t.type);
               }),
@@ -8992,12 +9150,9 @@
               Oa.default.map((t) => {
                 e.push(t.type);
               }),
-              $a.default.map((t) => {
-                e.push(t.type);
-              }),
               e
             );
-          }, [ja.default, Va.default, Oa.default, $a.default]);
+          }, [Ua.default, ja.default, Va.default, Oa.default]);
           (0, O.useEffect)(() => {
             console.log('curPoint', D);
           }, []);
@@ -9073,14 +9228,14 @@
                           { className: Mn().ctitle },
                           '\u57fa\u7840\u7ec4\u4ef6',
                         ),
-                        ja.default.map((e, t) =>
+                        Ua.default.map((e, t) =>
                           V().createElement(
-                            Qa,
+                            Ga,
                             { item: e, key: t, canvasId: L },
                             V().createElement(
                               de,
                               (0, q.Z)({ isTpl: !0 }, e, {
-                                config: Ua.default[e.type].config,
+                                config: qa.default[e.type].config,
                                 ui: 'semantic',
                                 componentsType: 'base',
                               }),
@@ -9096,14 +9251,14 @@
                           { className: Mn().ctitle },
                           '\u4ea4\u4e92\u7ec4\u4ef6',
                         ),
-                        Va.default.map((e, t) =>
+                        ja.default.map((e, t) =>
                           V().createElement(
-                            Qa,
+                            Ga,
                             { item: e, key: t, canvasId: L },
                             V().createElement(
                               de,
                               (0, q.Z)({ isTpl: !0 }, e, {
-                                config: Ua.default[e.type].config,
+                                config: qa.default[e.type].config,
                                 ui: 'semantic',
                                 componentsType: 'control',
                               }),
@@ -9119,14 +9274,14 @@
                           { className: Mn().ctitle },
                           '\u5a92\u4f53\u7ec4\u4ef6',
                         ),
-                        Oa.default.map((e, t) =>
+                        Va.default.map((e, t) =>
                           V().createElement(
-                            Qa,
+                            Ga,
                             { item: e, key: t, canvasId: L },
                             V().createElement(
                               de,
                               (0, q.Z)({ isTpl: !0 }, e, {
-                                config: Ua.default[e.type].config,
+                                config: qa.default[e.type].config,
                                 ui: 'semantic',
                                 componentsType: 'media',
                               }),
@@ -9142,14 +9297,14 @@
                           { className: Mn().ctitle },
                           '\u5c55\u793a\u7ec4\u4ef6',
                         ),
-                        $a.default.map((e, t) =>
+                        Oa.default.map((e, t) =>
                           V().createElement(
-                            Qa,
+                            Ga,
                             { item: e, key: t, canvasId: L },
                             V().createElement(
                               de,
                               (0, q.Z)({ isTpl: !0 }, e, {
-                                config: Ua.default[e.type].config,
+                                config: qa.default[e.type].config,
                                 ui: 'semantic',
                                 componentsType: 'social',
                               }),
@@ -9162,11 +9317,11 @@
                 L,
                 a,
                 M,
-                ja.default,
-                Va.default,
-                $a.default,
-                Oa.default,
                 Ua.default,
+                ja.default,
+                Oa.default,
+                Va.default,
+                qa.default,
               ],
             ),
             se = (0, O.useCallback)((e) => {
@@ -9217,7 +9372,7 @@
             V().createElement(
               'div',
               { className: Mn().editorWrap },
-              V().createElement(ha, {
+              V().createElement(xa, {
                 redohandler: j,
                 undohandler: U,
                 pointData: F,
@@ -9292,7 +9447,7 @@
                   V().createElement(
                     'div',
                     { className: Mn().tickMarkTop },
-                    V().createElement(Aa, {
+                    V().createElement(Za, {
                       direction: 'up',
                       id: 'calibrationUp',
                       multiple: m,
@@ -9301,13 +9456,13 @@
                   V().createElement(
                     'div',
                     { className: Mn().tickMarkLeft },
-                    V().createElement(Aa, {
+                    V().createElement(Za, {
                       direction: 'right',
                       id: 'calibrationRight',
                       multiple: m,
                     }),
                   ),
-                  V().createElement(La, {
+                  V().createElement(Na, {
                     dragState: b,
                     setDragState: y,
                     scaleNum: m,
@@ -9315,7 +9470,7 @@
                     allType: re,
                     ui: 'semantic',
                   }),
-                  V().createElement(Ea, {
+                  V().createElement(Ra, {
                     scaleNum: m,
                     handleSlider: B,
                     backSize: N,
@@ -9348,11 +9503,11 @@
             )
           );
         },
-        Ja = (0, Bn.connect)((e) => ({
+        Ya = (0, Bn.connect)((e) => ({
           pstate: e.present.editorModal,
           cstate: e.present.editorPcModal,
-        }))(Ga);
-      function Ya(e) {
+        }))(Ja);
+      function Xa(e) {
         (0, O.useEffect)(() => {
           console.log(e.location.query.ui);
         }, []);
@@ -9363,36 +9518,36 @@
           V().createElement(
             U.W,
             { backend: j.PD },
-            'antd' === t && V().createElement(Wa, e),
-            'semantic' === t && V().createElement(Ja, e),
+            'antd' === t && V().createElement($a, e),
+            'semantic' === t && V().createElement(Ya, e),
           ),
         );
       }
-      var Xa = Ya;
+      var eo = Xa;
     },
     94701: function (e, t, n) {
       e.exports = n.p + 'static/Card.6f050f5f.svg';
     },
     5629: function (e, t, n) {
       var a = {
-        './absolute-antd/base/Alert': [77811, 9, 7811],
-        './absolute-antd/base/Alert/': [77811, 9, 7811],
+        './absolute-antd/base/Alert': [63066, 9, 3066],
+        './absolute-antd/base/Alert/': [63066, 9, 3066],
         './absolute-antd/base/Alert/demo/Alert.md': [78751, 9, 8751],
         './absolute-antd/base/Alert/demo/_demo': [3780, 9, 3780],
         './absolute-antd/base/Alert/demo/_demo.tsx': [3780, 9, 3780],
-        './absolute-antd/base/Alert/index': [77811, 9, 7811],
-        './absolute-antd/base/Alert/index.tsx': [77811, 9, 7811],
+        './absolute-antd/base/Alert/index': [63066, 9, 3066],
+        './absolute-antd/base/Alert/index.tsx': [63066, 9, 3066],
         './absolute-antd/base/Alert/schema': [84466, 9],
         './absolute-antd/base/Alert/schema.ts': [84466, 9],
         './absolute-antd/base/Alert/template': [77347, 9],
         './absolute-antd/base/Alert/template.ts': [77347, 9],
-        './absolute-antd/base/Carousel': [82118, 9, 6, 4505],
-        './absolute-antd/base/Carousel/': [82118, 9, 6, 4505],
+        './absolute-antd/base/Carousel': [82118, 9, 6, 901],
+        './absolute-antd/base/Carousel/': [82118, 9, 6, 901],
         './absolute-antd/base/Carousel/demo/Carousel.md': [65839, 9, 5839],
-        './absolute-antd/base/Carousel/demo/_demo': [26052, 9, 6, 6427],
-        './absolute-antd/base/Carousel/demo/_demo.tsx': [26052, 9, 6, 6427],
-        './absolute-antd/base/Carousel/index': [82118, 9, 6, 4505],
-        './absolute-antd/base/Carousel/index.tsx': [82118, 9, 6, 4505],
+        './absolute-antd/base/Carousel/demo/_demo': [26052, 9, 6, 552],
+        './absolute-antd/base/Carousel/demo/_demo.tsx': [26052, 9, 6, 552],
+        './absolute-antd/base/Carousel/index': [82118, 9, 6, 901],
+        './absolute-antd/base/Carousel/index.tsx': [82118, 9, 6, 901],
         './absolute-antd/base/Carousel/schema': [18006, 9],
         './absolute-antd/base/Carousel/schema.ts': [18006, 9],
         './absolute-antd/base/Carousel/template': [79302, 9],
@@ -9430,13 +9585,13 @@
         './absolute-antd/base/Form/schema.ts': [14196, 9],
         './absolute-antd/base/Form/template': [19023, 9],
         './absolute-antd/base/Form/template.ts': [19023, 9],
-        './absolute-antd/base/Header': [80492, 9, 492, 3809],
-        './absolute-antd/base/Header/': [80492, 9, 492, 3809],
+        './absolute-antd/base/Header': [80492, 9, 492],
+        './absolute-antd/base/Header/': [80492, 9, 492],
         './absolute-antd/base/Header/demo/Header.md': [96423, 9, 6423],
-        './absolute-antd/base/Header/demo/_demo': [73831, 9, 492, 7298],
-        './absolute-antd/base/Header/demo/_demo.tsx': [73831, 9, 492, 7298],
-        './absolute-antd/base/Header/index': [80492, 9, 492, 3809],
-        './absolute-antd/base/Header/index.tsx': [80492, 9, 492, 3809],
+        './absolute-antd/base/Header/demo/_demo': [73831, 9, 3831],
+        './absolute-antd/base/Header/demo/_demo.tsx': [73831, 9, 3831],
+        './absolute-antd/base/Header/index': [80492, 9, 492],
+        './absolute-antd/base/Header/index.tsx': [80492, 9, 492],
         './absolute-antd/base/Header/schema': [86326, 9],
         './absolute-antd/base/Header/schema.ts': [86326, 9],
         './absolute-antd/base/Header/template': [90470, 9],
@@ -9452,24 +9607,24 @@
         './absolute-antd/base/Image/schema.ts': [438, 9],
         './absolute-antd/base/Image/template': [80100, 9],
         './absolute-antd/base/Image/template.ts': [80100, 9],
-        './absolute-antd/base/List': [32060, 9, 2060, 8989],
-        './absolute-antd/base/List/': [32060, 9, 2060, 8989],
+        './absolute-antd/base/List': [32060, 9, 2060, 6322],
+        './absolute-antd/base/List/': [32060, 9, 2060, 6322],
         './absolute-antd/base/List/demo/List.md': [50467, 9, 467],
-        './absolute-antd/base/List/demo/_demo': [43711, 9, 2060, 8923],
-        './absolute-antd/base/List/demo/_demo.tsx': [43711, 9, 2060, 8923],
-        './absolute-antd/base/List/index': [32060, 9, 2060, 8989],
-        './absolute-antd/base/List/index.tsx': [32060, 9, 2060, 8989],
+        './absolute-antd/base/List/demo/_demo': [43711, 9, 2060, 2320],
+        './absolute-antd/base/List/demo/_demo.tsx': [43711, 9, 2060, 2320],
+        './absolute-antd/base/List/index': [32060, 9, 2060, 6322],
+        './absolute-antd/base/List/index.tsx': [32060, 9, 2060, 6322],
         './absolute-antd/base/List/schema': [60793, 9],
         './absolute-antd/base/List/schema.ts': [60793, 9],
         './absolute-antd/base/List/template': [7862, 9],
         './absolute-antd/base/List/template.ts': [7862, 9],
-        './absolute-antd/base/Paragraph': [40044, 9, 8469, 2687],
-        './absolute-antd/base/Paragraph/': [40044, 9, 8469, 2687],
+        './absolute-antd/base/Paragraph': [40044, 9, 8469, 9637],
+        './absolute-antd/base/Paragraph/': [40044, 9, 8469, 9637],
         './absolute-antd/base/Paragraph/demo/Paragraph.md': [7007, 9, 7007],
-        './absolute-antd/base/Paragraph/demo/_demo': [12672, 9, 8469, 9107],
-        './absolute-antd/base/Paragraph/demo/_demo.tsx': [12672, 9, 8469, 9107],
-        './absolute-antd/base/Paragraph/index': [40044, 9, 8469, 2687],
-        './absolute-antd/base/Paragraph/index.tsx': [40044, 9, 8469, 2687],
+        './absolute-antd/base/Paragraph/demo/_demo': [12672, 9, 8469, 6928],
+        './absolute-antd/base/Paragraph/demo/_demo.tsx': [12672, 9, 8469, 6928],
+        './absolute-antd/base/Paragraph/index': [40044, 9, 8469, 9637],
+        './absolute-antd/base/Paragraph/index.tsx': [40044, 9, 8469, 9637],
         './absolute-antd/base/Paragraph/schema': [47544, 9],
         './absolute-antd/base/Paragraph/schema.ts': [47544, 9],
         './absolute-antd/base/Paragraph/template': [69112, 9],
@@ -9507,13 +9662,13 @@
         './absolute-antd/base/Tabs/schema.ts': [82232, 9],
         './absolute-antd/base/Tabs/template': [27439, 9],
         './absolute-antd/base/Tabs/template.ts': [27439, 9],
-        './absolute-antd/base/Text': [64842, 9, 8469, 5226],
-        './absolute-antd/base/Text/': [64842, 9, 8469, 5226],
+        './absolute-antd/base/Text': [64842, 9, 8469, 207],
+        './absolute-antd/base/Text/': [64842, 9, 8469, 207],
         './absolute-antd/base/Text/demo/Text.md': [10314, 9, 314],
-        './absolute-antd/base/Text/demo/_demo': [54336, 9, 8469, 4045],
-        './absolute-antd/base/Text/demo/_demo.tsx': [54336, 9, 8469, 4045],
-        './absolute-antd/base/Text/index': [64842, 9, 8469, 5226],
-        './absolute-antd/base/Text/index.tsx': [64842, 9, 8469, 5226],
+        './absolute-antd/base/Text/demo/_demo': [54336, 9, 8469, 4888],
+        './absolute-antd/base/Text/demo/_demo.tsx': [54336, 9, 8469, 4888],
+        './absolute-antd/base/Text/index': [64842, 9, 8469, 207],
+        './absolute-antd/base/Text/index.tsx': [64842, 9, 8469, 207],
         './absolute-antd/base/Text/schema': [1765, 9],
         './absolute-antd/base/Text/schema.ts': [1765, 9],
         './absolute-antd/base/Text/template': [44053, 9],
@@ -9522,13 +9677,13 @@
         './absolute-antd/base/schema.ts': [29677, 9],
         './absolute-antd/base/template': [71894, 9],
         './absolute-antd/base/template.ts': [71894, 9],
-        './absolute-antd/control/Button': [13672, 9, 6023, 3672],
-        './absolute-antd/control/Button/': [13672, 9, 6023, 3672],
+        './absolute-antd/control/Button': [13672, 9, 1706, 3672],
+        './absolute-antd/control/Button/': [13672, 9, 1706, 3672],
         './absolute-antd/control/Button/demo/Button.md': [81478, 9, 1478],
-        './absolute-antd/control/Button/demo/_demo': [49587, 9, 6023, 9587],
-        './absolute-antd/control/Button/demo/_demo.tsx': [49587, 9, 6023, 9587],
-        './absolute-antd/control/Button/index': [13672, 9, 6023, 3672],
-        './absolute-antd/control/Button/index.tsx': [13672, 9, 6023, 3672],
+        './absolute-antd/control/Button/demo/_demo': [49587, 9, 1706, 9587],
+        './absolute-antd/control/Button/demo/_demo.tsx': [49587, 9, 1706, 9587],
+        './absolute-antd/control/Button/index': [13672, 9, 1706, 3672],
+        './absolute-antd/control/Button/index.tsx': [13672, 9, 1706, 3672],
         './absolute-antd/control/Button/schema': [26984, 9],
         './absolute-antd/control/Button/schema.ts': [26984, 9],
         './absolute-antd/control/Button/template': [87422, 9],
@@ -9555,26 +9710,26 @@
         './absolute-antd/control/Radio/schema.ts': [10309, 9],
         './absolute-antd/control/Radio/template': [42845, 9],
         './absolute-antd/control/Radio/template.ts': [42845, 9],
-        './absolute-antd/control/Segmented': [41057, 9, 6023, 1057],
-        './absolute-antd/control/Segmented/': [41057, 9, 6023, 1057],
+        './absolute-antd/control/Segmented': [41057, 9, 1706, 1057],
+        './absolute-antd/control/Segmented/': [41057, 9, 1706, 1057],
         './absolute-antd/control/Segmented/demo/Segmented.md': [109, 9, 109],
-        './absolute-antd/control/Segmented/demo/_demo': [7941, 9, 6023, 7941],
+        './absolute-antd/control/Segmented/demo/_demo': [7941, 9, 1706, 7941],
         './absolute-antd/control/Segmented/demo/_demo.tsx': [
-          7941, 9, 6023, 7941,
+          7941, 9, 1706, 7941,
         ],
-        './absolute-antd/control/Segmented/index': [41057, 9, 6023, 1057],
-        './absolute-antd/control/Segmented/index.tsx': [41057, 9, 6023, 1057],
+        './absolute-antd/control/Segmented/index': [41057, 9, 1706, 1057],
+        './absolute-antd/control/Segmented/index.tsx': [41057, 9, 1706, 1057],
         './absolute-antd/control/Segmented/schema': [3567, 9],
         './absolute-antd/control/Segmented/schema.ts': [3567, 9],
         './absolute-antd/control/Segmented/template': [6443, 9],
         './absolute-antd/control/Segmented/template.ts': [6443, 9],
-        './absolute-antd/control/Select': [53320, 9, 6023, 3320],
-        './absolute-antd/control/Select/': [53320, 9, 6023, 3320],
+        './absolute-antd/control/Select': [53320, 9, 1706, 3320],
+        './absolute-antd/control/Select/': [53320, 9, 1706, 3320],
         './absolute-antd/control/Select/demo/Select.md': [73815, 9, 3815],
-        './absolute-antd/control/Select/demo/_demo': [19088, 9, 6023, 9088],
-        './absolute-antd/control/Select/demo/_demo.tsx': [19088, 9, 6023, 9088],
-        './absolute-antd/control/Select/index': [53320, 9, 6023, 3320],
-        './absolute-antd/control/Select/index.tsx': [53320, 9, 6023, 3320],
+        './absolute-antd/control/Select/demo/_demo': [19088, 9, 1706, 9088],
+        './absolute-antd/control/Select/demo/_demo.tsx': [19088, 9, 1706, 9088],
+        './absolute-antd/control/Select/index': [53320, 9, 1706, 3320],
+        './absolute-antd/control/Select/index.tsx': [53320, 9, 1706, 3320],
         './absolute-antd/control/Select/schema': [42457, 9],
         './absolute-antd/control/Select/schema.ts': [42457, 9],
         './absolute-antd/control/Select/template': [2654, 9],
@@ -9616,13 +9771,13 @@
         './absolute-antd/media/Audio/schema.ts': [72195, 9],
         './absolute-antd/media/Audio/template': [1952, 9],
         './absolute-antd/media/Audio/template.ts': [1952, 9],
-        './absolute-antd/media/Calendar': [64188, 9, 7327, 7300],
-        './absolute-antd/media/Calendar/': [64188, 9, 7327, 7300],
+        './absolute-antd/media/Calendar': [64188, 9, 7327, 1535],
+        './absolute-antd/media/Calendar/': [64188, 9, 7327, 1535],
         './absolute-antd/media/Calendar/demo/Calendar.md': [46280, 9, 6280],
-        './absolute-antd/media/Calendar/demo/_demo': [98220, 9, 7327, 7948],
-        './absolute-antd/media/Calendar/demo/_demo.tsx': [98220, 9, 7327, 7948],
-        './absolute-antd/media/Calendar/index': [64188, 9, 7327, 7300],
-        './absolute-antd/media/Calendar/index.tsx': [64188, 9, 7327, 7300],
+        './absolute-antd/media/Calendar/demo/_demo': [98220, 9, 7327, 3985],
+        './absolute-antd/media/Calendar/demo/_demo.tsx': [98220, 9, 7327, 3985],
+        './absolute-antd/media/Calendar/index': [64188, 9, 7327, 1535],
+        './absolute-antd/media/Calendar/index.tsx': [64188, 9, 7327, 1535],
         './absolute-antd/media/Calendar/schema': [64829, 9],
         './absolute-antd/media/Calendar/schema.ts': [64829, 9],
         './absolute-antd/media/Calendar/template': [50796, 9],
@@ -9649,16 +9804,16 @@
         './absolute-antd/media/Progress/schema.ts': [13333, 9],
         './absolute-antd/media/Progress/template': [32457, 9],
         './absolute-antd/media/Progress/template.ts': [32457, 9],
-        './absolute-antd/media/Video': [92376, 9, 8330, 9573, 2376],
-        './absolute-antd/media/Video/': [92376, 9, 8330, 9573, 2376],
+        './absolute-antd/media/Video': [92376, 9, 8330, 3990, 2376],
+        './absolute-antd/media/Video/': [92376, 9, 8330, 3990, 2376],
         './absolute-antd/media/Video/demo/Video.md': [23193, 9, 3193],
-        './absolute-antd/media/Video/demo/_demo': [80946, 9, 8330, 9573, 946],
+        './absolute-antd/media/Video/demo/_demo': [80946, 9, 8330, 3990, 946],
         './absolute-antd/media/Video/demo/_demo.tsx': [
-          80946, 9, 8330, 9573, 946,
+          80946, 9, 8330, 3990, 946,
         ],
-        './absolute-antd/media/Video/index': [92376, 9, 8330, 9573, 2376],
-        './absolute-antd/media/Video/index.css': [5506, 7, 9573, 5506],
-        './absolute-antd/media/Video/index.tsx': [92376, 9, 8330, 9573, 2376],
+        './absolute-antd/media/Video/index': [92376, 9, 8330, 3990, 2376],
+        './absolute-antd/media/Video/index.css': [5506, 7, 3990, 5506],
+        './absolute-antd/media/Video/index.tsx': [92376, 9, 8330, 3990, 2376],
         './absolute-antd/media/Video/schema': [6556, 9],
         './absolute-antd/media/Video/schema.ts': [6556, 9],
         './absolute-antd/media/Video/template': [10482, 9],
@@ -9669,64 +9824,64 @@
         './absolute-antd/media/template.ts': [48848, 9],
         './absolute-antd/schema': [97016, 9],
         './absolute-antd/schema.ts': [97016, 9],
-        './absolute-antd/social/Card': [57998, 9, 6023, 9396, 8118],
-        './absolute-antd/social/Card/': [57998, 9, 6023, 9396, 8118],
+        './absolute-antd/social/Card': [57998, 9, 1706, 9396, 3390],
+        './absolute-antd/social/Card/': [57998, 9, 1706, 9396, 3390],
         './absolute-antd/social/Card/demo/Card.md': [25356, 9, 5356],
-        './absolute-antd/social/Card/demo/_demo': [74317, 9, 6023, 9396, 7576],
+        './absolute-antd/social/Card/demo/_demo': [74317, 9, 1706, 9396, 9985],
         './absolute-antd/social/Card/demo/_demo.tsx': [
-          74317, 9, 6023, 9396, 7576,
+          74317, 9, 1706, 9396, 9985,
         ],
-        './absolute-antd/social/Card/index': [57998, 9, 6023, 9396, 8118],
-        './absolute-antd/social/Card/index.tsx': [57998, 9, 6023, 9396, 8118],
+        './absolute-antd/social/Card/index': [57998, 9, 1706, 9396, 3390],
+        './absolute-antd/social/Card/index.tsx': [57998, 9, 1706, 9396, 3390],
         './absolute-antd/social/Card/schema': [17349, 9],
         './absolute-antd/social/Card/schema.ts': [17349, 9],
         './absolute-antd/social/Card/template': [11146, 9],
         './absolute-antd/social/Card/template.ts': [11146, 9],
-        './absolute-antd/social/Collapse': [87426, 9, 7426, 8442],
-        './absolute-antd/social/Collapse/': [87426, 9, 7426, 8442],
+        './absolute-antd/social/Collapse': [87426, 9, 7426, 5561],
+        './absolute-antd/social/Collapse/': [87426, 9, 7426, 5561],
         './absolute-antd/social/Collapse/demo/Collapse.md': [7838, 9, 7838],
-        './absolute-antd/social/Collapse/demo/_demo': [75821, 9, 7426, 9261],
+        './absolute-antd/social/Collapse/demo/_demo': [75821, 9, 7426, 1651],
         './absolute-antd/social/Collapse/demo/_demo.tsx': [
-          75821, 9, 7426, 9261,
+          75821, 9, 7426, 1651,
         ],
-        './absolute-antd/social/Collapse/index': [87426, 9, 7426, 8442],
-        './absolute-antd/social/Collapse/index.tsx': [87426, 9, 7426, 8442],
+        './absolute-antd/social/Collapse/index': [87426, 9, 7426, 5561],
+        './absolute-antd/social/Collapse/index.tsx': [87426, 9, 7426, 5561],
         './absolute-antd/social/Collapse/schema': [56894, 9],
         './absolute-antd/social/Collapse/schema.ts': [56894, 9],
         './absolute-antd/social/Collapse/template': [96932, 9],
         './absolute-antd/social/Collapse/template.ts': [96932, 9],
-        './absolute-antd/social/Comment': [40862, 9, 6023, 862],
-        './absolute-antd/social/Comment/': [40862, 9, 6023, 862],
+        './absolute-antd/social/Comment': [40862, 9, 1706, 862],
+        './absolute-antd/social/Comment/': [40862, 9, 1706, 862],
         './absolute-antd/social/Comment/demo/Comment.md': [52474, 9, 1473],
-        './absolute-antd/social/Comment/demo/_demo': [5218, 9, 6023, 5218],
-        './absolute-antd/social/Comment/demo/_demo.tsx': [5218, 9, 6023, 5218],
-        './absolute-antd/social/Comment/index': [40862, 9, 6023, 862],
-        './absolute-antd/social/Comment/index.tsx': [40862, 9, 6023, 862],
+        './absolute-antd/social/Comment/demo/_demo': [5218, 9, 1706, 5218],
+        './absolute-antd/social/Comment/demo/_demo.tsx': [5218, 9, 1706, 5218],
+        './absolute-antd/social/Comment/index': [40862, 9, 1706, 862],
+        './absolute-antd/social/Comment/index.tsx': [40862, 9, 1706, 862],
         './absolute-antd/social/Comment/schema': [36562, 9],
         './absolute-antd/social/Comment/schema.ts': [36562, 9],
         './absolute-antd/social/Comment/template': [59840, 9],
         './absolute-antd/social/Comment/template.ts': [59840, 9],
-        './absolute-antd/social/Rate': [60581, 9, 6023, 581],
-        './absolute-antd/social/Rate/': [60581, 9, 6023, 581],
+        './absolute-antd/social/Rate': [60581, 9, 1706, 581],
+        './absolute-antd/social/Rate/': [60581, 9, 1706, 581],
         './absolute-antd/social/Rate/demo/Rate.md': [93734, 9, 3734],
-        './absolute-antd/social/Rate/demo/_demo': [92895, 9, 6023, 2895],
-        './absolute-antd/social/Rate/demo/_demo.tsx': [92895, 9, 6023, 2895],
-        './absolute-antd/social/Rate/index': [60581, 9, 6023, 581],
-        './absolute-antd/social/Rate/index.tsx': [60581, 9, 6023, 581],
+        './absolute-antd/social/Rate/demo/_demo': [92895, 9, 1706, 2895],
+        './absolute-antd/social/Rate/demo/_demo.tsx': [92895, 9, 1706, 2895],
+        './absolute-antd/social/Rate/index': [60581, 9, 1706, 581],
+        './absolute-antd/social/Rate/index.tsx': [60581, 9, 1706, 581],
         './absolute-antd/social/Rate/schema': [87937, 9],
         './absolute-antd/social/Rate/schema.ts': [87937, 9],
         './absolute-antd/social/Rate/template': [83192, 9],
         './absolute-antd/social/Rate/template.ts': [83192, 9],
-        './absolute-antd/social/Statistic': [2925, 9, 6023, 983, 4036],
-        './absolute-antd/social/Statistic/': [2925, 9, 6023, 983, 4036],
+        './absolute-antd/social/Statistic': [2925, 9, 1706, 983, 7190],
+        './absolute-antd/social/Statistic/': [2925, 9, 1706, 983, 7190],
         './absolute-antd/social/Statistic/demo/Statistic.md': [59108, 9, 9108],
-        './absolute-antd/social/Statistic/demo/_demo': [63, 9, 6023, 983, 1892],
+        './absolute-antd/social/Statistic/demo/_demo': [63, 9, 1706, 983, 8694],
         './absolute-antd/social/Statistic/demo/_demo.tsx': [
-          63, 9, 6023, 983, 1892,
+          63, 9, 1706, 983, 8694,
         ],
-        './absolute-antd/social/Statistic/index': [2925, 9, 6023, 983, 4036],
+        './absolute-antd/social/Statistic/index': [2925, 9, 1706, 983, 7190],
         './absolute-antd/social/Statistic/index.tsx': [
-          2925, 9, 6023, 983, 4036,
+          2925, 9, 1706, 983, 7190,
         ],
         './absolute-antd/social/Statistic/schema': [62677, 9],
         './absolute-antd/social/Statistic/schema.ts': [62677, 9],
@@ -9736,166 +9891,166 @@
         './absolute-antd/social/schema.ts': [86759, 9],
         './absolute-antd/social/template': [70285, 9],
         './absolute-antd/social/template.ts': [70285, 9],
-        './absolute-semantic/base/Ad': [12462, 9, 4626, 2462],
-        './absolute-semantic/base/Ad/': [12462, 9, 4626, 2462],
+        './absolute-semantic/base/Ad': [12462, 9, 2731, 2462],
+        './absolute-semantic/base/Ad/': [12462, 9, 2731, 2462],
         './absolute-semantic/base/Ad/demo/Ad.md': [32752, 9, 2752],
-        './absolute-semantic/base/Ad/demo/_demo': [40221, 9, 4626, 8137, 221],
+        './absolute-semantic/base/Ad/demo/_demo': [40221, 9, 2731, 3054, 221],
         './absolute-semantic/base/Ad/demo/_demo.tsx': [
-          40221, 9, 4626, 8137, 221,
+          40221, 9, 2731, 3054, 221,
         ],
-        './absolute-semantic/base/Ad/index': [12462, 9, 4626, 2462],
-        './absolute-semantic/base/Ad/index.tsx': [12462, 9, 4626, 2462],
+        './absolute-semantic/base/Ad/index': [12462, 9, 2731, 2462],
+        './absolute-semantic/base/Ad/index.tsx': [12462, 9, 2731, 2462],
         './absolute-semantic/base/Ad/schema': [61170, 9],
         './absolute-semantic/base/Ad/schema.ts': [61170, 9],
         './absolute-semantic/base/Ad/template': [86491, 9],
         './absolute-semantic/base/Ad/template.ts': [86491, 9],
-        './absolute-semantic/base/Divider': [74312, 9, 4626, 4312],
-        './absolute-semantic/base/Divider/': [74312, 9, 4626, 4312],
+        './absolute-semantic/base/Divider': [74312, 9, 2731, 4312],
+        './absolute-semantic/base/Divider/': [74312, 9, 2731, 4312],
         './absolute-semantic/base/Divider/demo/Divider.md': [4386, 9, 4386],
         './absolute-semantic/base/Divider/demo/_demo': [
-          63813, 9, 4626, 8137, 3813,
+          63813, 9, 2731, 3054, 3813,
         ],
         './absolute-semantic/base/Divider/demo/_demo.tsx': [
-          63813, 9, 4626, 8137, 3813,
+          63813, 9, 2731, 3054, 3813,
         ],
-        './absolute-semantic/base/Divider/index': [74312, 9, 4626, 4312],
-        './absolute-semantic/base/Divider/index.tsx': [74312, 9, 4626, 4312],
+        './absolute-semantic/base/Divider/index': [74312, 9, 2731, 4312],
+        './absolute-semantic/base/Divider/index.tsx': [74312, 9, 2731, 4312],
         './absolute-semantic/base/Divider/schema': [46128, 9],
         './absolute-semantic/base/Divider/schema.ts': [46128, 9],
         './absolute-semantic/base/Divider/template': [93671, 9],
         './absolute-semantic/base/Divider/template.ts': [93671, 9],
-        './absolute-semantic/base/Header': [24304, 9, 4626, 4304],
-        './absolute-semantic/base/Header/': [24304, 9, 4626, 4304],
+        './absolute-semantic/base/Header': [24304, 9, 2731, 4304],
+        './absolute-semantic/base/Header/': [24304, 9, 2731, 4304],
         './absolute-semantic/base/Header/demo/Header.md': [74388, 9, 4388],
         './absolute-semantic/base/Header/demo/_demo': [
-          35679, 9, 4626, 8137, 5679,
+          35679, 9, 2731, 3054, 5679,
         ],
         './absolute-semantic/base/Header/demo/_demo.tsx': [
-          35679, 9, 4626, 8137, 5679,
+          35679, 9, 2731, 3054, 5679,
         ],
-        './absolute-semantic/base/Header/index': [24304, 9, 4626, 4304],
-        './absolute-semantic/base/Header/index.tsx': [24304, 9, 4626, 4304],
+        './absolute-semantic/base/Header/index': [24304, 9, 2731, 4304],
+        './absolute-semantic/base/Header/index.tsx': [24304, 9, 2731, 4304],
         './absolute-semantic/base/Header/schema': [93475, 9],
         './absolute-semantic/base/Header/schema.ts': [93475, 9],
         './absolute-semantic/base/Header/template': [75590, 9],
         './absolute-semantic/base/Header/template.ts': [75590, 9],
-        './absolute-semantic/base/Input': [66913, 9, 4626, 416, 6913],
-        './absolute-semantic/base/Input/': [66913, 9, 4626, 416, 6913],
+        './absolute-semantic/base/Input': [66913, 9, 2731, 416, 6913],
+        './absolute-semantic/base/Input/': [66913, 9, 2731, 416, 6913],
         './absolute-semantic/base/Input/demo/Input.md': [44538, 9, 4538],
         './absolute-semantic/base/Input/demo/_demo': [
-          35658, 9, 4626, 416, 5658,
+          35658, 9, 2731, 416, 5658,
         ],
         './absolute-semantic/base/Input/demo/_demo.tsx': [
-          35658, 9, 4626, 416, 5658,
+          35658, 9, 2731, 416, 5658,
         ],
-        './absolute-semantic/base/Input/index': [66913, 9, 4626, 416, 6913],
-        './absolute-semantic/base/Input/index.tsx': [66913, 9, 4626, 416, 6913],
+        './absolute-semantic/base/Input/index': [66913, 9, 2731, 416, 6913],
+        './absolute-semantic/base/Input/index.tsx': [66913, 9, 2731, 416, 6913],
         './absolute-semantic/base/Input/schema': [53068, 9],
         './absolute-semantic/base/Input/schema.ts': [53068, 9],
         './absolute-semantic/base/Input/template': [58575, 9],
         './absolute-semantic/base/Input/template.ts': [58575, 9],
-        './absolute-semantic/base/Label': [50423, 9, 4626, 423],
-        './absolute-semantic/base/Label/': [50423, 9, 4626, 423],
+        './absolute-semantic/base/Label': [50423, 9, 2731, 423],
+        './absolute-semantic/base/Label/': [50423, 9, 2731, 423],
         './absolute-semantic/base/Label/demo/Label.md': [26336, 9, 4376],
-        './absolute-semantic/base/Label/demo/_demo': [88499, 9, 4626, 8499],
-        './absolute-semantic/base/Label/demo/_demo.tsx': [88499, 9, 4626, 8499],
-        './absolute-semantic/base/Label/index': [50423, 9, 4626, 423],
-        './absolute-semantic/base/Label/index.tsx': [50423, 9, 4626, 423],
+        './absolute-semantic/base/Label/demo/_demo': [88499, 9, 2731, 8499],
+        './absolute-semantic/base/Label/demo/_demo.tsx': [88499, 9, 2731, 8499],
+        './absolute-semantic/base/Label/index': [50423, 9, 2731, 423],
+        './absolute-semantic/base/Label/index.tsx': [50423, 9, 2731, 423],
         './absolute-semantic/base/Label/schema': [52704, 9],
         './absolute-semantic/base/Label/schema.ts': [52704, 9],
         './absolute-semantic/base/Label/template': [3111, 9],
         './absolute-semantic/base/Label/template.ts': [3111, 9],
-        './absolute-semantic/base/Message': [74818, 9, 4626, 4818],
-        './absolute-semantic/base/Message/': [74818, 9, 4626, 4818],
+        './absolute-semantic/base/Message': [74818, 9, 2731, 4818],
+        './absolute-semantic/base/Message/': [74818, 9, 2731, 4818],
         './absolute-semantic/base/Message/demo/Message.md': [325, 9, 325],
-        './absolute-semantic/base/Message/demo/_demo': [84182, 9, 4626, 4182],
+        './absolute-semantic/base/Message/demo/_demo': [84182, 9, 2731, 4182],
         './absolute-semantic/base/Message/demo/_demo.tsx': [
-          84182, 9, 4626, 4182,
+          84182, 9, 2731, 4182,
         ],
-        './absolute-semantic/base/Message/index': [74818, 9, 4626, 4818],
-        './absolute-semantic/base/Message/index.tsx': [74818, 9, 4626, 4818],
+        './absolute-semantic/base/Message/index': [74818, 9, 2731, 4818],
+        './absolute-semantic/base/Message/index.tsx': [74818, 9, 2731, 4818],
         './absolute-semantic/base/Message/schema': [48446, 9],
         './absolute-semantic/base/Message/schema.ts': [48446, 9],
         './absolute-semantic/base/Message/template': [66236, 9],
         './absolute-semantic/base/Message/template.ts': [66236, 9],
-        './absolute-semantic/base/Placeholder': [70411, 9, 4626, 411],
-        './absolute-semantic/base/Placeholder/': [70411, 9, 4626, 411],
+        './absolute-semantic/base/Placeholder': [70411, 9, 2731, 411],
+        './absolute-semantic/base/Placeholder/': [70411, 9, 2731, 411],
         './absolute-semantic/base/Placeholder/demo/Placeholder.md': [
           44524, 9, 1989,
         ],
         './absolute-semantic/base/Placeholder/demo/_demo': [
-          78357, 9, 4626, 8357,
+          78357, 9, 2731, 8357,
         ],
         './absolute-semantic/base/Placeholder/demo/_demo.tsx': [
-          78357, 9, 4626, 8357,
+          78357, 9, 2731, 8357,
         ],
-        './absolute-semantic/base/Placeholder/index': [70411, 9, 4626, 411],
-        './absolute-semantic/base/Placeholder/index.tsx': [70411, 9, 4626, 411],
+        './absolute-semantic/base/Placeholder/index': [70411, 9, 2731, 411],
+        './absolute-semantic/base/Placeholder/index.tsx': [70411, 9, 2731, 411],
         './absolute-semantic/base/Placeholder/schema': [89251, 9],
         './absolute-semantic/base/Placeholder/schema.ts': [89251, 9],
         './absolute-semantic/base/Placeholder/template': [96096, 9],
         './absolute-semantic/base/Placeholder/template.ts': [96096, 9],
-        './absolute-semantic/base/Search': [67787, 9, 4626, 416, 3867, 7787],
-        './absolute-semantic/base/Search/': [67787, 9, 4626, 416, 3867, 7787],
+        './absolute-semantic/base/Search': [67787, 9, 2731, 416, 7406, 7787],
+        './absolute-semantic/base/Search/': [67787, 9, 2731, 416, 7406, 7787],
         './absolute-semantic/base/Search/demo/Search.md': [8885, 9, 8885],
         './absolute-semantic/base/Search/demo/_demo': [
-          77406, 9, 4626, 416, 3867, 7406,
+          77406, 9, 2731, 416, 7406, 9846,
         ],
         './absolute-semantic/base/Search/demo/_demo.tsx': [
-          77406, 9, 4626, 416, 3867, 7406,
+          77406, 9, 2731, 416, 7406, 9846,
         ],
         './absolute-semantic/base/Search/index': [
-          67787, 9, 4626, 416, 3867, 7787,
+          67787, 9, 2731, 416, 7406, 7787,
         ],
         './absolute-semantic/base/Search/index.tsx': [
-          67787, 9, 4626, 416, 3867, 7787,
+          67787, 9, 2731, 416, 7406, 7787,
         ],
         './absolute-semantic/base/Search/schema': [56919, 9],
         './absolute-semantic/base/Search/schema.ts': [56919, 9],
         './absolute-semantic/base/Search/template': [34205, 9],
         './absolute-semantic/base/Search/template.ts': [34205, 9],
-        './absolute-semantic/base/Staistic': [71595, 9, 4626, 1595],
-        './absolute-semantic/base/Staistic/': [71595, 9, 4626, 1595],
+        './absolute-semantic/base/Staistic': [71595, 9, 2731, 1595],
+        './absolute-semantic/base/Staistic/': [71595, 9, 2731, 1595],
         './absolute-semantic/base/Staistic/demo/Statistic.md': [71135, 9, 1135],
-        './absolute-semantic/base/Staistic/demo/_demo': [70124, 9, 4626, 124],
+        './absolute-semantic/base/Staistic/demo/_demo': [70124, 9, 2731, 124],
         './absolute-semantic/base/Staistic/demo/_demo.tsx': [
-          70124, 9, 4626, 124,
+          70124, 9, 2731, 124,
         ],
-        './absolute-semantic/base/Staistic/index': [71595, 9, 4626, 1595],
-        './absolute-semantic/base/Staistic/index.tsx': [71595, 9, 4626, 1595],
+        './absolute-semantic/base/Staistic/index': [71595, 9, 2731, 1595],
+        './absolute-semantic/base/Staistic/index.tsx': [71595, 9, 2731, 1595],
         './absolute-semantic/base/Staistic/schema': [5503, 9],
         './absolute-semantic/base/Staistic/schema.ts': [5503, 9],
         './absolute-semantic/base/Staistic/template': [60357, 9],
         './absolute-semantic/base/Staistic/template.ts': [60357, 9],
-        './absolute-semantic/base/Text': [3394, 9, 4626, 3394],
-        './absolute-semantic/base/Text/': [3394, 9, 4626, 3394],
+        './absolute-semantic/base/Text': [3394, 9, 2731, 3394],
+        './absolute-semantic/base/Text/': [3394, 9, 2731, 3394],
         './absolute-semantic/base/Text/demo/Text.md': [94510, 9, 4510],
-        './absolute-semantic/base/Text/demo/_demo': [12418, 9, 4626, 2418],
-        './absolute-semantic/base/Text/demo/_demo.tsx': [12418, 9, 4626, 2418],
-        './absolute-semantic/base/Text/index': [3394, 9, 4626, 3394],
-        './absolute-semantic/base/Text/index.tsx': [3394, 9, 4626, 3394],
+        './absolute-semantic/base/Text/demo/_demo': [12418, 9, 2731, 2418],
+        './absolute-semantic/base/Text/demo/_demo.tsx': [12418, 9, 2731, 2418],
+        './absolute-semantic/base/Text/index': [3394, 9, 2731, 3394],
+        './absolute-semantic/base/Text/index.tsx': [3394, 9, 2731, 3394],
         './absolute-semantic/base/Text/schema': [53851, 9],
         './absolute-semantic/base/Text/schema.ts': [53851, 9],
         './absolute-semantic/base/Text/template': [43180, 9],
         './absolute-semantic/base/Text/template.ts': [43180, 9],
         './absolute-semantic/base/TextArea': [
-          53058, 9, 4626, 416, 8723, 5957, 1223, 3058,
+          53058, 9, 2731, 416, 8723, 5957, 1223, 3058,
         ],
         './absolute-semantic/base/TextArea/': [
-          53058, 9, 4626, 416, 8723, 5957, 1223, 3058,
+          53058, 9, 2731, 416, 8723, 5957, 1223, 3058,
         ],
         './absolute-semantic/base/TextArea/demo/TextArea.md': [71164, 9, 1164],
         './absolute-semantic/base/TextArea/demo/_demo': [
-          89882, 9, 4626, 416, 8723, 5957, 1223, 9882,
+          89882, 9, 2731, 416, 8723, 5957, 1223, 9882,
         ],
         './absolute-semantic/base/TextArea/demo/_demo.tsx': [
-          89882, 9, 4626, 416, 8723, 5957, 1223, 9882,
+          89882, 9, 2731, 416, 8723, 5957, 1223, 9882,
         ],
         './absolute-semantic/base/TextArea/index': [
-          53058, 9, 4626, 416, 8723, 5957, 1223, 3058,
+          53058, 9, 2731, 416, 8723, 5957, 1223, 3058,
         ],
         './absolute-semantic/base/TextArea/index.tsx': [
-          53058, 9, 4626, 416, 8723, 5957, 1223, 3058,
+          53058, 9, 2731, 416, 8723, 5957, 1223, 3058,
         ],
         './absolute-semantic/base/TextArea/schema': [39794, 9],
         './absolute-semantic/base/TextArea/schema.ts': [39794, 9],
@@ -9905,114 +10060,114 @@
         './absolute-semantic/base/schema.ts': [82984, 9],
         './absolute-semantic/base/template': [6, 9],
         './absolute-semantic/base/template.ts': [6, 9],
-        './absolute-semantic/control/Button': [67776, 9, 4626, 7776],
-        './absolute-semantic/control/Button/': [67776, 9, 4626, 7776],
+        './absolute-semantic/control/Button': [67776, 9, 2731, 7776],
+        './absolute-semantic/control/Button/': [67776, 9, 2731, 7776],
         './absolute-semantic/control/Button/demo/Button.md': [27054, 9, 7054],
         './absolute-semantic/control/Button/demo/_demo': [
-          1007, 9, 4626, 8137, 1007,
+          1007, 9, 2731, 3054, 1007,
         ],
         './absolute-semantic/control/Button/demo/_demo.tsx': [
-          1007, 9, 4626, 8137, 1007,
+          1007, 9, 2731, 3054, 1007,
         ],
-        './absolute-semantic/control/Button/index': [67776, 9, 4626, 7776],
-        './absolute-semantic/control/Button/index.tsx': [67776, 9, 4626, 7776],
+        './absolute-semantic/control/Button/index': [67776, 9, 2731, 7776],
+        './absolute-semantic/control/Button/index.tsx': [67776, 9, 2731, 7776],
         './absolute-semantic/control/Button/schema': [15117, 9],
         './absolute-semantic/control/Button/schema.ts': [15117, 9],
         './absolute-semantic/control/Button/template': [57861, 9],
         './absolute-semantic/control/Button/template.ts': [57861, 9],
-        './absolute-semantic/control/CheckBox': [42966, 9, 4626, 2966],
-        './absolute-semantic/control/CheckBox/': [42966, 9, 4626, 2966],
+        './absolute-semantic/control/CheckBox': [42966, 9, 2731, 2966],
+        './absolute-semantic/control/CheckBox/': [42966, 9, 2731, 2966],
         './absolute-semantic/control/CheckBox/demo/CheckBox.md': [
           50124, 9, 4009,
         ],
         './absolute-semantic/control/CheckBox/demo/_demo': [
-          10651, 9, 4626, 8137, 651,
+          10651, 9, 2731, 3054, 651,
         ],
         './absolute-semantic/control/CheckBox/demo/_demo.tsx': [
-          10651, 9, 4626, 8137, 651,
+          10651, 9, 2731, 3054, 651,
         ],
-        './absolute-semantic/control/CheckBox/index': [42966, 9, 4626, 2966],
+        './absolute-semantic/control/CheckBox/index': [42966, 9, 2731, 2966],
         './absolute-semantic/control/CheckBox/index.tsx': [
-          42966, 9, 4626, 2966,
+          42966, 9, 2731, 2966,
         ],
         './absolute-semantic/control/CheckBox/schema': [38690, 9],
         './absolute-semantic/control/CheckBox/schema.ts': [38690, 9],
         './absolute-semantic/control/CheckBox/template': [54910, 9],
         './absolute-semantic/control/CheckBox/template.ts': [54910, 9],
         './absolute-semantic/control/Dropdown': [
-          70420, 9, 4626, 8723, 5957, 420,
+          70420, 9, 2731, 8723, 5957, 420,
         ],
         './absolute-semantic/control/Dropdown/': [
-          70420, 9, 4626, 8723, 5957, 420,
+          70420, 9, 2731, 8723, 5957, 420,
         ],
         './absolute-semantic/control/Dropdown/demo/Dropdown.md': [
           81791, 9, 1791,
         ],
         './absolute-semantic/control/Dropdown/demo/_demo': [
-          87852, 9, 4626, 8723, 5957, 7852,
+          87852, 9, 2731, 8723, 5957, 7852,
         ],
         './absolute-semantic/control/Dropdown/demo/_demo.tsx': [
-          87852, 9, 4626, 8723, 5957, 7852,
+          87852, 9, 2731, 8723, 5957, 7852,
         ],
         './absolute-semantic/control/Dropdown/index': [
-          70420, 9, 4626, 8723, 5957, 420,
+          70420, 9, 2731, 8723, 5957, 420,
         ],
         './absolute-semantic/control/Dropdown/index.tsx': [
-          70420, 9, 4626, 8723, 5957, 420,
+          70420, 9, 2731, 8723, 5957, 420,
         ],
         './absolute-semantic/control/Dropdown/schema': [71401, 9],
         './absolute-semantic/control/Dropdown/schema.ts': [71401, 9],
         './absolute-semantic/control/Dropdown/template': [68414, 9],
         './absolute-semantic/control/Dropdown/template.ts': [68414, 9],
-        './absolute-semantic/control/Pagination': [45559, 9, 4626, 9398, 5559],
-        './absolute-semantic/control/Pagination/': [45559, 9, 4626, 9398, 5559],
+        './absolute-semantic/control/Pagination': [45559, 9, 2731, 9398, 5559],
+        './absolute-semantic/control/Pagination/': [45559, 9, 2731, 9398, 5559],
         './absolute-semantic/control/Pagination/demo/Pagination.md': [
           20859, 9, 859,
         ],
         './absolute-semantic/control/Pagination/demo/_demo': [
-          55850, 9, 4626, 9398, 5850,
+          55850, 9, 2731, 9398, 5850,
         ],
         './absolute-semantic/control/Pagination/demo/_demo.tsx': [
-          55850, 9, 4626, 9398, 5850,
+          55850, 9, 2731, 9398, 5850,
         ],
         './absolute-semantic/control/Pagination/index': [
-          45559, 9, 4626, 9398, 5559,
+          45559, 9, 2731, 9398, 5559,
         ],
         './absolute-semantic/control/Pagination/index.tsx': [
-          45559, 9, 4626, 9398, 5559,
+          45559, 9, 2731, 9398, 5559,
         ],
         './absolute-semantic/control/Pagination/schema': [49145, 9],
         './absolute-semantic/control/Pagination/schema.ts': [49145, 9],
         './absolute-semantic/control/Pagination/template': [24973, 9],
         './absolute-semantic/control/Pagination/template.ts': [24973, 9],
-        './absolute-semantic/control/Progress': [736, 9, 4626, 736],
-        './absolute-semantic/control/Progress/': [736, 9, 4626, 736],
+        './absolute-semantic/control/Progress': [736, 9, 2731, 736],
+        './absolute-semantic/control/Progress/': [736, 9, 2731, 736],
         './absolute-semantic/control/Progress/demo/Progress.md': [
           76743, 9, 6743,
         ],
         './absolute-semantic/control/Progress/demo/_demo': [
-          82990, 9, 4626, 2990,
+          82990, 9, 2731, 2990,
         ],
         './absolute-semantic/control/Progress/demo/_demo.tsx': [
-          82990, 9, 4626, 2990,
+          82990, 9, 2731, 2990,
         ],
-        './absolute-semantic/control/Progress/index': [736, 9, 4626, 736],
-        './absolute-semantic/control/Progress/index.tsx': [736, 9, 4626, 736],
+        './absolute-semantic/control/Progress/index': [736, 9, 2731, 736],
+        './absolute-semantic/control/Progress/index.tsx': [736, 9, 2731, 736],
         './absolute-semantic/control/Progress/schema': [21244, 9],
         './absolute-semantic/control/Progress/schema.ts': [21244, 9],
         './absolute-semantic/control/Progress/template': [29269, 9],
         './absolute-semantic/control/Progress/template.ts': [29269, 9],
-        './absolute-semantic/control/Radio': [20832, 9, 4626, 832],
-        './absolute-semantic/control/Radio/': [20832, 9, 4626, 832],
+        './absolute-semantic/control/Radio': [20832, 9, 2731, 832],
+        './absolute-semantic/control/Radio/': [20832, 9, 2731, 832],
         './absolute-semantic/control/Radio/demo/Radio.md': [60537, 9, 537],
         './absolute-semantic/control/Radio/demo/_demo': [
-          82503, 9, 4626, 8137, 2503,
+          82503, 9, 2731, 3054, 2503,
         ],
         './absolute-semantic/control/Radio/demo/_demo.tsx': [
-          82503, 9, 4626, 8137, 2503,
+          82503, 9, 2731, 3054, 2503,
         ],
-        './absolute-semantic/control/Radio/index': [20832, 9, 4626, 832],
-        './absolute-semantic/control/Radio/index.tsx': [20832, 9, 4626, 832],
+        './absolute-semantic/control/Radio/index': [20832, 9, 2731, 832],
+        './absolute-semantic/control/Radio/index.tsx': [20832, 9, 2731, 832],
         './absolute-semantic/control/Radio/schema': [14949, 9],
         './absolute-semantic/control/Radio/schema.ts': [14949, 9],
         './absolute-semantic/control/Radio/template': [61736, 9],
@@ -10021,28 +10176,28 @@
         './absolute-semantic/control/schema.ts': [76324, 9],
         './absolute-semantic/control/template': [19177, 9],
         './absolute-semantic/control/template.ts': [19177, 9],
-        './absolute-semantic/media/Embed': [26950, 9, 4626, 6950],
-        './absolute-semantic/media/Embed/': [26950, 9, 4626, 6950],
+        './absolute-semantic/media/Embed': [26950, 9, 2731, 6950],
+        './absolute-semantic/media/Embed/': [26950, 9, 2731, 6950],
         './absolute-semantic/media/Embed/demo/Embed.md': [77712, 9, 7712],
-        './absolute-semantic/media/Embed/demo/_demo': [54224, 9, 4626, 4224],
+        './absolute-semantic/media/Embed/demo/_demo': [54224, 9, 2731, 4224],
         './absolute-semantic/media/Embed/demo/_demo.tsx': [
-          54224, 9, 4626, 4224,
+          54224, 9, 2731, 4224,
         ],
-        './absolute-semantic/media/Embed/index': [26950, 9, 4626, 6950],
-        './absolute-semantic/media/Embed/index.tsx': [26950, 9, 4626, 6950],
+        './absolute-semantic/media/Embed/index': [26950, 9, 2731, 6950],
+        './absolute-semantic/media/Embed/index.tsx': [26950, 9, 2731, 6950],
         './absolute-semantic/media/Embed/schema': [94220, 9],
         './absolute-semantic/media/Embed/schema.ts': [94220, 9],
         './absolute-semantic/media/Embed/template': [54717, 9],
         './absolute-semantic/media/Embed/template.ts': [54717, 9],
-        './absolute-semantic/media/Image': [45214, 9, 4626, 5214],
-        './absolute-semantic/media/Image/': [45214, 9, 4626, 5214],
+        './absolute-semantic/media/Image': [45214, 9, 2731, 5214],
+        './absolute-semantic/media/Image/': [45214, 9, 2731, 5214],
         './absolute-semantic/media/Image/demo/Image.md': [95882, 9, 5882],
-        './absolute-semantic/media/Image/demo/_demo': [79200, 9, 4626, 9200],
+        './absolute-semantic/media/Image/demo/_demo': [79200, 9, 2731, 9200],
         './absolute-semantic/media/Image/demo/_demo.tsx': [
-          79200, 9, 4626, 9200,
+          79200, 9, 2731, 9200,
         ],
-        './absolute-semantic/media/Image/index': [45214, 9, 4626, 5214],
-        './absolute-semantic/media/Image/index.tsx': [45214, 9, 4626, 5214],
+        './absolute-semantic/media/Image/index': [45214, 9, 2731, 5214],
+        './absolute-semantic/media/Image/index.tsx': [45214, 9, 2731, 5214],
         './absolute-semantic/media/Image/schema': [46810, 9],
         './absolute-semantic/media/Image/schema.ts': [46810, 9],
         './absolute-semantic/media/Image/template': [63072, 9],
@@ -10053,84 +10208,84 @@
         './absolute-semantic/media/template.ts': [38679, 9],
         './absolute-semantic/schema': [48803, 9],
         './absolute-semantic/schema.ts': [48803, 9],
-        './absolute-semantic/social/Accordion': [19919, 9, 4626, 5346],
-        './absolute-semantic/social/Accordion/': [19919, 9, 4626, 5346],
+        './absolute-semantic/social/Accordion': [19919, 9, 2731, 5346],
+        './absolute-semantic/social/Accordion/': [19919, 9, 2731, 5346],
         './absolute-semantic/social/Accordion/demo/Accordion.md': [
           11561, 9, 1561,
         ],
-        './absolute-semantic/social/Accordion/demo/_demo': [20001, 9, 4626, 1],
+        './absolute-semantic/social/Accordion/demo/_demo': [20001, 9, 2731, 1],
         './absolute-semantic/social/Accordion/demo/_demo.tsx': [
-          20001, 9, 4626, 1,
+          20001, 9, 2731, 1,
         ],
-        './absolute-semantic/social/Accordion/index': [19919, 9, 4626, 5346],
+        './absolute-semantic/social/Accordion/index': [19919, 9, 2731, 5346],
         './absolute-semantic/social/Accordion/index.tsx': [
-          19919, 9, 4626, 5346,
+          19919, 9, 2731, 5346,
         ],
         './absolute-semantic/social/Accordion/schema': [88647, 9],
         './absolute-semantic/social/Accordion/schema.ts': [88647, 9],
         './absolute-semantic/social/Accordion/template': [16458, 9],
         './absolute-semantic/social/Accordion/template.ts': [16458, 9],
-        './absolute-semantic/social/Card': [74589, 9, 4626, 4589],
-        './absolute-semantic/social/Card/': [74589, 9, 4626, 4589],
+        './absolute-semantic/social/Card': [74589, 9, 2731, 4589],
+        './absolute-semantic/social/Card/': [74589, 9, 2731, 4589],
         './absolute-semantic/social/Card/demo/Card.md': [29368, 9, 9368],
-        './absolute-semantic/social/Card/demo/_demo': [41014, 9, 4626, 1014],
+        './absolute-semantic/social/Card/demo/_demo': [41014, 9, 2731, 1014],
         './absolute-semantic/social/Card/demo/_demo.tsx': [
-          41014, 9, 4626, 1014,
+          41014, 9, 2731, 1014,
         ],
-        './absolute-semantic/social/Card/index': [74589, 9, 4626, 4589],
-        './absolute-semantic/social/Card/index.tsx': [74589, 9, 4626, 4589],
+        './absolute-semantic/social/Card/index': [74589, 9, 2731, 4589],
+        './absolute-semantic/social/Card/index.tsx': [74589, 9, 2731, 4589],
         './absolute-semantic/social/Card/schema': [30384, 9],
         './absolute-semantic/social/Card/schema.ts': [30384, 9],
         './absolute-semantic/social/Card/template': [22438, 9],
         './absolute-semantic/social/Card/template.ts': [22438, 9],
-        './absolute-semantic/social/Comment': [63512, 9, 4626, 3512],
-        './absolute-semantic/social/Comment/': [63512, 9, 4626, 3512],
+        './absolute-semantic/social/Comment': [63512, 9, 2731, 3512],
+        './absolute-semantic/social/Comment/': [63512, 9, 2731, 3512],
         './absolute-semantic/social/Comment/demo/Comment.md': [33102, 9, 3102],
-        './absolute-semantic/social/Comment/demo/_demo': [89518, 9, 4626, 9518],
+        './absolute-semantic/social/Comment/demo/_demo': [89518, 9, 2731, 9518],
         './absolute-semantic/social/Comment/demo/_demo.tsx': [
-          89518, 9, 4626, 9518,
+          89518, 9, 2731, 9518,
         ],
-        './absolute-semantic/social/Comment/index': [63512, 9, 4626, 3512],
-        './absolute-semantic/social/Comment/index.tsx': [63512, 9, 4626, 3512],
+        './absolute-semantic/social/Comment/index': [63512, 9, 2731, 3512],
+        './absolute-semantic/social/Comment/index.tsx': [63512, 9, 2731, 3512],
         './absolute-semantic/social/Comment/schema': [58993, 9],
         './absolute-semantic/social/Comment/schema.ts': [58993, 9],
         './absolute-semantic/social/Comment/template': [51425, 9],
         './absolute-semantic/social/Comment/template.ts': [51425, 9],
-        './absolute-semantic/social/Feed': [26464, 9, 4626, 6464],
-        './absolute-semantic/social/Feed/': [26464, 9, 4626, 6464],
+        './absolute-semantic/social/Feed': [26464, 9, 2731, 6464],
+        './absolute-semantic/social/Feed/': [26464, 9, 2731, 6464],
         './absolute-semantic/social/Feed/demo/Feed.md': [79794, 9, 9794],
-        './absolute-semantic/social/Feed/demo/_demo': [14117, 9, 4626, 4117],
+        './absolute-semantic/social/Feed/demo/_demo': [14117, 9, 2731, 4117],
         './absolute-semantic/social/Feed/demo/_demo.tsx': [
-          14117, 9, 4626, 4117,
+          14117, 9, 2731, 4117,
         ],
-        './absolute-semantic/social/Feed/index': [26464, 9, 4626, 6464],
-        './absolute-semantic/social/Feed/index.tsx': [26464, 9, 4626, 6464],
+        './absolute-semantic/social/Feed/index': [26464, 9, 2731, 6464],
+        './absolute-semantic/social/Feed/index.tsx': [26464, 9, 2731, 6464],
         './absolute-semantic/social/Feed/schema': [30405, 9],
         './absolute-semantic/social/Feed/schema.ts': [30405, 9],
         './absolute-semantic/social/Feed/template': [74838, 9],
         './absolute-semantic/social/Feed/template.ts': [74838, 9],
-        './absolute-semantic/social/Item': [93427, 9, 4626, 1961],
-        './absolute-semantic/social/Item/': [93427, 9, 4626, 1961],
+        './absolute-semantic/social/Item': [93427, 9, 2731, 1961],
+        './absolute-semantic/social/Item/': [93427, 9, 2731, 1961],
         './absolute-semantic/social/Item/demo/Item.md': [74311, 9, 4311],
-        './absolute-semantic/social/Item/demo/_demo': [48140, 9, 4626, 8140],
+        './absolute-semantic/social/Item/demo/_demo': [48140, 9, 2731, 8140],
         './absolute-semantic/social/Item/demo/_demo.tsx': [
-          48140, 9, 4626, 8140,
+          48140, 9, 2731, 8140,
         ],
-        './absolute-semantic/social/Item/index': [93427, 9, 4626, 1961],
-        './absolute-semantic/social/Item/index.tsx': [93427, 9, 4626, 1961],
+        './absolute-semantic/social/Item/index': [93427, 9, 2731, 1961],
+        './absolute-semantic/social/Item/index.tsx': [93427, 9, 2731, 1961],
         './absolute-semantic/social/Item/schema': [57267, 9],
         './absolute-semantic/social/Item/schema.ts': [57267, 9],
         './absolute-semantic/social/Item/template': [22089, 9],
         './absolute-semantic/social/Item/template.ts': [22089, 9],
-        './absolute-semantic/social/Rate': [76163, 9, 4626, 6163],
-        './absolute-semantic/social/Rate/': [76163, 9, 4626, 6163],
+        './absolute-semantic/social/Rate': [76163, 9, 2731, 6163],
+        './absolute-semantic/social/Rate/': [76163, 9, 2731, 6163],
         './absolute-semantic/social/Rate/demo/Rating.md': [51314, 9, 1314],
-        './absolute-semantic/social/Rate/demo/_demo': [78065, 9, 4626, 8065],
+        './absolute-semantic/social/Rate/demo/_demo': [78065, 9, 2731, 8065],
         './absolute-semantic/social/Rate/demo/_demo.tsx': [
-          78065, 9, 4626, 8065,
+          78065, 9, 2731, 8065,
         ],
-        './absolute-semantic/social/Rate/index': [76163, 9, 4626, 6163],
-        './absolute-semantic/social/Rate/index.tsx': [76163, 9, 4626, 6163],
+        './absolute-semantic/social/Rate/index': [76163, 9, 2731, 6163],
+        './absolute-semantic/social/Rate/index.tsx': [76163, 9, 2731, 6163],
         './absolute-semantic/social/Rate/schema': [64110, 9],
         './absolute-semantic/social/Rate/schema.ts': [64110, 9],
         './absolute-semantic/social/Rate/template': [94477, 9],

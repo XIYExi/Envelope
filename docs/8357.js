@@ -25,7 +25,7 @@
             return Y;
           },
         });
-      var n = r(57337),
+      var n = r(2824),
         l = r(93224),
         t = r(12924),
         s = r.n(t),
@@ -132,7 +132,7 @@
         (Q.Line = v),
         (Q.Paragraph = I);
       var N = Q,
-        F = r(49282),
+        F = r(76763),
         L = ['isTpl'],
         G = (e) => {
           var a = e.isTpl,

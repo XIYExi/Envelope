@@ -12,33 +12,29 @@
         r = n.n(c),
         i = n(21843),
         s = n.n(i),
-        d = n(86023),
-        u = ['isTpl'],
-        p = (e) => {
+        d = n(71706),
+        p = ['isTpl'],
+        u = (e) => {
           var t = e.isTpl,
-            n = (0, o.Z)(e, u),
+            n = (0, o.Z)(e, p),
             c = n.text,
             i = n.block,
-            p = n.danger,
+            u = n.danger,
             g = n.disabled,
             h = n.ghost,
-            m = (n.href, n.iconLocation),
-            k = n.icon,
+            k = (n.href, n.iconLocation),
+            m = n.icon,
             b = n.loading,
             f = n.shape;
           return r().createElement(
             r().Fragment,
             null,
             t &&
-              r().createElement(
-                'div',
-                null,
-                r().createElement(a.Z, {
-                  preview: !1,
-                  src: s(),
-                  alt: 'Antd Button',
-                }),
-              ),
+              r().createElement(a.Z, {
+                preview: !1,
+                src: s(),
+                alt: 'Antd Button',
+              }),
             !t &&
               r().createElement(
                 l.Z,
@@ -46,19 +42,19 @@
                   id: 'antd button',
                   block: i,
                   ghost: h,
-                  danger: p,
+                  danger: u,
                   disabled: g,
                   loading: b,
                   shape: f,
                   onClick: e.onClick,
                 },
-                k.length > 0 && 'left' === m && r().createElement(d[k]),
+                m.length > 0 && 'left' === k && r().createElement(d[m]),
                 c,
-                k.length > 0 && 'right' === m && r().createElement(d[k]),
+                m.length > 0 && 'right' === k && r().createElement(d[m]),
               ),
           );
         };
-      t['default'] = (0, c.memo)(p);
+      t['default'] = (0, c.memo)(u);
     },
     21843: function (e, t, n) {
       e.exports = n.p + 'static/Button.299612d5.svg';

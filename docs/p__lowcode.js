@@ -9,7 +9,7 @@
             return re;
           },
         });
-      var i = r(57337),
+      var i = r(2824),
         n = r(12924),
         s = r.n(n),
         a = r(20653),
@@ -1005,7 +1005,7 @@
         './Binary_Property/Changes_When_Uppercased.js': 61638,
         './Binary_Property/Dash.js': 64152,
         './Binary_Property/Default_Ignorable_Code_Point.js': 24447,
-        './Binary_Property/Deprecated.js': 71748,
+        './Binary_Property/Deprecated.js': 34224,
         './Binary_Property/Diacritic.js': 28490,
         './Binary_Property/Emoji.js': 99782,
         './Binary_Property/Emoji_Component.js': 92514,
