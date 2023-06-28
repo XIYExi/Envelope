@@ -64,7 +64,7 @@ const UserDrawer = (props) => {
             icon={<PoweroffOutlined />}
             block={true}
             onClick={() => {
-              history.replace('/login');
+              history.replace('/');
             }}
           >
             退出

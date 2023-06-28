@@ -93,10 +93,7 @@ const ThirdUI: FC<any> = (props) => {
             color="teal"
             onClick={() => {
               //history.push('/~docs/absolute-antd/antd/alert');
-              window.open(
-                'http://localhost:8000/#/~docs/lole文档/lole_of_react',
-                'blank',
-              );
+              window.open('/#/~docs/lole文档/lole_of_react', 'blank');
             }}
           >
             查看文档

@@ -1,6 +1,6 @@
 import React, { FC, memo, useEffect, useState } from 'react';
 import styled from 'styled-components';
-import logo from '../../../../assets/absolute/list.png';
+import logo from '../../../../assets/absolute/listImage.png';
 import { IListConfig } from '@/materials/absolute-antd/base/List/schema';
 import { Avatar, Divider, Image, List } from 'antd';
 import { PaginationConfig } from 'antd/es/pagination';

@@ -29,11 +29,7 @@ const AButton: FC<IButtonProProp> = (props) => {
 
   return (
     <React.Fragment>
-      {isTpl && (
-        <div>
-          <Image preview={false} src={logo} alt={'Antd Button'} />
-        </div>
-      )}
+      {isTpl && <Image preview={false} src={logo} alt={'Antd Button'} />}
       {!isTpl && (
         <Button
           id="antd button"

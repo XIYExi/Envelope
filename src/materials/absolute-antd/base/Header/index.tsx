@@ -1,5 +1,5 @@
 import React, { FC, memo, useState } from 'react';
-import Logo from '../../../../assets/absolute/Logo.png';
+import Logo from '../../../../assets/absolute/headerImage.png';
 import { Avatar, Button, Image } from 'antd';
 import styled from 'styled-components';
 import { IHeaderConfig } from '@/materials/absolute-antd/base/Header/schema';

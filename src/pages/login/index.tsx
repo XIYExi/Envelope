@@ -78,7 +78,11 @@ class LoginForm extends React.Component<any, any> {
     const { inputUsername, inputPwd } = this.state;
     //console.log(inputUsername,inputPwd)
 
-    axios
+    // TODO 部署github page删除后端，直接进入管理界面，用户名为admin则直接进入rbac
+    if (inputUsername === 'admin') history.replace('/rbac');
+    else history.replace('/inner');
+
+    /*axios
       .post(
         back_port +
           '/user/login?username=' +
@@ -96,13 +100,15 @@ class LoginForm extends React.Component<any, any> {
           else history.replace('/inner');
         } else message.error(response.data.message);
       })
-      .catch((error) => console.log(error));
+      .catch((error) => console.log(error));*/
   };
 
   bindSignUpBtn = () => {
     const { inputTel, inputUsername, inputNickname, inputPwd } = this.state;
 
-    axios
+    message.info('注册成功');
+
+    /*axios
       .post(
         back_port +
           `/user/signup?username=` +
@@ -118,7 +124,7 @@ class LoginForm extends React.Component<any, any> {
         //console.log(response)
         message.info(response.data.message === 'ok' ? '注册成功' : '注册失败');
       })
-      .catch((error) => console.log(error));
+      .catch((error) => console.log(error));*/
   };
 
   jumpToSignUp = () => {

@@ -50,6 +50,7 @@ const SourceBox = memo((props: TargetBoxProps) => {
               alignItems: 'center',
               flexDirection: 'column',
               overflow: 'hidden',
+              padding: '0.7em',
             }}
           >
             {props.children}

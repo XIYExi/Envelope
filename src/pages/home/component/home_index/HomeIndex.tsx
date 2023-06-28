@@ -61,7 +61,7 @@ const renderMsg = [
   {
     type: 'lowcode',
     color: 'teal',
-    image: 'https://s1.ax1x.com/2023/03/27/ppsbWan.jpg',
+    image: 'https://s1.ax1x.com/2023/06/28/pCdQA9x.png',
     title: 'Ant Design 风格模板',
     description:
       '基于Antd框架的H5静态布局低代码框架，在antd的基础上封装30套组件，其风格简约干练，适合于管理系统构建',
@@ -82,7 +82,7 @@ const renderMsg = [
   {
     type: 'lowcode',
     color: 'teal',
-    image: 'https://s1.ax1x.com/2023/03/27/ppsbWan.jpg',
+    image: 'https://s1.ax1x.com/2023/06/28/pCdQA9x.png',
     title: 'Semantic UI 风格模板',
     description:
       '封装Semantic UI中26套精选组件，聚焦于社交以及交互组件，添加了更多用户交互的自定义组件，适用于制作社交App',
@@ -103,7 +103,7 @@ const renderMsg = [
   {
     type: 'lowcode',
     color: 'teal',
-    image: 'https://s1.ax1x.com/2023/03/27/ppsbWan.jpg',
+    image: 'https://s1.ax1x.com/2023/06/28/pCdQA9x.png',
     title: 'Lowcode Engine',
     description:
       '使用阿里开源lowcode-engine为核心，编写解析插件以及物料，构建基于Fushion以及Next的低代码编辑器，适用于编辑PC网页以及栅格布局应用',
@@ -124,7 +124,7 @@ const renderMsg = [
   {
     type: 'lowcode',
     color: 'teal',
-    image: 'https://s1.ax1x.com/2023/03/27/ppsbWan.jpg',
+    image: 'https://s1.ax1x.com/2023/06/28/pCdQA9x.png',
     title: '模板网页构建',
     description:
       '基于提供的模板网页，通过拓展以及自定义参数，轻松实现动效官网的构建',
@@ -145,7 +145,7 @@ const renderMsg = [
   {
     type: 'lowcode',
     color: 'teal',
-    image: 'https://s1.ax1x.com/2023/03/27/ppsbWan.jpg',
+    image: 'https://s1.ax1x.com/2023/06/28/pCdQA9x.png',
     title: 'AntV 可视化开发',
     description:
       '基于AntV，使用json schema自定义可视化图标，实现快速构建可视化应用',
@@ -166,7 +166,7 @@ const renderMsg = [
   {
     type: 'ui',
     color: 'yellow',
-    image: 'https://s1.ax1x.com/2023/03/27/ppsbWan.jpg',
+    image: 'https://s1.ax1x.com/2023/06/28/pCdQA9x.png',
     title: '封装组件展示文档',
     description: '对二次封装组件进行展示，让用户可以快速预览组件效果以及样式',
     tags: ['Antd', 'Semantic', 'dumi'],
@@ -186,7 +186,7 @@ const renderMsg = [
   {
     type: 'ui',
     color: 'yellow',
-    image: 'https://s1.ax1x.com/2023/03/27/ppsbWan.jpg',
+    image: 'https://s1.ax1x.com/2023/06/28/pCdQA9x.png',
     title: 'Love Letter UI',
     description:
       'Envelope Engine自带的默认样式，开箱即用的樱花风格React元件库，基于React Hook和TypeScript构造。',
@@ -207,7 +207,7 @@ const renderMsg = [
   {
     type: 'doc',
     color: 'pink',
-    image: 'https://s1.ax1x.com/2023/03/27/ppsbWan.jpg',
+    image: 'https://s1.ax1x.com/2023/06/28/pCdQA9x.png',
     title: '使用手册',
     description:
       'Envelope Engine自带的默认样式，开箱即用的樱花风格React元件库，基于React Hook和TypeScript构造。',
@@ -228,7 +228,7 @@ const renderMsg = [
   {
     type: 'doc',
     color: 'pink',
-    image: 'https://s1.ax1x.com/2023/03/27/ppsbWan.jpg',
+    image: 'https://s1.ax1x.com/2023/06/28/pCdQA9x.png',
     title: '设计手册',
     description:
       'Envelope Engine是开源项目，将提供设计手册对项目中部分重点进行讲解，并以dumi文档的形式展示',

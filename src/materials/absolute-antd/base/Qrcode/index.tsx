@@ -1,5 +1,5 @@
 import React, { FC, memo } from 'react';
-import logo from '../../../../assets/absolute/Logo.png';
+import logo from '../../../../assets/absolute/qrcodeImage.png';
 import { Image } from 'antd';
 import styled from 'styled-components';
 import { IQrcodeConfig } from '@/materials/absolute-antd/base/Qrcode/schema';

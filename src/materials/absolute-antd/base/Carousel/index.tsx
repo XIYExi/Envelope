@@ -2,7 +2,7 @@ import { Carousel } from 'antd';
 import React, { FC, memo, PropsWithChildren } from 'react';
 import styled from 'styled-components';
 import { ICarouselConfig } from './schema';
-import logo from '../../../../assets/absolute/banner.png';
+import logo from '../../../../assets/absolute/carouselImage.png';
 
 /*begin to delete*/
 interface CarouselTypes extends ICarouselConfig {
@@ -35,7 +35,7 @@ const ACarousel: FC<CarouselTypes> = (props) => {
     return imgList.map((item, i) => {
       return (
         <PicItem key={+i} style={{ borderRadius: round + 'px' }}>
-          <a href={item.link}>
+          <a>
             <img
               src={item.imgUrl.length > 0 ? item.imgUrl[0].url : ''}
               alt=""

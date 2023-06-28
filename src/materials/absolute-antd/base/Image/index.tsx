@@ -1,7 +1,7 @@
 import React, { FC, memo, useState } from 'react';
 import styled from 'styled-components';
 import { Image } from 'antd';
-import logo from '../../../../assets/absolute/img.png';
+import logo from '../../../../assets/absolute/imageImage.png';
 import { TTextSelectKeyType } from '@/materials/absolute-antd/base/Text/schema';
 import { IImageConfig } from '@/materials/absolute-antd/base/Image/schema';
 
@@ -77,7 +77,7 @@ const AImage: FC<IImageProps> = (props) => {
     <React.Fragment>
       {props.isTpl && (
         <div>
-          <img src={logo} alt="" />
+          <Image preview={false} src={logo} alt="" />
         </div>
       )}
       {!props.isTpl && (
