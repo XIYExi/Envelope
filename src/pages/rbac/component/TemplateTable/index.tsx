@@ -58,6 +58,7 @@ const TemplateTable = (props: any) => {
   const [editingKey, setEditingKey] = useState('');
   const [data, setData] = useState<any>([]);
   const [loading, setLoading] = useState(false);
+
   const [tableParams, setTableParams] = useState<TableParams>({
     pagination: {
       current: 1,
