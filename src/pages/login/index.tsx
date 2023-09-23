@@ -153,7 +153,7 @@ class LoginForm extends React.Component<any, any> {
                       fontWeight: 550,
                     }}
                   >
-                    Envelope
+                    Ink
                   </p>
                 </Header>
 

@@ -59,12 +59,12 @@ export default function Rbac({ children }: IRouteComponentProps) {
               <Footer style={{ textAlign: 'center' }}>
                 <Typography.Text>
                   {'ε٩(๑> ₃ <)۶з'}&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-                  <span style={{ fontWeight: 550 }}>Envelope</span>
+                  <span style={{ fontWeight: 550 }}>Ink</span>
                   &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; (๑╹◡╹๑)
                 </Typography.Text>
                 <br />
                 <Typography.Text>
-                  2023.05.05 京海建工集团 Copyright©
+                  2023.09.23 Ink Platform Copyright©
                 </Typography.Text>
               </Footer>
             )}

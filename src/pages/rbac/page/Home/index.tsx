@@ -18,7 +18,7 @@ const Home: FC = (props: any) => {
   return (
     <>
       <HeadWrapper>
-        <Typography.Title level={2}>Envelope 管理页</Typography.Title>
+        <Typography.Title level={2}>Ink 管理页</Typography.Title>
       </HeadWrapper>
 
       <SegmentWrapper>
