@@ -41,7 +41,7 @@ const LoleIndex = (props: any) => {
       >
         <Typography.Title level={3}>Love Letter UI 原生框架</Typography.Title>
         <Typography.Paragraph style={{ color: 'gray' }}>
-          Envelope 低代码整合平台内置 UI 框架
+          Ink 低代码整合平台内置 UI 框架
         </Typography.Paragraph>
 
         <GitHubButton url="https://github.com/XIYExi/Envelope" />
@@ -64,7 +64,7 @@ const LoleIndex = (props: any) => {
                 </Header>
 
                 <FontDesign>
-                  Love Letter UI 是 Envelope 低代码整合平台的内置 UI
+                  Love Letter UI 是 Ink 低代码整合平台的内置 UI
                   框架，秉承独立开发，统一集成的思想，两套系统并行开发，并实现完美对接。
                 </FontDesign>
 

@@ -104,7 +104,7 @@ const Home: FC = () => {
               history.push('/');
             }}
           >
-            Envelope
+            Ink
           </HomeTitle>
         </div>
 
@@ -175,7 +175,7 @@ const Home: FC = () => {
                   marginTop: '25px',
                 }}
               >
-                <Typography.Title level={3}>Envelope H5 配置</Typography.Title>
+                <Typography.Title level={3}>Ink H5 配置</Typography.Title>
                 <Typography.Paragraph style={{ color: 'gray' }}>
                   通过简单配置启动编辑器
                 </Typography.Paragraph>

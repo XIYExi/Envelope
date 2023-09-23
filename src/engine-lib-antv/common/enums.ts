@@ -43,6 +43,7 @@ interface ICustomEventTypeEnum {
   FREEZE_GRAPH: string;
   RUNTIME_ERR: string;
 }
+
 export const CustomEventTypeEnum: ICustomEventTypeEnum = {
   /**@type {String} 单元点击触发 */
   CELL_CLICK: '__antv_x6_custom_event_type_cell_click__',

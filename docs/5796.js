@@ -16281,11 +16281,13 @@
                 .addClass(this.prefixClassName(Fi.zoom))
                 .appendTo(this.$viewport)
                 .get(0)),
-            this.$container.append(this.$viewport).css({
-              width: this.options.width,
-              height: this.options.height,
-              padding: this.options.padding,
-            }),
+            this.$container
+              .append(this.$viewport)
+              .css({
+                width: this.options.width,
+                height: this.options.height,
+                padding: this.options.padding,
+              }),
             this.options.container &&
               this.options.container.appendChild(this.container),
             (this.sourceGraph = this.graph);
@@ -18280,12 +18282,14 @@
             s = Xi(i, ['padding']),
             o = m.GH.normalizeSides(r),
             a = V.Ae.fromSize(this.getClientSize()),
-            l = a.clone().moveAndExpand({
-              x: o.left,
-              y: o.top,
-              width: -o.right - o.left,
-              height: -o.top - o.bottom,
-            });
+            l = a
+              .clone()
+              .moveAndExpand({
+                x: o.left,
+                y: o.top,
+                width: -o.right - o.left,
+                height: -o.top - o.bottom,
+              });
           (e = m.GH.normalizePercentage(e, Math.max(0, l.width))),
             e < 0 && (e = l.width + e),
             (n = m.GH.normalizePercentage(n, Math.max(0, l.height))),
@@ -18402,14 +18406,16 @@
         removeTransition() {
           return (
             this.$container.removeClass(Wi.transitionClassName),
-            this.$content.off(Wi.transitionEventName).css({
-              transform: '',
-              transformOrigin: '',
-              transition: '',
-              transitionDuration: '',
-              transitionDelay: '',
-              transitionTimingFunction: '',
-            }),
+            this.$content
+              .off(Wi.transitionEventName)
+              .css({
+                transform: '',
+                transformOrigin: '',
+                transition: '',
+                transitionDuration: '',
+                transitionDelay: '',
+                transitionTimingFunction: '',
+              }),
             this
           );
         }
@@ -22349,12 +22355,14 @@
           let e = t.area;
           if (!e) {
             const n = m.GH.normalizeSides(t.padding);
-            e = this.graph.getContentArea().moveAndExpand({
-              x: -n.left,
-              y: -n.top,
-              width: n.left + n.right,
-              height: n.top + n.bottom,
-            });
+            e = this.graph
+              .getContentArea()
+              .moveAndExpand({
+                x: -n.left,
+                y: -n.top,
+                width: n.left + n.right,
+                height: n.top + n.bottom,
+              });
           }
           return e;
         }
@@ -22720,11 +22728,13 @@
             (this.clientY = e.clientY),
             (this.panning = !0),
             this.updateClassName(),
-            this.view.$(document.body).on({
-              'mousemove.panning touchmove.panning': this.pan.bind(this),
-              'mouseup.panning touchend.panning': this.stopPanning.bind(this),
-              'mouseleave.panning': this.stopPanning.bind(this),
-            }),
+            this.view
+              .$(document.body)
+              .on({
+                'mousemove.panning touchmove.panning': this.pan.bind(this),
+                'mouseup.panning touchend.panning': this.stopPanning.bind(this),
+                'mouseleave.panning': this.stopPanning.bind(this),
+              }),
             this.view
               .$(window)
               .on('mouseup.panning', this.stopPanning.bind(this));
@@ -27180,12 +27190,14 @@
             e = this.options,
             { useCellGeometry: n, rotate: i } = e,
             r = o.GH.normalizeSides(e.padding);
-          let s = a.x(t, n).moveAndExpand({
-            x: -r.left,
-            y: -r.top,
-            width: r.left + r.right,
-            height: r.top + r.bottom,
-          });
+          let s = a
+            .x(t, n)
+            .moveAndExpand({
+              x: -r.left,
+              y: -r.top,
+              width: r.left + r.right,
+              height: r.top + r.bottom,
+            });
           const l = t.cell;
           if (l.isNode()) {
             const t = l.getAngle();

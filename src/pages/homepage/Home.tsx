@@ -141,7 +141,7 @@ export const Home = (props: any) => {
             <Grid>
               <Grid.Column width={8}>
                 <HeaderDesign $fontSize={'65px'}>
-                  Envelope&nbsp;&nbsp;Platform
+                  Ink&nbsp;&nbsp;Platform
                 </HeaderDesign>
                 <HeaderDesign $fontSize={'55px'}>
                   充满无限可能的
@@ -219,7 +219,7 @@ export const Home = (props: any) => {
         >
           <Segment basic textAlign="center">
             <HeaderDesign $color={'black'} $fontSize={'40px'}>
-              Envelope 超乎想象的活力
+              Ink 超乎想象的活力
             </HeaderDesign>
 
             <FontDesign $fontSize={'20px'}>
@@ -262,7 +262,7 @@ export const Home = (props: any) => {
             </HeaderDesign>
 
             <FontDesign $fontSize={'18px'} style={{ textAlign: 'center' }}>
-              Envelope
+              Ink
               低代码整合平台旨在提供多种多样的低代码构建方式，因此集成更多的低代码引擎
               <br />
               只为给你带来最棒的使用体验。
@@ -275,11 +275,11 @@ export const Home = (props: any) => {
                     <Image centered size="tiny" src={cell1} />
 
                     <HeaderDesign $fontSize={'19px'} $color="black">
-                      Envelope 原生引擎
+                      Ink 原生引擎
                     </HeaderDesign>
 
                     <FontDesign $fontSize={'14px'}>
-                      Envelope 团队自研的原生低代码引擎，基于 umi
+                      Ink 团队自研的原生低代码引擎，基于 umi
                       框架的动态加载技术，使用 dva 以及 JSON schema
                       实现低代码元件的编辑与设计。 原生引擎采用
                       Antd、Semantic、原生UI三套样式，在 H5
@@ -309,7 +309,7 @@ export const Home = (props: any) => {
                     </HeaderDesign>
 
                     <FontDesign $fontSize={'14px'}>
-                      Envelope Platform 集成 Antv / x6 图引擎，在 x6 提供的 API
+                      Ink Platform 集成 Antv / x6 图引擎，在 x6 提供的 API
                       基础上进行二次开发，实现流程图， E-R
                       图，UML统一类图等多种图表绘制，
                       实现数据可视化需求，支持导出 JSON。
@@ -349,7 +349,7 @@ export const Home = (props: any) => {
                       maxWidth: '430px',
                     }}
                   >
-                    Envelope Platform 提供了多套 UI 框架，其中包含Envelope
+                    Ink Platform 提供了多套 UI 框架，其中包含 Ink
                     低代码整合平台的内置 UI 框架 Love Letter UI， UI
                     框架秉承独立开发，统一集成的思想，两套系统并行开发，并实现完美对接。
                     框架打包上传 npm ，开箱即用，可以在平台外独立使用 ...
@@ -397,8 +397,8 @@ export const Home = (props: any) => {
                       maxWidth: '430px',
                     }}
                   >
-                    Envelope Platform 秉承开源思想，Envelope
-                    开发中所有产生的物料都已在GitHub等仓库开源。 Envelope
+                    Ink Platform 秉承开源思想，Ink
+                    开发中所有产生的物料都已在GitHub等仓库开源。 Ink
                     提供了完善的设计手稿，包含原生引擎设计文档，原生引擎功能流图。提供了软件工程开发全周期的各项资料，
                     支持其余爱好者进行独立二次开发 ...
                   </FontDesign>
@@ -409,7 +409,7 @@ export const Home = (props: any) => {
                       maxWidth: '430px',
                     }}
                   >
-                    Envelope Platform 设计中产出的所有设计文稿均采导出为 Figma
+                    Ink Platform 设计中产出的所有设计文稿均采导出为 Figma
                     文档，包含设计中所有参考的 Figma 设计项目， 目前均以上传
                     GitHub 供各位参考查阅 ...
                   </FontDesign>

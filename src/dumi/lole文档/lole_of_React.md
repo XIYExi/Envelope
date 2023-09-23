@@ -6,8 +6,6 @@ order: 1
 
 # lole UI of React
 
-```lole UI```是 ```rd /s/q C:\Program Files\Java``` 团队精心设计的React UI库，是面向个人站点的简约风格组件。
-
 
 <br/>
 

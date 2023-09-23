@@ -221,9 +221,9 @@
           return r;
         },
       });
-      var n = 'http://localhost:8001/api',
-        l = 'http://localhost:8001/rbac',
-        r = 'http://localhost:8001/templateApi';
+      var n = 'http://localhost:8000/api',
+        l = 'http://localhost:8000/rbac',
+        r = 'http://localhost:8000/templateApi';
     },
   },
 ]);

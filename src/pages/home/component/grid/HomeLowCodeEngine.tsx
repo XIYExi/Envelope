@@ -94,17 +94,18 @@ const HomeLowCodeEngine: FC<{ gotoLowcodeEngine: any }> = (props) => {
                 </FontDesign>
 
                 <FontDesign>
-                  Envelope致力于打造低代码整合平台，团队认为没有一款设计可以满足所有的软件需求，只有最适合当前需求的工具与方法。因此强大的
+                  Ink
+                  致力于打造低代码整合平台，团队认为没有一款设计可以满足所有的软件需求，只有最适合当前需求的工具与方法。因此强大的
                   Lowcode-Engine
                   正是我们构建低代码项目的神兵利器。Lowcode-Engine
-                  具备强大的响应式布局以及栅格系统，弥补了原生Envelope系统在响应式项目以及PC等大显示
-                  设备上的表现力。
+                  具备强大的响应式布局以及栅格系统，弥补了原生 Ink
+                  系统在响应式项目以及PC等大显示 设备上的表现力。
                 </FontDesign>
 
                 <FontDesign>
-                  Envelope
+                  Ink
                   团队通过为原生引擎编写插件以及物料库，成功构建了低代码运行集，可以使用Fushion元件库，配合强大的编辑器构建响应式项目，并完成
-                  预览、出码等功能。第三方引擎与Envelope
+                  预览、出码等功能。第三方引擎与 Ink
                   原生项目完全隔离，因此并不会产生环境或项目污染。
                 </FontDesign>
 
@@ -138,7 +139,7 @@ const HomeLowCodeEngine: FC<{ gotoLowcodeEngine: any }> = (props) => {
                 <HeaderDesign as="h2">自定义插件</HeaderDesign>
 
                 <FontDesign>
-                  Envelope Lowcode-Engine
+                  Ink Lowcode-Engine
                   通过编写插件实现对引擎的注入以及操控，在项目核心包{' '}
                   <mark>engine-lib-grid</mark>{' '}
                   中配置了关于第三方引擎的所有插件。
@@ -216,7 +217,7 @@ const HomeLowCodeEngine: FC<{ gotoLowcodeEngine: any }> = (props) => {
             {/*@ts-ignore*/}
             <Card color="teal">
               <Card.Content>
-                <Card.Header>Envelope Lowcode</Card.Header>
+                <Card.Header>Ink Lowcode</Card.Header>
                 {/*@ts-ignore*/}
                 <Button fluid color="teal" onClick={props.gotoLowcodeEngine}>
                   立刻使用
@@ -239,7 +240,7 @@ const HomeLowCodeEngine: FC<{ gotoLowcodeEngine: any }> = (props) => {
                 </Card.Header>
                 <Card.Description>
                   <FontDesign>
-                    Envelope Lowcode-Engine
+                    Ink Lowcode-Engine
                     封装后保留原引擎的强大特性，支持SandBox沙箱运行项目，可以快速预览，在线修改
                   </FontDesign>
                 </Card.Description>
@@ -293,8 +294,7 @@ const HomeLowCodeEngine: FC<{ gotoLowcodeEngine: any }> = (props) => {
                 </Card.Header>
                 <Card.Description>
                   <FontDesign>
-                    Lowcode-Engine 使用和 原生Envelope
-                    一样得设计理念，均使用Json
+                    Lowcode-Engine 使用和 原生 Ink 一样得设计理念，均使用Json
                     Schema导出元件编辑数据，使用zip工具快速打包，支持源码导出
                   </FontDesign>
                 </Card.Description>

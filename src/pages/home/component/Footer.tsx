@@ -47,12 +47,12 @@ const Footer = (props: any) => {
                     marginLeft: '1em',
                   }}
                 >
-                  Envelope
+                  Ink
                 </p>
               </div>
 
               <FontDesign>
-                Envelope 低代码整合平台
+                Ink 低代码整合平台
                 <br />
                 使用自研引擎、Lowcode-Engine、AntV
                 <br />
@@ -106,7 +106,7 @@ const Footer = (props: any) => {
 
             <FontDesignItem>UI 框架设计稿</FontDesignItem>
             <FontDesignItem>Figma 设计资源</FontDesignItem>
-            <FontDesignItem>Envelope 设计稿</FontDesignItem>
+            <FontDesignItem>Ink 设计稿</FontDesignItem>
             <FontDesignItem>插件设计稿</FontDesignItem>
           </Grid.Column>
 
@@ -128,7 +128,7 @@ const Footer = (props: any) => {
         <Grid>
           <Grid.Column width={4}>
             <FontDesignItem style={{ textAlign: 'right' }}>
-              Envelope 开发团队
+              Ink 开发团队
             </FontDesignItem>
           </Grid.Column>
           <Grid.Column width={8}>

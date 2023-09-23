@@ -128,16 +128,16 @@ const TemplateIndex = (props: any) => {
                 模板网页开发
               </HeaderDesign>
               <HeaderDesign $fontSize="26px" $fontWeight={500} $color="black">
-                Envelope 原生引擎,
+                Ink 原生引擎,
                 <br />
                 React, 动效, 简单操作, 源码导出
               </HeaderDesign>
 
               <FontDesign style={{ width: '640px' }}>
-                模板编辑器基于 Envelope 原生引擎，继续参照 JSON Schema
+                模板编辑器基于 Ink 原生引擎，继续参照 JSON Schema
                 规范构建低代码项目，
                 为了弥补原生引擎在大屏幕设备上遗留的缺陷，我们设计了模块化网页模板编辑器。
-                Envelope Template Engine 拥有丰富的各类首页模板，
+                Ink Template Engine 拥有丰富的各类首页模板，
                 下载模板代码包，即可快速使用，
                 也可以使用首页编辑器，快速搭建一个属于你的专属首页。
               </FontDesign>
@@ -212,7 +212,7 @@ const TemplateIndex = (props: any) => {
                   width: '400px',
                 }}
               >
-                所有的模块与模板都基于 Ant Design 以及 Envelope
+                所有的模块与模板都基于 Ant Design 以及 Ink
                 内部约定的设计规范设计，你可以直接下载我们的模板以及源码，
                 也可以使用我们的编辑器，快速搭建一个属于你的专属首页。
               </FontDesign>
@@ -241,7 +241,7 @@ const TemplateIndex = (props: any) => {
                   <Card.Description>
                     <div style={{ paddingLeft: '1em' }}>
                       提供详细的设计指南，讲解动效模板实现思路，采用内置dumi部署文档，快捷访问。
-                      我们将持续迭代，逐步沉淀和总结出更多首页模块的代码实现，阐述首页(Envelope
+                      我们将持续迭代，逐步沉淀和总结出更多首页模块的代码实现，阐述首页(Ink
                       page)的最佳实践， 也十分期待你的参与和共建。
                     </div>
                   </Card.Description>
@@ -273,7 +273,7 @@ const TemplateIndex = (props: any) => {
                   </Card.Header>
                   <Card.Description>
                     <div style={{ paddingLeft: '1em', color: 'white' }}>
-                      Envelope 模板设计器所有模板均来自 Figma
+                      Ink 模板设计器所有模板均来自 Figma
                       设计稿，我们提供了大量的设计手稿供参考、下载。
                       任何人都可以在我们的官网上下载我们的设计资源，此外更多的设计资源正在整理和完善中。
                     </div>
@@ -306,7 +306,7 @@ const TemplateIndex = (props: any) => {
                   </Card.Header>
                   <Card.Description>
                     <div style={{ paddingLeft: '1em', color: 'white' }}>
-                      Envelope 模板编辑器完美解决了 H5
+                      Ink 模板编辑器完美解决了 H5
                       引擎中无法适配响应式的问题，采用 Ant Design 元件库以及
                       React Animate
                       动画库，制作具有动效动画的响应式网站首页。目前设计器模板采用24栅格布局(Grid)，
@@ -378,7 +378,7 @@ const TemplateIndex = (props: any) => {
             $fontWeight={450}
             style={{ marginBottom: '2.5em' }}
           >
-            立刻使用 Envelope page 编辑器，
+            立刻使用 Ink page 编辑器，
             <br />
             使用风格迥异的模板快速构建你的网页
           </HeaderDesign>

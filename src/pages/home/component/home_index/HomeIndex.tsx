@@ -189,7 +189,7 @@ const renderMsg = [
     image: 'https://s1.ax1x.com/2023/06/28/pCdQA9x.png',
     title: 'Love Letter UI',
     description:
-      'Envelope Engine自带的默认样式，开箱即用的樱花风格React元件库，基于React Hook和TypeScript构造。',
+      'Ink Engine自带的默认样式，开箱即用的樱花风格React元件库，基于React Hook和TypeScript构造。',
     tags: ['UI框架', 'TypeScript', 'React Hook'],
     msgs: [
       {
@@ -210,7 +210,7 @@ const renderMsg = [
     image: 'https://s1.ax1x.com/2023/06/28/pCdQA9x.png',
     title: '使用手册',
     description:
-      'Envelope Engine自带的默认样式，开箱即用的樱花风格React元件库，基于React Hook和TypeScript构造。',
+      'Ink Engine自带的默认样式，开箱即用的樱花风格React元件库，基于React Hook和TypeScript构造。',
     tags: ['UI框架', 'TypeScript', 'React Hook'],
     msgs: [
       {
@@ -231,7 +231,7 @@ const renderMsg = [
     image: 'https://s1.ax1x.com/2023/06/28/pCdQA9x.png',
     title: '设计手册',
     description:
-      'Envelope Engine是开源项目，将提供设计手册对项目中部分重点进行讲解，并以dumi文档的形式展示',
+      'Ink Engine是开源项目，将提供设计手册对项目中部分重点进行讲解，并以dumi文档的形式展示',
     tags: ['design', 'doc'],
     msgs: [
       {
@@ -345,7 +345,7 @@ const HomeIndex: FC<any> = (props) => {
           marginTop: '25px',
         }}
       >
-        <Typography.Title level={3}>欢迎使用 Envelope Engine</Typography.Title>
+        <Typography.Title level={3}>欢迎使用 Ink Engine</Typography.Title>
         <Typography.Paragraph style={{ color: 'gray' }}>
           简单易上手的低代码整合平台
         </Typography.Paragraph>

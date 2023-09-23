@@ -97,7 +97,7 @@ const AntVIndex = (props: any) => {
                     </FontDesign>
 
                     <FontDesign>
-                      Envelope团队通过 X6 引擎提供的 API
+                      Ink 团队通过 X6 引擎提供的 API
                       接口，进行二次封装，保留原生引擎操作手感，并提供了更多自定义操作，方便用户迅速进行图操作。
                     </FontDesign>
                   </Segment>
@@ -147,8 +147,8 @@ const AntVIndex = (props: any) => {
                       <Segment basic>
                         <Header as="h2">更多图表</Header>
                         <FontDesign style={{ marginTop: '2em' }}>
-                          Envelope 流程图编辑器后续将添加E - R实体图、DFD
-                          数据流图、时序图、UML实例图等一系列图标组件。 Envelope
+                          Ink 流程图编辑器后续将添加E - R实体图、DFD
+                          数据流图、时序图、UML实例图等一系列图标组件。 Ink
                           低代码整合平台持续集成，持续交付。
                         </FontDesign>
                       </Segment>
