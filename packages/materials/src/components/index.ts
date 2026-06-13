@@ -1,17 +1,8 @@
 import { createRegistry } from "../registry";
-import {
-  buttonMaterial,
-  inputMaterial,
-  labelMaterial,
-  cardMaterial,
-  cardHeaderMaterial,
-  cardContentMaterial,
-  cardFooterMaterial,
-  separatorMaterial,
-  avatarMaterial,
-  skeletonMaterial,
-  badgeMaterial,
-} from "./core.materials";
+import { cardMaterial, cardHeaderMaterial, cardContentMaterial, cardFooterMaterial, separatorMaterial } from "./layout";
+import { buttonMaterial, inputMaterial, labelMaterial } from "./form";
+import { avatarMaterial, badgeMaterial } from "./display";
+import { skeletonMaterial } from "./feedback";
 
 export function createDefaultRegistry() {
   const registry = createRegistry();

@@ -1,0 +1,70 @@
+import type { MaterialDefinition } from "../../types/material";
+
+export const buttonMaterial: MaterialDefinition = {
+  name: "Button",
+  displayName: "Button",
+  description: "Triggers an action or event, such as submitting a form or opening a dialog.",
+  category: "form",
+  icon: "SquareMousePointer",
+  supportsChildren: true,
+  defaultProps: {
+    variant: "default",
+    size: "default",
+  },
+  editableProps: [
+    {
+      key: "variant",
+      label: "Variant",
+      type: "select",
+      options: [
+        { label: "Default", value: "default" },
+        { label: "Destructive", value: "destructive" },
+        { label: "Outline", value: "outline" },
+        { label: "Secondary", value: "secondary" },
+        { label: "Ghost", value: "ghost" },
+        { label: "Link", value: "link" },
+      ],
+      defaultValue: "default",
+      group: "Appearance",
+      order: 1,
+    },
+    {
+      key: "size",
+      label: "Size",
+      type: "select",
+      options: [
+        { label: "Default", value: "default" },
+        { label: "Small", value: "sm" },
+        { label: "Large", value: "lg" },
+        { label: "Icon", value: "icon" },
+      ],
+      defaultValue: "default",
+      group: "Appearance",
+      order: 2,
+    },
+    {
+      key: "disabled",
+      label: "Disabled",
+      type: "switch",
+      defaultValue: false,
+      group: "State",
+      order: 3,
+    },
+    {
+      key: "className",
+      label: "Tailwind Classes",
+      type: "tailwind",
+      group: "Styling",
+      order: 10,
+      comment: "Additional Tailwind CSS classes for the button.",
+    },
+    {
+      key: "comment",
+      label: "Comment",
+      type: "textarea",
+      group: "Documentation",
+      order: 20,
+      comment: "Documentation note that will appear in generated code.",
+    },
+  ],
+};

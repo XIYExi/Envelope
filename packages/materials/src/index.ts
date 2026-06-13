@@ -19,19 +19,21 @@ export {
 
 export { createRegistry } from "./registry";
 export { createDefaultRegistry } from "./components/index";
+
+// Form components
+export { buttonMaterial, inputMaterial, labelMaterial } from "./components/form";
+// Layout components
 export {
-  buttonMaterial,
-  inputMaterial,
-  labelMaterial,
   cardMaterial,
   cardHeaderMaterial,
   cardContentMaterial,
   cardFooterMaterial,
   separatorMaterial,
-  avatarMaterial,
-  skeletonMaterial,
-  badgeMaterial,
-} from "./components/core.materials";
+} from "./components/layout";
+// Display components
+export { avatarMaterial, badgeMaterial } from "./components/display";
+// Feedback components
+export { skeletonMaterial } from "./components/feedback";
 
 export const PACKAGE_NAME = "@envelope/materials";
 export const VERSION = "3.0.0";
