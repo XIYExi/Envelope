@@ -1,5 +1,6 @@
 const { app, BrowserWindow, Menu, ipcMain, dialog } = require("electron");
 const path = require("path");
+const fs = require("fs");
 const { initSQLite } = require("./db");
 
 const isDev = process.env.NODE_ENV === "development";
@@ -30,7 +31,16 @@ function createWindow() {
     mainWindow.loadURL("http://localhost:3000");
     mainWindow.webContents.openDevTools({ mode: "detach" });
   } else {
-    mainWindow.loadFile(path.join(__dirname, "..", "..", "platform", ".next", "server", "app", "index.html"));
+    const rendererPath = path.join(__dirname, "..", "platform-build", "server", "app", "index.html");
+    if (fs.existsSync(rendererPath)) {
+      mainWindow.loadFile(rendererPath);
+    } else {
+      dialog.showErrorBox(
+        "Render Error",
+        "Production renderer not found. Build the platform first:\n  pnpm --filter=@envelope/platform build\n\nExpected: " + rendererPath
+      );
+      app.quit();
+    }
   }
 
   mainWindow.on("closed", () => {

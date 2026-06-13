@@ -2,6 +2,7 @@ module.exports = {
   productName: "Envelope",
   appId: "com.envelope.platform",
   copyright: "Copyright © Envelope",
+  npmRebuild: false,
   directories: {
     output: "release",
   },
@@ -9,10 +10,7 @@ module.exports = {
     "main/**/*",
     "preload/**/*",
     "package.json",
-    {
-      from: "../platform/.next",
-      to: "../platform/.next",
-    },
+    "platform-build/**/*",
   ],
   extraResources: [],
   mac: {
@@ -34,7 +32,7 @@ module.exports = {
     category: "Development",
   },
   win: {
-    target: ["nsis", "portable"],
+    target: ["dir"],
     icon: "assets/icon.ico",
   },
   nsis: {

@@ -20,14 +20,17 @@ export function createComponentDragItem(componentId: string): DragItem {
 }
 
 export function gridSnap(value: number, gridSize: number): number {
+  if (gridSize <= 0) return value;
   return Math.round(value / gridSize) * gridSize;
 }
 
 export function pixelToGrid(pixel: number, cellSize: number): number {
+  if (cellSize <= 0) return pixel;
   return Math.round(pixel / cellSize);
 }
 
 export function gridToPixel(grid: number, cellSize: number): number {
+  if (cellSize <= 0) return grid;
   return grid * cellSize;
 }
 

@@ -2,10 +2,11 @@
   "name": "@envelope/generator",
   "version": "3.0.0",
   "private": true,
+  "_comment": "main points to src/ so Next.js transpilePackages reads source directly",
   "main": "./src/index.ts",
   "types": "./src/index.ts",
   "scripts": {
-    "build": "tsc",
+    "build": "tsc --noEmit",
     "typecheck": "tsc --noEmit",
     "lint": "eslint src/",
     "clean": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\""

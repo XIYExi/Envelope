@@ -1,9 +1,8 @@
 import { create } from "zustand";
 import type { CanvasState, CanvasActions, CanvasComponent } from "./types";
 
-let nextId = 1;
 function generateId(): string {
-  return `comp_${Date.now()}_${nextId++}`;
+  return crypto.randomUUID();
 }
 
 export const useCanvasStore = create<CanvasState & CanvasActions>((set, get) => ({
@@ -47,35 +46,45 @@ export const useCanvasStore = create<CanvasState & CanvasActions>((set, get) => 
 
   moveComponent: (id, x, y) =>
     set((state) => ({
-      components: state.components.map((c) =>
-        c.id === id ? { ...c, position: { ...c.position, x, y } } : c,
-      ),
+      components: state.components.map((c) => {
+        if (c.id !== id) return c;
+        const clampedX = Math.max(1, Math.min(12, x));
+        const clampedY = Math.max(1, y);
+        return { ...c, position: { ...c.position, x: clampedX, y: clampedY } };
+      }),
     })),
 
   resizeComponent: (id, width, height) =>
     set((state) => ({
-      components: state.components.map((c) =>
-        c.id === id
-          ? { ...c, position: { ...c.position, width, height } }
-          : c,
-      ),
+      components: state.components.map((c) => {
+        if (c.id !== id) return c;
+        const clampedWidth = Math.max(1, Math.min(12 - c.position.x + 1, width));
+        const clampedHeight = Math.max(1, height);
+        return { ...c, position: { ...c.position, width: clampedWidth, height: clampedHeight } };
+      }),
     })),
 
   setZoom: (zoom) => set({ zoom }),
   setViewport: (viewport) => set({ viewport }),
+  setGridCols: (gridCols) => set({ gridCols }),
+  setGridGap: (gridGap) => set({ gridGap }),
 
   copySelected: () => {
     const { components, selectedIds } = get();
+    const componentMap = new Map(components.map((c) => [c.id, c]));
     const copies = selectedIds
-      .map((sid) => components.find((c) => c.id === sid))
+      .map((sid) => componentMap.get(sid))
       .filter(Boolean) as CanvasComponent[];
 
-    const newComps: CanvasComponent[] = copies.map((c) => ({
-      ...c,
-      id: generateId(),
-      node: { ...c.node, id: generateId() },
-      position: { ...c.position, x: c.position.x + 2, y: c.position.y + 1 },
-    }));
+    const newComps: CanvasComponent[] = copies.map((c) => {
+      const clonedNode = structuredClone(c.node);
+      clonedNode.id = generateId();
+      return {
+        id: generateId(),
+        node: clonedNode,
+        position: { ...c.position, x: c.position.x + 2, y: c.position.y + 1 },
+      };
+    });
 
     set((state) => ({
       components: [...state.components, ...newComps],
@@ -103,7 +112,12 @@ export function createCanvasComponent(
   type: string,
   category: string,
   props: Record<string, unknown> = {},
+  existingComponents: CanvasComponent[] = [],
 ): CanvasComponent {
+  let y = 1;
+  if (existingComponents.length > 0) {
+    y = Math.max(...existingComponents.map((c) => c.position.y + c.position.height));
+  }
   return {
     id: generateId(),
     node: {
@@ -112,6 +126,6 @@ export function createCanvasComponent(
       category,
       props,
     },
-    position: { x: 1, y: 1, width: 3, height: 2 },
+    position: { x: 1, y, width: 3, height: 2 },
   };
 }

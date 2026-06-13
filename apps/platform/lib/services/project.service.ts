@@ -13,7 +13,10 @@ export async function getProjects(): Promise<Project[]> {
     .select("*")
     .order("updated_at", { ascending: false });
 
-  if (error) throw new Error(`Failed to fetch projects: ${error.message}`);
+  if (error) {
+    console.error("Failed to fetch projects:", error);
+    throw new Error("Failed to fetch projects");
+  }
   return data;
 }
 
@@ -25,7 +28,10 @@ export async function getProject(id: string): Promise<Project> {
     .eq("id", id)
     .single();
 
-  if (error) throw new Error(`Failed to fetch project: ${error.message}`);
+  if (error) {
+    console.error("Failed to fetch project:", error);
+    throw new Error("Failed to fetch project");
+  }
   return data;
 }
 
@@ -43,7 +49,10 @@ export async function createProject(input: Omit<ProjectInsert, "user_id">): Prom
     .select()
     .single();
 
-  if (error) throw new Error(`Failed to create project: ${error.message}`);
+  if (error) {
+    console.error("Failed to create project:", error);
+    throw new Error("Failed to create project");
+  }
   return data;
 }
 
@@ -59,19 +68,30 @@ export async function updateProject(
     .select()
     .single();
 
-  if (error) throw new Error(`Failed to update project: ${error.message}`);
+  if (error) {
+    console.error("Failed to update project:", error);
+    throw new Error("Failed to update project");
+  }
   return data;
 }
 
 export async function deleteProject(id: string): Promise<void> {
   const supabase = await createServerSupabase();
   const { error } = await supabase.from("projects").delete().eq("id", id);
-  if (error) throw new Error(`Failed to delete project: ${error.message}`);
+  if (error) {
+    console.error("Failed to delete project:", error);
+    throw new Error("Failed to delete project");
+  }
 }
 
 export async function duplicateProject(id: string, newName: string): Promise<Project> {
   const original = await getProject(id);
   const supabase = await createServerSupabase();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) throw new Error("Not authenticated");
 
   const { data, error } = await supabase
     .from("projects")
@@ -80,12 +100,15 @@ export async function duplicateProject(id: string, newName: string): Promise<Pro
       description: `Copy of ${original.name}`,
       config: original.config,
       schema_version: original.schema_version,
-      user_id: original.user_id,
+      user_id: user.id,
     })
     .select()
     .single();
 
-  if (error) throw new Error(`Failed to duplicate project: ${error.message}`);
+  if (error) {
+    console.error("Failed to duplicate project:", error);
+    throw new Error("Failed to duplicate project");
+  }
 
   const { data: pages } = await supabase
     .from("project_pages")

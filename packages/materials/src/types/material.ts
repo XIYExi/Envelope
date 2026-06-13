@@ -56,15 +56,17 @@ export const materialDefinitionSchema = z.object({
   icon: z.string().optional(),
   editableProps: z.array(editablePropSchema).optional(),
   defaultProps: z.record(z.unknown()).optional(),
-  defaultChildren: z.array(z.string()).optional(),
   supportsChildren: z.boolean().optional(),
   maxChildren: z.number().optional(),
   isContainer: z.boolean().optional(),
-  tailwindClasses: z.string().optional(),
   documentation: z.string().optional(),
 });
 
 export type MaterialDefinition = z.infer<typeof materialDefinitionSchema>;
+
+export function getDefaultValue<T = unknown>(prop: EditableProp): T {
+  return prop.defaultValue as T;
+}
 
 export interface MaterialRegistry {
   getByCategory: (category: ComponentCategory) => MaterialDefinition[];

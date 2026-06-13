@@ -1,29 +1,15 @@
 import { forwardRef } from "react";
-import { clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
+import type { CanvasComponent } from "./types";
 
-function cn(...inputs: Parameters<typeof clsx>) {
-  return twMerge(clsx(inputs));
+const CELL_HEIGHT = 40;
+
+function cn(...inputs: Parameters<typeof twMerge>) {
+  return twMerge(...inputs);
 }
 
 interface CanvasRendererProps {
-  components: Array<{
-    id: string;
-    node: {
-      id: string;
-      type: string;
-      category: string;
-      props?: Record<string, unknown>;
-      tailwindClasses?: string;
-      children?: unknown[];
-    };
-    position: {
-      x: number;
-      y: number;
-      width: number;
-      height: number;
-    };
-  }>;
+  components: CanvasComponent[];
   selectedIds: string[];
   onSelect: (id: string, multi?: boolean) => void;
   onClearSelection: () => void;
@@ -64,6 +50,13 @@ export const CanvasRenderer = forwardRef<HTMLDivElement, CanvasRendererProps>(
           )}
 
           {components.map((comp) => {
+            const { x: rawX, y: rawY, width: rawW, height: rawH } = comp.position;
+            if (rawX < 1 || rawY < 1 || rawW < 1 || rawH < 1) return null;
+
+            const x = Math.max(1, Math.min(12, rawX));
+            const y = Math.max(1, rawY);
+            const width = Math.max(1, Math.min(12 - x + 1, rawW));
+            const height = Math.max(1, rawH);
             const isSelected = selectedIds.includes(comp.id);
 
             return (
@@ -74,13 +67,13 @@ export const CanvasRenderer = forwardRef<HTMLDivElement, CanvasRendererProps>(
                   isSelected && "border-blue-500 ring-2 ring-blue-200",
                 )}
                 style={{
-                  gridColumn: `${comp.position.x} / span ${comp.position.width}`,
-                  gridRow: `${comp.position.y} / span ${comp.position.height}`,
-                  minHeight: `${comp.position.height * 40}px`,
+                  gridColumn: `${x} / span ${width}`,
+                  gridRow: `${y} / span ${height}`,
+                  minHeight: `${height * CELL_HEIGHT}px`,
                 }}
                 onClick={(e) => {
                   e.stopPropagation();
-                  onSelect(comp.id, e.shiftKey);
+                  onSelect(comp.id, e.ctrlKey || e.metaKey || e.shiftKey);
                 }}
               >
                 <div className="flex h-full items-center justify-center rounded bg-muted/50">

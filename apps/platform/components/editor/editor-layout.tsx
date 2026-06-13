@@ -39,7 +39,7 @@ function CanvasDropZone() {
 }
 
 export function EditorLayout() {
-  const { leftPanelCollapsed, rightPanelCollapsed } = useEditorStore();
+  const { leftPanelCollapsed, rightPanelCollapsed, pushSnapshot } = useEditorStore();
   const { addComponent, copySelected, deleteSelected } = useCanvasStore();
 
   const registry = useMemo(() => createDefaultRegistry(), []);
@@ -62,9 +62,10 @@ export function EditorLayout() {
       const category = material?.category ?? "layout";
 
       const comp = createCanvasComponent(materialName, category, {});
+      pushSnapshot();
       addComponent(comp);
     },
-    [addComponent, materialMap],
+    [addComponent, pushSnapshot, materialMap],
   );
 
   useEffect(() => {
@@ -73,21 +74,19 @@ export function EditorLayout() {
 
       if ((e.ctrlKey || e.metaKey) && e.key === "c") {
         e.preventDefault();
-        copySelected();
-      }
-      if ((e.ctrlKey || e.metaKey) && e.key === "d") {
-        e.preventDefault();
+        pushSnapshot();
         copySelected();
       }
       if (e.key === "Delete" || e.key === "Backspace") {
         e.preventDefault();
+        pushSnapshot();
         deleteSelected();
       }
     }
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [copySelected, deleteSelected]);
+  }, [copySelected, deleteSelected, pushSnapshot]);
 
   return (
     <div className="flex h-screen flex-col">

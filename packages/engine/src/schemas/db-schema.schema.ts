@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-const columnSchema = z.object({
+export const columnSchema = z.object({
   name: z.string().min(1),
   type: z.enum([
     "uuid",
@@ -23,21 +23,21 @@ const columnSchema = z.object({
     .object({
       table: z.string(),
       column: z.string(),
-      onDelete: z.enum(["CASCADE", "SET NULL", "RESTRICT"]).default("CASCADE"),
+      onDelete: z.enum(["CASCADE", "SET NULL", "RESTRICT", "NO ACTION", "SET DEFAULT"]).default("CASCADE"),
     })
     .optional(),
   checkConstraint: z.string().optional(),
   comment: z.string().optional(),
 });
 
-const indexSchema = z.object({
+export const indexSchema = z.object({
   name: z.string(),
   columns: z.array(z.string()),
   unique: z.boolean().default(false),
   type: z.enum(["btree", "gin", "gist"]).default("btree"),
 });
 
-const rlsPolicySchema = z.object({
+export const rlsPolicySchema = z.object({
   name: z.string(),
   operation: z.enum(["SELECT", "INSERT", "UPDATE", "DELETE", "ALL"]),
   using: z.string(),
@@ -55,6 +55,8 @@ export const tableSchema = z.object({
 
 export type TableDefinition = z.infer<typeof tableSchema>;
 export type ColumnDefinition = z.infer<typeof columnSchema>;
+export type IndexDefinition = z.infer<typeof indexSchema>;
+export type RlsPolicyDefinition = z.infer<typeof rlsPolicySchema>;
 
 export const dbSchemaSchema = z.object({
   version: z.string().default("3.0.0"),

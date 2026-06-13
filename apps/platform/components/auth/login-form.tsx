@@ -32,7 +32,7 @@ export function LoginForm() {
         return;
       }
 
-      router.push("/inner");
+      await router.push("/inner");
       router.refresh();
     } catch {
       setError("An unexpected error occurred");

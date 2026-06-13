@@ -9,6 +9,14 @@ export const createProjectSchema = z.object({
 
 export type CreateProjectInput = z.infer<typeof createProjectSchema>;
 
+export const updateProjectSchema = z.object({
+  name: z.string().min(1).max(100).optional(),
+  description: z.string().max(500).optional(),
+  config: z.record(z.unknown()).optional(),
+});
+
+export type UpdateProjectInput = z.infer<typeof updateProjectSchema>;
+
 export const projectConfigSchema = z.object({
   theme: z
     .object({

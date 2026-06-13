@@ -6,10 +6,6 @@ export const inputMaterial: MaterialDefinition = {
   description: "A form input field for text entry.",
   category: "form",
   icon: "Type",
-  defaultProps: {
-    type: "text",
-    placeholder: "",
-  },
   editableProps: [
     {
       key: "type",

@@ -1,10 +1,15 @@
 import { createRegistry } from "../registry";
+import type { MaterialRegistry } from "../types/material";
 import { cardMaterial, cardHeaderMaterial, cardContentMaterial, cardFooterMaterial, separatorMaterial } from "./layout";
 import { buttonMaterial, inputMaterial, labelMaterial } from "./form";
 import { avatarMaterial, badgeMaterial } from "./display";
 import { skeletonMaterial } from "./feedback";
 
-export function createDefaultRegistry() {
+let defaultRegistry: MaterialRegistry | null = null;
+
+export function createDefaultRegistry(): MaterialRegistry {
+  if (defaultRegistry) return defaultRegistry;
+
   const registry = createRegistry();
 
   registry.registerAll([
@@ -28,5 +33,6 @@ export function createDefaultRegistry() {
     skeletonMaterial,
   ]);
 
+  defaultRegistry = registry;
   return registry;
 }

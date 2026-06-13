@@ -7,7 +7,7 @@
   "license": "MIT",
   "scripts": {
     "dev": "turbo dev",
-    "build": "turbo build",
+    "build": "turbo build --filter=!@envelope/electron",
     "lint": "turbo lint",
     "typecheck": "turbo typecheck",
     "test": "turbo test",

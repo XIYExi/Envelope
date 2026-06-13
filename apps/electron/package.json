@@ -5,7 +5,10 @@
   "main": "./main/main.js",
   "scripts": {
     "dev": "electron .",
-    "build": "electron-builder --config electron-builder.config.js",
+    "dev:full": "concurrently \"pnpm --filter=@envelope/platform dev\" \"wait-on http://localhost:3000 && electron .\"",
+    "build": "node -e \"var f=require('fs'),p=require('path'),s='platform-build';if(f.existsSync(s))f.rmSync(s,{recursive:true,force:true});f.cpSync(p.join('..','platform','.next'),s,{recursive:true})\" && electron-builder --config electron-builder.config.js",
+    "lint": "eslint main/ preload/",
+    "typecheck": "tsc --noEmit",
     "clean": "node -e \"require('fs').rmSync('release',{recursive:true,force:true});require('fs').rmSync('dist',{recursive:true,force:true})\""
   },
   "dependencies": {
@@ -13,7 +16,10 @@
     "better-sqlite3": "^11.0.0"
   },
   "devDependencies": {
+    "@envelope/platform": "workspace:*",
+    "concurrently": "^9.0.0",
     "electron": "^31.0.0",
-    "electron-builder": "^24.13.0"
+    "electron-builder": "^24.13.0",
+    "wait-on": "^8.0.0"
   }
 }

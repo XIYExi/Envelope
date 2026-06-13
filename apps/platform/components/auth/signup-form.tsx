@@ -35,7 +35,7 @@ export function SignupForm() {
         return;
       }
 
-      router.push("/login?message=Check your email to confirm your account");
+      await router.push("/login?message=Check your email to confirm your account");
     } catch {
       setError("An unexpected error occurred");
     } finally {

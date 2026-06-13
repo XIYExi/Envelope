@@ -2,12 +2,16 @@
 
 import { cn } from "@/lib/utils";
 import { Separator } from "@/components/ui/separator";
+import { useEditorStore } from "@/stores/editor";
 
 interface RightPanelProps {
   collapsed: boolean;
 }
 
 export function RightPanel({ collapsed }: RightPanelProps) {
+  const canvasScale = useEditorStore((s) => s.canvasScale);
+  const setCanvasScale = useEditorStore((s) => s.setCanvasScale);
+
   return (
     <div
       className={cn(
@@ -30,13 +34,14 @@ export function RightPanel({ collapsed }: RightPanelProps) {
       <div className="p-3">
         <div className="flex items-center justify-between text-xs text-muted-foreground">
           <span>Canvas</span>
-          <span>100%</span>
+          <span>{Math.round(canvasScale * 100)}%</span>
         </div>
         <input
           type="range"
           min="25"
           max="200"
-          defaultValue="100"
+          value={Math.round(canvasScale * 100)}
+          onChange={(e) => setCanvasScale(Number(e.target.value) / 100)}
           className="mt-1 w-full"
         />
       </div>

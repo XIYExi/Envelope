@@ -15,6 +15,20 @@ export interface EditorState {
   rightPanelCollapsed: boolean;
   activePanelTab: string;
   isDirty: boolean;
+  canUndo: boolean;
+  canRedo: boolean;
+  history: EditorSnapshot[];
+  historyIndex: number;
+}
+
+export interface EditorSnapshot {
+  selectedComponentId: string | null;
+  canvasScale: number;
+  canvasViewport: "mobile" | "tablet" | "desktop" | "fluid";
+  leftPanelCollapsed: boolean;
+  rightPanelCollapsed: boolean;
+  activePanelTab: string;
+  isDirty: boolean;
 }
 
 export interface EditorActions {
@@ -26,4 +40,7 @@ export interface EditorActions {
   setActivePanelTab: (tab: string) => void;
   markDirty: () => void;
   markClean: () => void;
+  pushSnapshot: () => void;
+  undo: () => void;
+  redo: () => void;
 }

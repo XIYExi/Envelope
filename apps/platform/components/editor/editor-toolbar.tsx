@@ -41,6 +41,10 @@ export function EditorToolbar() {
     toggleRightPanel,
     leftPanelCollapsed,
     rightPanelCollapsed,
+    canUndo,
+    canRedo,
+    undo,
+    redo,
   } = useEditorStore();
 
   return (
@@ -55,10 +59,10 @@ export function EditorToolbar() {
 
       <Separator orientation="vertical" className="mx-1 h-5" />
 
-      <Button variant="ghost" size="icon" className="h-8 w-8" disabled>
+      <Button variant="ghost" size="icon" className="h-8 w-8" disabled={!canUndo} onClick={undo}>
         <Undo2 className="h-4 w-4" />
       </Button>
-      <Button variant="ghost" size="icon" className="h-8 w-8" disabled>
+      <Button variant="ghost" size="icon" className="h-8 w-8" disabled={!canRedo} onClick={redo}>
         <Redo2 className="h-4 w-4" />
       </Button>
 

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { updateProjectSchema } from "@envelope/engine";
 import { getProject, updateProject, deleteProject, duplicateProject } from "@/lib/services/project.service";
 
 export async function GET(_request: Request, { params }: { params: { id: string } }) {
@@ -14,7 +15,14 @@ export async function GET(_request: Request, { params }: { params: { id: string 
 export async function PATCH(request: Request, { params }: { params: { id: string } }) {
   try {
     const body = await request.json();
-    const project = await updateProject(params.id, body);
+    const parsed = updateProjectSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: "Validation failed", details: parsed.error.flatten() },
+        { status: 400 },
+      );
+    }
+    const project = await updateProject(params.id, parsed.data);
     return NextResponse.json(project);
   } catch (error) {
     console.error("[api/projects/[id]] PATCH failed:", error);

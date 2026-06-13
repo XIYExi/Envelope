@@ -1,7 +1,9 @@
 export {
   createProjectSchema,
+  updateProjectSchema,
   projectConfigSchema,
   type CreateProjectInput,
+  type UpdateProjectInput,
   type ProjectConfig,
 } from "./project.schema";
 
@@ -20,9 +22,14 @@ export {
 export {
   dbSchemaSchema,
   tableSchema,
+  columnSchema,
+  indexSchema,
+  rlsPolicySchema,
   type DbSchema,
   type TableDefinition,
   type ColumnDefinition,
+  type IndexDefinition,
+  type RlsPolicyDefinition,
 } from "./db-schema.schema";
 
 export {

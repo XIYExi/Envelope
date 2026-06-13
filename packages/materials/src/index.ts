@@ -15,6 +15,7 @@ export {
   materialDefinitionSchema,
   editablePropSchema,
   componentCategorySchema,
+  getDefaultValue,
 } from "./types/material";
 
 export { createRegistry } from "./registry";

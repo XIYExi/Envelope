@@ -31,7 +31,7 @@ export const componentSchema: z.ZodType<ComponentNode> = z.lazy(() =>
     grid: z
       .object({
         col: z.number().min(1).max(12),
-        row: z.number(),
+        row: z.number().min(1),
         colSpan: z.number().min(1).optional(),
         rowSpan: z.number().min(1).optional(),
       })

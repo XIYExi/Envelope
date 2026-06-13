@@ -23,13 +23,15 @@ export interface CanvasState {
 export interface CanvasActions {
   addComponent: (comp: CanvasComponent) => void;
   removeComponent: (id: string) => void;
-  updateComponent: (id: string, updates: Partial<CanvasComponent>) => void;
+  updateComponent: (id: string, updates: Partial<Omit<CanvasComponent, "id">>) => void;
   selectComponent: (id: string, multi?: boolean) => void;
   clearSelection: () => void;
   moveComponent: (id: string, x: number, y: number) => void;
   resizeComponent: (id: string, width: number, height: number) => void;
   setZoom: (zoom: number) => void;
   setViewport: (viewport: CanvasState["viewport"]) => void;
+  setGridCols: (cols: number) => void;
+  setGridGap: (gap: number) => void;
   copySelected: () => void;
   deleteSelected: () => void;
   clearAll: () => void;
