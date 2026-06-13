@@ -33,7 +33,7 @@ export const editablePropSchema = z.object({
   order: z.number().optional(),
 });
 
-export type EditableProp = z.input<typeof editablePropSchema>;
+export type EditableProp = z.infer<typeof editablePropSchema>;
 
 export const componentCategorySchema = z.enum([
   "layout",
@@ -64,12 +64,12 @@ export const materialDefinitionSchema = z.object({
   documentation: z.string().optional(),
 });
 
-export type MaterialDefinition = z.input<typeof materialDefinitionSchema>;
+export type MaterialDefinition = z.infer<typeof materialDefinitionSchema>;
 
 export interface MaterialRegistry {
-  components: Map<string, MaterialDefinition>;
   getByCategory: (category: ComponentCategory) => MaterialDefinition[];
   getAll: () => MaterialDefinition[];
+  get: (name: string) => MaterialDefinition | undefined;
   register: (def: MaterialDefinition) => void;
   registerAll: (defs: MaterialDefinition[]) => void;
 }

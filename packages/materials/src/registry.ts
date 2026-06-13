@@ -1,11 +1,10 @@
 import type { MaterialRegistry, MaterialDefinition, ComponentCategory } from "./types/material";
+import { materialDefinitionSchema } from "./types/material";
 
 export function createRegistry(): MaterialRegistry {
   const components = new Map<string, MaterialDefinition>();
 
   return {
-    components,
-
     getByCategory(category: ComponentCategory): MaterialDefinition[] {
       const result: MaterialDefinition[] = [];
       components.forEach((def) => {
@@ -21,14 +20,20 @@ export function createRegistry(): MaterialRegistry {
     },
 
     register(def: MaterialDefinition): void {
-      if (components.has(def.name)) {
-        console.warn(`Material "${def.name}" is already registered, overwriting.`);
+      const parsed = materialDefinitionSchema.safeParse(def);
+      if (!parsed.success) {
+        console.error(`Invalid material "${def.name}":`, parsed.error.flatten());
+        return;
       }
-      components.set(def.name, def);
+      components.set(def.name, parsed.data);
     },
 
     registerAll(defs: MaterialDefinition[]): void {
       defs.forEach((def) => this.register(def));
+    },
+
+    get(name: string): MaterialDefinition | undefined {
+      return components.get(name);
     },
   };
 }

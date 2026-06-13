@@ -12,6 +12,7 @@
     "typecheck": "turbo typecheck",
     "test": "turbo test",
     "clean": "turbo clean",
+    "clean:all": "node -e \"var f=require('fs');['node_modules','.turbo','.next','dist','release'].forEach(d=>{try{f.rmSync(d,{recursive:true,force:true})}catch(e){}})\"",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md,css}\"",
     "electron:dev": "turbo dev --filter=@envelope/electron",
     "electron:build": "turbo build --filter=@envelope/electron"

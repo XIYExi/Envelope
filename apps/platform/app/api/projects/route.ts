@@ -10,8 +10,9 @@ export async function GET() {
     const projects = await getProjects();
     return NextResponse.json(projects);
   } catch (error) {
+    console.error("[api/projects] GET failed:", error);
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Unknown error" },
+      { error: "Internal server error" },
       { status: 500 },
     );
   }
@@ -31,8 +32,9 @@ export async function POST(request: Request) {
     const project = await createProject(parsed.data);
     return NextResponse.json(project, { status: 201 });
   } catch (error) {
+    console.error("[api/projects] POST failed:", error);
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Unknown error" },
+      { error: "Internal server error" },
       { status: 500 },
     );
   }

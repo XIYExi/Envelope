@@ -6,10 +6,8 @@ export async function GET(_request: Request, { params }: { params: { id: string 
     const project = await getProject(params.id);
     return NextResponse.json(project);
   } catch (error) {
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Not found" },
-      { status: 404 },
-    );
+    console.error("[api/projects/[id]] GET failed:", error);
+    return NextResponse.json({ error: "Project not found" }, { status: 404 });
   }
 }
 
@@ -19,10 +17,8 @@ export async function PATCH(request: Request, { params }: { params: { id: string
     const project = await updateProject(params.id, body);
     return NextResponse.json(project);
   } catch (error) {
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Update failed" },
-      { status: 500 },
-    );
+    console.error("[api/projects/[id]] PATCH failed:", error);
+    return NextResponse.json({ error: "Update failed" }, { status: 500 });
   }
 }
 
@@ -31,10 +27,8 @@ export async function DELETE(_request: Request, { params }: { params: { id: stri
     await deleteProject(params.id);
     return NextResponse.json({ success: true });
   } catch (error) {
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Delete failed" },
-      { status: 500 },
-    );
+    console.error("[api/projects/[id]] DELETE failed:", error);
+    return NextResponse.json({ error: "Delete failed" }, { status: 500 });
   }
 }
 
@@ -44,9 +38,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
     const duplicated = await duplicateProject(params.id, body.name);
     return NextResponse.json(duplicated, { status: 201 });
   } catch (error) {
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Duplicate failed" },
-      { status: 500 },
-    );
+    console.error("[api/projects/[id]] POST(duplicate) failed:", error);
+    return NextResponse.json({ error: "Duplicate failed" }, { status: 500 });
   }
 }

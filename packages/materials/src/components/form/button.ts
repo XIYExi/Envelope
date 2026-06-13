@@ -7,10 +7,6 @@ export const buttonMaterial: MaterialDefinition = {
   category: "form",
   icon: "SquareMousePointer",
   supportsChildren: true,
-  defaultProps: {
-    variant: "default",
-    size: "default",
-  },
   editableProps: [
     {
       key: "variant",

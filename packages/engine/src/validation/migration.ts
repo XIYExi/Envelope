@@ -9,6 +9,12 @@ interface Migration {
 const migrations: Migration[] = [];
 
 export function registerMigration(from: SchemaVersion, to: SchemaVersion, migrate: Migration["migrate"]) {
+  const existing = migrations.find((m) => m.from === from && m.to === to);
+  if (existing) {
+    console.warn(`Migration ${from}→${to} already registered, overwriting.`);
+    existing.migrate = migrate;
+    return;
+  }
   migrations.push({ from, to, migrate });
 }
 
@@ -17,24 +23,29 @@ export function migrateSchema(
   fromVersion: SchemaVersion,
   toVersion: SchemaVersion,
 ): Record<string, unknown> {
-  let current = { ...data };
+  if (fromVersion === toVersion) return data;
+
+  let current = structuredClone(data);
   let currentVersion = fromVersion;
+  const maxIterations = migrations.length + 1;
+  let iterations = 0;
 
-  const applicable = migrations.filter((m) => m.from === currentVersion && m.to === toVersion);
-
-  if (applicable.length === 0 && fromVersion !== toVersion) {
-    console.warn(`No migration found from ${fromVersion} to ${toVersion}`);
-    return data;
-  }
-
-  for (const migration of applicable) {
-    current = migration.migrate(current);
-    currentVersion = migration.to;
+  while (currentVersion !== toVersion && iterations < maxIterations) {
+    iterations++;
+    const next = migrations.find((m) => m.from === currentVersion);
+    if (!next) {
+      console.warn(`No migration found from ${currentVersion} to ${toVersion}`);
+      return current;
+    }
+    current = next.migrate(current);
+    currentVersion = next.to;
   }
 
   return current;
 }
 
 export function getLatestVersion(): SchemaVersion {
-  return "3.0.0";
+  if (migrations.length === 0) return "3.0.0";
+  const versions = new Set(migrations.map((m) => m.to));
+  return [...versions].sort().pop() ?? "3.0.0";
 }

@@ -7,16 +7,17 @@ contextBridge.exposeInMainWorld("electronAPI", {
   openFile: (options) => ipcRenderer.invoke("dialog:open-file", options),
   saveFile: (options) => ipcRenderer.invoke("dialog:save-file", options),
 
-  dbQuery: (sql, ...params) => ipcRenderer.invoke("db:query", sql, params),
+  getProjects: () => ipcRenderer.invoke("db:getProjects"),
+  createProject: (project) => ipcRenderer.invoke("db:createProject", project),
+  updateProject: (id, updates) => ipcRenderer.invoke("db:updateProject", id, updates),
+  deleteProject: (id) => ipcRenderer.invoke("db:deleteProject", id),
 
   on: (channel, callback) => {
     const validChannels = ["project:open", "navigate"];
     if (validChannels.includes(channel)) {
-      ipcRenderer.on(channel, (_event, ...args) => callback(...args));
+      const listener = (_event, ...args) => callback(...args);
+      ipcRenderer.on(channel, listener);
+      return () => ipcRenderer.removeListener(channel, listener);
     }
-  },
-
-  removeListener: (channel, callback) => {
-    ipcRenderer.removeListener(channel, callback);
   },
 });

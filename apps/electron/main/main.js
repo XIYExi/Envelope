@@ -17,7 +17,7 @@ function createWindow() {
       preload: path.join(__dirname, "..", "preload", "preload.js"),
       contextIsolation: true,
       nodeIntegration: false,
-      sandbox: false,
+      sandbox: true,
     },
     show: false,
   });
@@ -138,12 +138,38 @@ function registerIPC() {
     return result;
   });
 
-  ipcMain.handle("db:query", async (_event, sql, params) => {
+  ipcMain.handle("db:getProjects", async () => {
     const db = initSQLite();
-    if (sql.trim().toUpperCase().startsWith("SELECT")) {
-      return db.prepare(sql).all(...(params || []));
-    }
-    return db.prepare(sql).run(...(params || []));
+    return db.prepare("SELECT * FROM projects ORDER BY updated_at DESC").all();
+  });
+
+  ipcMain.handle("db:createProject", async (_event, project) => {
+    const db = initSQLite();
+    const id = project.id || crypto.randomUUID();
+    db.prepare(
+      `INSERT INTO projects (id, name, description, config) VALUES (?, ?, ?, ?)`
+    ).run(id, project.name, project.description || "", JSON.stringify(project.config || {}));
+    return db.prepare("SELECT * FROM projects WHERE id = ?").get(id);
+  });
+
+  ipcMain.handle("db:updateProject", async (_event, id, updates) => {
+    const db = initSQLite();
+    const fields = [];
+    const values = [];
+    if (updates.name !== undefined) { fields.push("name = ?"); values.push(updates.name); }
+    if (updates.description !== undefined) { fields.push("description = ?"); values.push(updates.description); }
+    if (updates.config !== undefined) { fields.push("config = ?"); values.push(JSON.stringify(updates.config)); }
+    if (fields.length === 0) return null;
+    fields.push("updated_at = datetime('now')");
+    values.push(id);
+    db.prepare(`UPDATE projects SET ${fields.join(", ")} WHERE id = ?`).run(...values);
+    return db.prepare("SELECT * FROM projects WHERE id = ?").get(id);
+  });
+
+  ipcMain.handle("db:deleteProject", async (_event, id) => {
+    const db = initSQLite();
+    db.prepare("DELETE FROM projects WHERE id = ?").run(id);
+    return { success: true };
   });
 }
 
