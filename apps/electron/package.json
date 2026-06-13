@@ -1,0 +1,19 @@
+{
+  "name": "@envelope/electron",
+  "version": "3.0.0",
+  "private": true,
+  "main": "./main/main.js",
+  "scripts": {
+    "dev": "electron .",
+    "build": "electron-builder --config electron-builder.config.js",
+    "clean": "rm -rf release dist"
+  },
+  "dependencies": {
+    "electron-updater": "^6.3.0",
+    "better-sqlite3": "^11.0.0"
+  },
+  "devDependencies": {
+    "electron": "^31.0.0",
+    "electron-builder": "^24.13.0"
+  }
+}
