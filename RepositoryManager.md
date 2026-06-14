@@ -39,6 +39,8 @@ envelope/
 ## Change History
 | Date | Change |
 |------|--------|
-| 2026-06-14 | F09 Material System completed: 91 material definitions across 7 categories covering 36+ unique shadcn/ui component types. Registry pattern verified. |
-| 2026-06-14 | F07 Page Editor Canvas completed: SimulatedComponentContent for 30+ types, 8-dir resize handles, component tree panel, zoom/pan, viewport presets, keyboard shortcuts (Ctrl+C/X/Delete), RightPanel property viewer. `pnpm build` passes with 0 errors. |
+| 2026-06-14 | F09 Material System completed: 91 material definitions across 7 categories covering 36+ unique shadcn/ui component types. |
+| 2026-06-14 | F07 Page Editor Canvas completed: SimulatedComponentContent for 30+ types, 8-dir resize handles, component tree panel, zoom/pan, viewport presets, keyboard shortcuts. |
+| 2026-06-14 | F08 Property Editor completed: reflective form generation from editableProps, 15 property types, real-time updates via canvas store, grouped by category with field comments. |
+| 2026-06-14 | F10 Data Model Editor + F11 Routing Editor + Editor Shell completed: LeftPanel mode switching (Pages/Models/Routing/Flows/API), visual table designer, visual route tree editor. UI layer essentially complete. |
 | ~2023 (V2) | Original Envelope V2 prototype — single H5 page editor with react-dnd. Abandoned due to dependency conflicts and scope limitations. |

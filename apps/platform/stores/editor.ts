@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import type { EditorState, EditorActions, EditorSnapshot } from "./editor.types";
+import type { EditorState, EditorActions, EditorSnapshot, EditorMode } from "./editor.types";
 
 function takeSnapshot(state: EditorState): EditorSnapshot {
   return {
@@ -10,6 +10,7 @@ function takeSnapshot(state: EditorState): EditorSnapshot {
     leftPanelCollapsed: state.leftPanelCollapsed,
     rightPanelCollapsed: state.rightPanelCollapsed,
     activePanelTab: state.activePanelTab,
+    editorMode: state.editorMode,
     isDirty: state.isDirty,
   };
 }
@@ -23,6 +24,7 @@ export const useEditorStore = create<EditorState & EditorActions>()(
       leftPanelCollapsed: false,
       rightPanelCollapsed: false,
       activePanelTab: "components",
+      editorMode: "pages" as EditorMode,
       isDirty: false,
       canUndo: false,
       canRedo: false,
@@ -35,6 +37,7 @@ export const useEditorStore = create<EditorState & EditorActions>()(
       toggleLeftPanel: () => set((s) => ({ leftPanelCollapsed: !s.leftPanelCollapsed })),
       toggleRightPanel: () => set((s) => ({ rightPanelCollapsed: !s.rightPanelCollapsed })),
       setActivePanelTab: (activePanelTab) => set({ activePanelTab }),
+      setEditorMode: (editorMode) => set({ editorMode }),
       markDirty: () => set({ isDirty: true, canUndo: true }),
       markClean: () => set({ isDirty: false }),
 

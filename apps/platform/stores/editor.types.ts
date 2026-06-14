@@ -7,6 +7,8 @@ export interface Project {
   updatedAt: string;
 }
 
+export type EditorMode = "pages" | "data-models" | "routing" | "flows" | "api";
+
 export interface EditorState {
   selectedComponentId: string | null;
   canvasScale: number;
@@ -14,6 +16,7 @@ export interface EditorState {
   leftPanelCollapsed: boolean;
   rightPanelCollapsed: boolean;
   activePanelTab: string;
+  editorMode: EditorMode;
   isDirty: boolean;
   canUndo: boolean;
   canRedo: boolean;
@@ -28,6 +31,7 @@ export interface EditorSnapshot {
   leftPanelCollapsed: boolean;
   rightPanelCollapsed: boolean;
   activePanelTab: string;
+  editorMode: EditorMode;
   isDirty: boolean;
 }
 
@@ -38,6 +42,7 @@ export interface EditorActions {
   toggleLeftPanel: () => void;
   toggleRightPanel: () => void;
   setActivePanelTab: (tab: string) => void;
+  setEditorMode: (mode: EditorMode) => void;
   markDirty: () => void;
   markClean: () => void;
   pushSnapshot: () => void;

@@ -9,6 +9,8 @@ import { EditorToolbar } from "./editor-toolbar";
 import { MaterialPanel } from "./material-panel";
 import { RightPanel } from "./right-panel";
 import { LeftPanel } from "./left-panel";
+import { DataModelEditor } from "./data-model-editor";
+import { RoutingEditor } from "./routing-editor";
 
 function CanvasDropZone() {
   const {
@@ -67,7 +69,10 @@ function CanvasDropZone() {
 }
 
 export function EditorLayout() {
-  const { leftPanelCollapsed, rightPanelCollapsed, pushSnapshot, canvasViewport } = useEditorStore();
+  const {
+    leftPanelCollapsed, rightPanelCollapsed, pushSnapshot,
+    canvasViewport, editorMode,
+  } = useEditorStore();
   const { addComponent, copySelected, components, setViewport } = useCanvasStore();
 
   const registry = useMemo(() => createDefaultRegistry(), []);
@@ -113,7 +118,6 @@ export function EditorLayout() {
         e.preventDefault();
         pushSnapshot();
         copySelected();
-        // After copying, delete selection
         setTimeout(() => {
           useCanvasStore.getState().deleteSelected();
         }, 0);
@@ -129,21 +133,45 @@ export function EditorLayout() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [copySelected, pushSnapshot]);
 
+  // Determine which editor content to render based on mode
+  const isPageMode = editorMode === "pages";
+
   return (
     <div className="flex h-screen flex-col">
       <EditorToolbar />
-      <DndContext
-        onDragEnd={handleDragEnd}
-        collisionDetection={pointerWithin}
-        autoScroll={false}
-      >
+      {isPageMode ? (
+        <DndContext
+          onDragEnd={handleDragEnd}
+          collisionDetection={pointerWithin}
+          autoScroll={false}
+        >
+          <div className="flex flex-1 overflow-hidden">
+            {!leftPanelCollapsed && <LeftPanel collapsed={leftPanelCollapsed} />}
+            <MaterialPanel collapsed={leftPanelCollapsed} />
+            <CanvasDropZone />
+            <RightPanel collapsed={rightPanelCollapsed} />
+          </div>
+        </DndContext>
+      ) : (
         <div className="flex flex-1 overflow-hidden">
           {!leftPanelCollapsed && <LeftPanel collapsed={leftPanelCollapsed} />}
-          <MaterialPanel collapsed={leftPanelCollapsed} />
-          <CanvasDropZone />
+          <div className="flex-1 overflow-hidden">
+            {editorMode === "data-models" && <DataModelEditor />}
+            {editorMode === "routing" && <RoutingEditor />}
+            {editorMode === "flows" && (
+              <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
+                Flow Editor — Coming Soon
+              </div>
+            )}
+            {editorMode === "api" && (
+              <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
+                API Endpoint Editor — Coming Soon
+              </div>
+            )}
+          </div>
           <RightPanel collapsed={rightPanelCollapsed} />
         </div>
-      </DndContext>
+      )}
     </div>
   );
 }

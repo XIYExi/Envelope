@@ -6,7 +6,7 @@
   "author": "xiye",
   "license": "MIT",
   "scripts": {
-    "dev": "turbo dev",
+    "dev": "turbo dev --filter=!@envelope/electron",
     "build": "turbo build --filter=!@envelope/electron",
     "lint": "turbo lint",
     "typecheck": "turbo typecheck",

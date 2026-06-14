@@ -1,6 +1,8 @@
 "use client";
 
-import { useCanvasStore } from "@envelope/engine";
+import { useMemo, useCallback } from "react";
+import { useCanvasStore, PropertyEditor } from "@envelope/engine";
+import { createDefaultRegistry } from "@envelope/materials";
 import { cn } from "@/lib/utils";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -10,9 +12,51 @@ interface RightPanelProps {
 }
 
 export function RightPanel({ collapsed }: RightPanelProps) {
-  const { zoom, setZoom, components, selectedIds, setPageBackground, pageBackground, pagePadding, setPagePadding } = useCanvasStore();
+  const {
+    zoom, setZoom, components, selectedIds,
+    setPageBackground, pageBackground, pagePadding, setPagePadding,
+    updateComponent,
+  } = useCanvasStore();
+
   const selected = components.filter((c) => selectedIds.includes(c.id));
   const selectedComp = selected.length === 1 ? selected[0] : null;
+
+  const registry = useMemo(() => createDefaultRegistry(), []);
+
+  const material = useMemo(() => {
+    if (!selectedComp) return null;
+    return registry.get(selectedComp.node.type) ?? null;
+  }, [selectedComp, registry]);
+
+  const handlePropChange = useCallback(
+    (key: string, value: unknown) => {
+      if (!selectedComp) return;
+      const currentProps = selectedComp.node.props ?? {};
+      updateComponent(selectedComp.id, {
+        node: {
+          ...selectedComp.node,
+          props: {
+            ...currentProps,
+            [key]: value,
+          },
+        },
+      });
+    },
+    [selectedComp, updateComponent],
+  );
+
+  const handleNameChange = useCallback(
+    (name: string) => {
+      if (!selectedComp) return;
+      updateComponent(selectedComp.id, {
+        node: {
+          ...selectedComp.node,
+          name,
+        },
+      });
+    },
+    [selectedComp, updateComponent],
+  );
 
   return (
     <div
@@ -23,39 +67,69 @@ export function RightPanel({ collapsed }: RightPanelProps) {
     >
       <div className="flex h-9 items-center border-b px-3">
         <span className="text-xs font-medium text-muted-foreground">Properties</span>
+        {material && (
+          <span className="ml-auto text-[10px] text-muted-foreground">{material.name}</span>
+        )}
       </div>
 
       <ScrollArea className="flex-1">
         {selectedComp ? (
-          <div className="space-y-3 p-3">
-            <div>
-              <label className="mb-1 block text-[10px] font-medium text-muted-foreground">Component</label>
-              <div className="rounded border bg-muted/30 px-2 py-1 text-xs font-medium">{selectedComp.node.type}</div>
-            </div>
-            <div>
-              <label className="mb-1 block text-[10px] font-medium text-muted-foreground">Name</label>
-              <div className="rounded border bg-muted/30 px-2 py-1 text-xs">{selectedComp.node.name || selectedComp.node.type}</div>
-            </div>
-            <div>
-              <label className="mb-1 block text-[10px] font-medium text-muted-foreground">Position</label>
-              <div className="grid grid-cols-2 gap-1">
-                <div className="rounded border bg-muted/30 px-2 py-1 text-[10px]">Col: {selectedComp.position.x}</div>
-                <div className="rounded border bg-muted/30 px-2 py-1 text-[10px]">Row: {selectedComp.position.y}</div>
-                <div className="rounded border bg-muted/30 px-2 py-1 text-[10px]">W: {selectedComp.position.width}</div>
-                <div className="rounded border bg-muted/30 px-2 py-1 text-[10px]">H: {selectedComp.position.height}</div>
+          <div className="space-y-4 p-3">
+            {/* Identity section */}
+            <div className="space-y-3">
+              <div>
+                <label className="mb-1 block text-[10px] font-medium text-muted-foreground">Component ID</label>
+                <input
+                  type="text"
+                  value={selectedComp.id.slice(0, 16)}
+                  disabled
+                  className="h-7 w-full rounded border bg-muted/30 px-2 font-mono text-[10px] text-muted-foreground"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-[10px] font-medium text-muted-foreground">Component Name</label>
+                <input
+                  type="text"
+                  value={selectedComp.node.name ?? ""}
+                  placeholder={`${selectedComp.node.type}-${selectedComp.id.slice(0, 8)}`}
+                  onChange={(e) => handleNameChange(e.target.value)}
+                  className="h-7 w-full rounded border bg-background px-2 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
+                />
               </div>
             </div>
-            {selectedComp.node.props && Object.keys(selectedComp.node.props).length > 0 && (
-              <div>
-                <label className="mb-1 block text-[10px] font-medium text-muted-foreground">Props</label>
-                <div className="rounded border bg-muted/30 p-2">
-                  {Object.entries(selectedComp.node.props).map(([key, value]) => (
-                    <div key={key} className="flex items-center justify-between py-0.5 text-[10px]">
-                      <span className="text-muted-foreground">{key}</span>
-                      <span className="font-mono">{String(value)}</span>
-                    </div>
-                  ))}
-                </div>
+
+            <Separator />
+
+            {/* Position info */}
+            <div>
+              <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Layout</label>
+              <div className="grid grid-cols-2 gap-1">
+                {([
+                  ["Col", selectedComp.position.x],
+                  ["Row", selectedComp.position.y],
+                  ["Width", selectedComp.position.width],
+                  ["Height", selectedComp.position.height],
+                ] as const).map(([label, value]) => (
+                  <div key={label} className="rounded border bg-muted/30 px-2 py-0.5">
+                    <span className="block text-[9px] text-muted-foreground">{label}</span>
+                    <span className="text-[10px] font-medium">{value}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <Separator />
+
+            {/* Dynamic property editor from material */}
+            {material?.editableProps && material.editableProps.length > 0 ? (
+              <PropertyEditor
+                editableProps={material.editableProps}
+                values={(selectedComp.node.props ?? {}) as Record<string, unknown>}
+                onChange={handlePropChange}
+              />
+            ) : (
+              <div className="py-2 text-center text-[10px] text-muted-foreground">
+                No editable properties for this component
               </div>
             )}
           </div>

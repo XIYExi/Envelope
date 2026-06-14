@@ -10,6 +10,7 @@
 export * from "./schemas/index";
 export * from "./validation/index";
 export * from "./canvas/index";
+export * from "./property-editor/index";
 
 export const PACKAGE_NAME = "@envelope/engine";
 export const VERSION = "3.0.0";
