@@ -1,15 +1,32 @@
+/**
+ * 动态属性编辑器 —— 根据材料定义的 editableProps 模式自动生成表单控件
+ *
+ * 支持 16 种字段类型：text、number、textarea、select、color、switch、
+ * radio、image、richText、json、code、icon、tailwind、dataBinding、eventBinding
+ *
+ * @author xiye
+ * @date 2026-06-14
+ */
+
 "use client";
 
-import { useCallback, type ChangeEvent } from "react";
+import { type ChangeEvent } from "react";
 import type { EditableProp } from "@envelope/materials";
 
+/**
+ * 属性编辑器组件的 Props 接口
+ *
+ * @param editableProps - 材料的可编辑属性定义数组
+ * @param values - 当前属性值对象，key 为属性字段名
+ * @param onChange - 属性值变更回调，接收字段 key 和新值
+ */
 export interface PropertyEditorProps {
   editableProps: EditableProp[];
   values: Record<string, unknown>;
   onChange: (key: string, value: unknown) => void;
 }
 
-/** Group editable props by their `group` field, preserving order */
+/** 将可编辑属性按 group 字段分组，使用 Map 保证插入顺序 */
 function groupProps(props: EditableProp[]): Map<string, EditableProp[]> {
   const map = new Map<string, EditableProp[]>();
   for (const p of props) {
@@ -20,6 +37,7 @@ function groupProps(props: EditableProp[]): Map<string, EditableProp[]> {
   return map;
 }
 
+/** 字段标签组件，显示标签文本、必填星号和注释说明 */
 function FieldLabel({ label, required, comment }: { label: string; required?: boolean; comment?: string }) {
   return (
     <div className="mb-1">
@@ -32,12 +50,14 @@ function FieldLabel({ label, required, comment }: { label: string; required?: bo
   );
 }
 
+/** 字段容器组件的通用 Props */
 interface FieldWrapperProps {
   prop: EditableProp;
   value: unknown;
   onChange: (key: string, value: unknown) => void;
 }
 
+/** 文本字段 —— 单行文本输入 */
 function TextField({ prop, value, onChange }: FieldWrapperProps) {
   return (
     <div>
@@ -53,6 +73,7 @@ function TextField({ prop, value, onChange }: FieldWrapperProps) {
   );
 }
 
+/** 数字字段 —— 数值输入，空值时发送 undefined */
 function NumberField({ prop, value, onChange }: FieldWrapperProps) {
   return (
     <div>
@@ -70,6 +91,7 @@ function NumberField({ prop, value, onChange }: FieldWrapperProps) {
   );
 }
 
+/** 文本域字段 —— 多行文本输入，支持垂直拖拽调整大小 */
 function TextareaField({ prop, value, onChange }: FieldWrapperProps) {
   return (
     <div>
@@ -85,6 +107,7 @@ function TextareaField({ prop, value, onChange }: FieldWrapperProps) {
   );
 }
 
+/** 下拉选择字段 —— 从 options 数组中渲染 <option> 列表 */
 function SelectField({ prop, value, onChange }: FieldWrapperProps) {
   const options = prop.options ?? [];
   return (
@@ -105,6 +128,7 @@ function SelectField({ prop, value, onChange }: FieldWrapperProps) {
   );
 }
 
+/** 颜色字段 —— 同时提供颜色选择器（type=color）和十六进制文本输入 */
 function ColorField({ prop, value, onChange }: FieldWrapperProps) {
   return (
     <div>
@@ -127,6 +151,7 @@ function ColorField({ prop, value, onChange }: FieldWrapperProps) {
   );
 }
 
+/** 开关字段 —— 自定义 role="switch" 按钮，切换布尔值 */
 function SwitchField({ prop, value, onChange }: FieldWrapperProps) {
   const checked = typeof value === "boolean" ? value : !!(prop.defaultValue);
   return (
@@ -153,6 +178,7 @@ function SwitchField({ prop, value, onChange }: FieldWrapperProps) {
   );
 }
 
+/** 单选按钮组字段 —— 从 options 数组渲染一组 radio 按钮 */
 function RadioField({ prop, value, onChange }: FieldWrapperProps) {
   const options = prop.options ?? [];
   return (
@@ -177,6 +203,7 @@ function RadioField({ prop, value, onChange }: FieldWrapperProps) {
   );
 }
 
+/** 图片字段 —— URL 文本输入 + 背景图预览 */
 function ImageField({ prop, value, onChange }: FieldWrapperProps) {
   return (
     <div>
@@ -195,6 +222,7 @@ function ImageField({ prop, value, onChange }: FieldWrapperProps) {
   );
 }
 
+/** 富文本字段 —— 多行文本输入（等宽字体），用于 HTML/Markdown 内容 */
 function RichTextField({ prop, value, onChange }: FieldWrapperProps) {
   return (
     <div>
@@ -210,6 +238,7 @@ function RichTextField({ prop, value, onChange }: FieldWrapperProps) {
   );
 }
 
+/** JSON 字段 —— JSON 文本编辑（等宽字体），实时校验并显示解析错误 */
 function JsonField({ prop, value, onChange }: FieldWrapperProps) {
   const str = typeof value === "string" ? value : typeof value === "object" ? JSON.stringify(value, null, 2) : "";
   let parseError = false;
@@ -246,6 +275,7 @@ function CodeField({ prop, value, onChange }: FieldWrapperProps) {
   );
 }
 
+/** 图标字段 —— Lucide 图标名称输入，带用法提示 */
 function IconField({ prop, value, onChange }: FieldWrapperProps) {
   return (
     <div>
@@ -290,6 +320,7 @@ function TailwindField({ prop, value, onChange }: FieldWrapperProps) {
   );
 }
 
+/** 数据绑定字段 —— 绑定到 Supabase 查询列，格式 table.column */
 function DataBindField({ prop, value, onChange }: FieldWrapperProps) {
   return (
     <div>
@@ -306,6 +337,7 @@ function DataBindField({ prop, value, onChange }: FieldWrapperProps) {
   );
 }
 
+/** 事件绑定字段 —— 绑定到业务流程，值为 Flow ID */
 function EventBindField({ prop, value, onChange }: FieldWrapperProps) {
   return (
     <div>
@@ -322,6 +354,7 @@ function EventBindField({ prop, value, onChange }: FieldWrapperProps) {
   );
 }
 
+/** 字段类型 → React 组件的映射表，共 15 种类型，未知类型回退到 TextField */
 const FIELD_COMPONENTS: Record<string, React.FC<FieldWrapperProps>> = {
   text: TextField,
   number: NumberField,
@@ -340,6 +373,17 @@ const FIELD_COMPONENTS: Record<string, React.FC<FieldWrapperProps>> = {
   eventBinding: EventBindField,
 };
 
+/**
+ * 动态属性编辑器组件，根据材料的 editableProps 模式自动生成表单控件
+ *
+ * 支持 16 种字段类型：文本、数字、文本域、下拉选择、颜色选择器、
+ * 开关、单选按钮组、图片、富文本、JSON、代码、图标、Tailwind 类名、
+ * 数据绑定和事件绑定
+ *
+ * @param editableProps - 可编辑属性定义数组，来自材料定义
+ * @param values - 当前属性值对象
+ * @param onChange - 属性值变更回调，接收字段 key 和新值
+ */
 export function PropertyEditor({ editableProps, values, onChange }: PropertyEditorProps) {
   const grouped = groupProps(editableProps);
 

@@ -1,16 +1,35 @@
+/**
+ * 右侧属性面板 — 组件属性编辑、画布缩放、页面背景/内边距
+ *
+ * 选中单个组件时显示其可编辑属性（由物料定义的 editableProps 驱动）。
+ * 同时提供画布缩放滑块、背景色选择器和内边距设置。
+ *
+ * @author xiye
+ * @date 2026-06-14
+ */
 "use client";
 
-import { useMemo, useCallback } from "react";
+import { useMemo, useCallback, useRef } from "react";
 import { useCanvasStore, PropertyEditor } from "@envelope/engine";
 import { createDefaultRegistry } from "@envelope/materials";
 import { cn } from "@/lib/utils";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
+/** 右侧面板 Props */
 interface RightPanelProps {
+  /** 面板是否处于折叠态 */
   collapsed: boolean;
 }
 
+/**
+ * 右侧属性面板
+ *
+ * - 选中 1 个组件：显示组件 ID、名称、布局位置、动态属性编辑器
+ * - 选中多个组件：显示选中数量
+ * - 未选中：提示文本
+ * - 底部固定：缩放滑块、背景色、内边距（始终可见）
+ */
 export function RightPanel({ collapsed }: RightPanelProps) {
   const {
     zoom, setZoom, components, selectedIds,
@@ -21,6 +40,10 @@ export function RightPanel({ collapsed }: RightPanelProps) {
   const selected = components.filter((c) => selectedIds.includes(c.id));
   const selectedComp = selected.length === 1 ? selected[0] : null;
 
+  // 用 ref 持有最新的 selectedComp，避免 handlePropChange/handleNameChange 的依赖变化
+  const selectedCompRef = useRef(selectedComp);
+  selectedCompRef.current = selectedComp;
+
   const registry = useMemo(() => createDefaultRegistry(), []);
 
   const material = useMemo(() => {
@@ -28,13 +51,20 @@ export function RightPanel({ collapsed }: RightPanelProps) {
     return registry.get(selectedComp.node.type) ?? null;
   }, [selectedComp, registry]);
 
+  /**
+   * 属性变更处理
+   *
+   * 更新当前选中组件的指定属性键值对，
+   * 其他属性保持不变。
+   */
   const handlePropChange = useCallback(
     (key: string, value: unknown) => {
-      if (!selectedComp) return;
-      const currentProps = selectedComp.node.props ?? {};
-      updateComponent(selectedComp.id, {
+      const comp = selectedCompRef.current;
+      if (!comp) return;
+      const currentProps = comp.node.props ?? {};
+      updateComponent(comp.id, {
         node: {
-          ...selectedComp.node,
+          ...comp.node,
           props: {
             ...currentProps,
             [key]: value,
@@ -42,20 +72,24 @@ export function RightPanel({ collapsed }: RightPanelProps) {
         },
       });
     },
-    [selectedComp, updateComponent],
+    [updateComponent],
   );
 
+  /**
+   * 组件名称变更处理
+   */
   const handleNameChange = useCallback(
     (name: string) => {
-      if (!selectedComp) return;
-      updateComponent(selectedComp.id, {
+      const comp = selectedCompRef.current;
+      if (!comp) return;
+      updateComponent(comp.id, {
         node: {
-          ...selectedComp.node,
+          ...comp.node,
           name,
         },
       });
     },
-    [selectedComp, updateComponent],
+    [updateComponent],
   );
 
   return (
@@ -75,7 +109,7 @@ export function RightPanel({ collapsed }: RightPanelProps) {
       <ScrollArea className="flex-1">
         {selectedComp ? (
           <div className="space-y-4 p-3">
-            {/* Identity section */}
+            {/* 组件标识区 */}
             <div className="space-y-3">
               <div>
                 <label className="mb-1 block text-[10px] font-medium text-muted-foreground">Component ID</label>
@@ -100,7 +134,7 @@ export function RightPanel({ collapsed }: RightPanelProps) {
 
             <Separator />
 
-            {/* Position info */}
+            {/* 布局位置信息（只读） */}
             <div>
               <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Layout</label>
               <div className="grid grid-cols-2 gap-1">
@@ -120,7 +154,7 @@ export function RightPanel({ collapsed }: RightPanelProps) {
 
             <Separator />
 
-            {/* Dynamic property editor from material */}
+            {/* 动态属性编辑器（由物料定义驱动） */}
             {material?.editableProps && material.editableProps.length > 0 ? (
               <PropertyEditor
                 editableProps={material.editableProps}
@@ -146,6 +180,7 @@ export function RightPanel({ collapsed }: RightPanelProps) {
 
       <Separator />
 
+      {/* 画布全局设置（始终可见） */}
       <div className="space-y-3 p-3">
         <div>
           <div className="flex items-center justify-between text-[10px] text-muted-foreground">

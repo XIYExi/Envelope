@@ -1,5 +1,17 @@
+/**
+ * 画布核心模块入口
+ *
+ * 统一导出画布系统的所有公共 API：
+ * - 类型定义（CanvasComponent, CanvasState, CanvasActions, DragItem 等）
+ * - 状态管理（useCanvasStore, createCanvasComponent）
+ * - 拖拽工具函数（网格对齐、坐标转换、拖拽项工厂）
+ * - 渲染器（CanvasRenderer）
+ *
+ * @author xiye
+ * @date 2026-06-14
+ */
+
 export * from "./types";
 export * from "./store";
 export * from "./dnd";
 export * from "./renderer";
-export { VIEWPORT_WIDTHS } from "./types";

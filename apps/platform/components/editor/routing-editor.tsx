@@ -1,3 +1,13 @@
+/**
+ * 路由编辑器 —— 可视化设计应用路由树、API 端点、重定向规则和导航菜单
+ *
+ * 支持：页面路由 / API 路由 / 布局 / 重定向四种类型，
+ * 嵌套路由树（父子关系）、认证守卫、SEO 元数据、导航菜单配置。
+ *
+ * @author xiye
+ * @date 2026-06-14
+ */
+
 "use client";
 
 import { useState, useMemo } from "react";
@@ -9,6 +19,7 @@ import { Label } from "@/components/ui/label";
 import { Plus, Trash2, Route, Globe, Shield, Menu, FileCode } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+/** 路由定义 —— 包含路径、类型、父子关系、认证、SEO、导航等全部配置 */
 interface RouteDef {
   id: string;
   path: string;
@@ -31,6 +42,15 @@ interface RouteDef {
   redirectStatus: "301" | "302";
 }
 
+/** 树递归最大深度，防止循环引用导致栈溢出 */
+const MAX_TREE_DEPTH = 100;
+
+/**
+ * 创建默认路由对象，使用 Partial<RouteDef> 覆盖默认值
+ *
+ * @param overrides - 包含 id（必填）和其他可选覆盖字段
+ * @returns 完整填充的 RouteDef 对象
+ */
 function createDefaultRoute(
   overrides: Partial<RouteDef> & { id: string }
 ): RouteDef {
@@ -57,6 +77,7 @@ function createDefaultRoute(
   };
 }
 
+/** 应用默认路由预设：首页（/）和健康检查 API（/api/health） */
 const DEFAULT_ROUTES: RouteDef[] = [
   createDefaultRoute({
     id: crypto.randomUUID(),
@@ -74,12 +95,22 @@ const DEFAULT_ROUTES: RouteDef[] = [
   }),
 ];
 
+/** 树节点 —— 路由引用 + 子节点列表 + 嵌套深度 */
 interface TreeNode {
   route: RouteDef;
   children: TreeNode[];
   depth: number;
 }
 
+/**
+ * 从扁平路由数组构建树结构
+ *
+ * 通过 parentId 建立父子关系，使用递归分配深度。
+ * 内建循环检测：深度超过 MAX_TREE_DEPTH 时停止递归。
+ *
+ * @param routes - 路由定义数组
+ * @returns 根节点数组（无 parentId 的路由）
+ */
 function buildTree(routes: RouteDef[]): TreeNode[] {
   const map = new Map<string, TreeNode>();
   const roots: TreeNode[] = [];
@@ -97,7 +128,9 @@ function buildTree(routes: RouteDef[]): TreeNode[] {
     }
   }
 
+  /** 递归分配深度，带深度上限防止循环引用 */
   function assignDepth(nodes: TreeNode[], depth: number) {
+    if (depth > MAX_TREE_DEPTH) return;
     for (const node of nodes) {
       node.depth = depth;
       assignDepth(node.children, depth + 1);
@@ -108,29 +141,58 @@ function buildTree(routes: RouteDef[]): TreeNode[] {
   return roots;
 }
 
+/**
+ * 将树结构展平为一维数组（深度优先）
+ *
+ * 内建循环检测：visited 集合防止重复访问，深度超过上限时停止。
+ *
+ * @param nodes - 根节点数组
+ * @returns 展平后的节点数组
+ */
 function flattenTree(nodes: TreeNode[]): TreeNode[] {
   const result: TreeNode[] = [];
-  function walk(list: TreeNode[]) {
+  const visited = new Set<string>();
+  function walk(list: TreeNode[], depth: number) {
+    if (depth > MAX_TREE_DEPTH) return;
     for (const node of list) {
+      if (visited.has(node.route.id)) continue;
+      visited.add(node.route.id);
       result.push(node);
-      walk(node.children);
+      walk(node.children, depth + 1);
     }
   }
-  walk(nodes);
+  walk(nodes, 0);
   return result;
 }
 
-function getDescendantIds(routeId: string, routes: RouteDef[]): Set<string> {
+/**
+ * 获取指定路由的所有后代 ID（递归）
+ *
+ * 内建循环检测：visited 集合防止无限递归。
+ *
+ * @param routeId - 起始路由 ID
+ * @param routes - 路由定义数组
+ * @param visited - 已访问 ID 集合（内部递归使用）
+ * @returns 所有后代路由 ID 的 Set
+ */
+function getDescendantIds(
+  routeId: string,
+  routes: RouteDef[],
+  visited: Set<string> = new Set()
+): Set<string> {
+  if (visited.has(routeId) || visited.size > MAX_TREE_DEPTH) return new Set();
+  visited.add(routeId);
   const children = routes.filter((r) => r.parentId === routeId);
   const ids = new Set(children.map((c) => c.id));
   for (const child of children) {
-    for (const id of getDescendantIds(child.id, routes)) {
+    for (const id of getDescendantIds(child.id, routes, visited)) {
       ids.add(id);
     }
   }
   return ids;
 }
 
+/** 路由类型图标组件 —— 根据 type 显示对应 Lucide 图标 */
 function RouteTypeIcon({ type }: { type: RouteDef["type"] }) {
   const cls = "h-3 w-3 shrink-0 text-muted-foreground";
   switch (type) {
@@ -145,6 +207,7 @@ function RouteTypeIcon({ type }: { type: RouteDef["type"] }) {
   }
 }
 
+/** HTTP 方法彩色徽章组件 —— 按 GET/POST/PUT/PATCH/DELETE 显示不同颜色 */
 function HttpMethodBadge({ method }: { method: string }) {
   if (!method) return null;
   const colors: Record<string, string> = {
@@ -166,6 +229,7 @@ function HttpMethodBadge({ method }: { method: string }) {
   );
 }
 
+/** 通用下拉选择字段组件 —— 带标签的原生 <select> */
 function SelectField({
   label,
   value,
@@ -197,6 +261,7 @@ function SelectField({
   );
 }
 
+/** 紧凑输入框组件 —— 带标签的受控输入，支持 type 切换 */
 function CompactInput({
   label,
   value,
@@ -226,6 +291,15 @@ function CompactInput({
   );
 }
 
+/**
+ * 路由编辑器主组件
+ *
+ * 左侧为路由树（支持嵌套展开、类型图标、HTTP 方法徽章），
+ * 右侧为选中路由的详细配置面板（基本信息、布局/认证、API 配置、
+ * SEO 元数据、重定向规则、导航菜单）。
+ *
+ * @returns JSX 元素
+ */
 export function RoutingEditor() {
   const [routes, setRoutes] = useState<RouteDef[]>(DEFAULT_ROUTES);
   const [selectedRouteId, setSelectedRouteId] = useState<string | null>(
@@ -245,12 +319,14 @@ export function RoutingEditor() {
     [routes, selectedRouteId],
   );
 
+  /** 更新路由的部分属性 */
   function updateRoute(id: string, patch: Partial<RouteDef>) {
     setRoutes((prev) =>
       prev.map((r) => (r.id === id ? { ...r, ...patch } : r)),
     );
   }
 
+  /** 添加新路由，根据类型设置默认路径 */
   function addRoute(type: RouteDef["type"]) {
     const newRoute = createDefaultRoute({
       id: crypto.randomUUID(),
@@ -261,6 +337,7 @@ export function RoutingEditor() {
     setSelectedRouteId(newRoute.id);
   }
 
+  /** 删除路由及其所有后代，根路由 / 不可删除 */
   function deleteRoute(id: string) {
     const isRoot = routes.find((r) => r.id === id)?.path === "/";
     if (isRoot) return;
@@ -280,6 +357,7 @@ export function RoutingEditor() {
     }
   }
 
+  /** 父路由候选列表 —— 排除自身、后代和重定向类型 */
   const parentOptions = useMemo(() => {
     if (!selectedRoute) return [];
     return routes

@@ -1,3 +1,13 @@
+/**
+ * 数据模型编辑器 —— 可视化设计 Supabase/PostgreSQL 数据库模型
+ *
+ * 支持：数据表的增删改、列定义（12 种类型 + PK/NN/UQ 约束）、
+ * 外键关联、行级安全策略（RLS）模板及自定义策略编辑。
+ *
+ * @author xiye
+ * @date 2026-06-14
+ */
+
 "use client";
 
 import { useState } from "react";
@@ -19,6 +29,7 @@ import { cn } from "@/lib/utils";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
+/** PostgreSQL 数据库列类型列表 */
 const COLUMN_TYPES = [
   "uuid",
   "text",
@@ -34,6 +45,7 @@ const COLUMN_TYPES = [
   "text[]",
 ] as const;
 
+/** 数据库列定义 */
 interface ColumnDef {
   id: string;
   name: string;
@@ -44,6 +56,7 @@ interface ColumnDef {
   defaultValue: string;
 }
 
+/** 外键约束定义 */
 interface ForeignKeyDef {
   id: string;
   columnName: string;
@@ -51,6 +64,7 @@ interface ForeignKeyDef {
   referencedColumn: string;
 }
 
+/** 数据库表定义 */
 interface TableDef {
   id: string;
   name: string;
@@ -60,6 +74,7 @@ interface TableDef {
   rlsPolicies: string[];
 }
 
+/** RLS 策略模板列表 */
 const RLS_POLICY_TEMPLATES = [
   { label: "Owner only", value: "owner_only" },
   { label: "Public read", value: "public_read" },
@@ -68,10 +83,12 @@ const RLS_POLICY_TEMPLATES = [
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
+/** 生成唯一 ID（crypto.randomUUID），所有现代浏览器均支持 */
 function uid() {
   return crypto.randomUUID();
 }
 
+/** 创建默认列对象 */
 function newColumn(type: string = "text"): ColumnDef {
   return {
     id: uid(),
@@ -84,6 +101,7 @@ function newColumn(type: string = "text"): ColumnDef {
   };
 }
 
+/** 创建默认表对象，自带 uuid 主键列 */
 function newTable(): TableDef {
   const idCol = newColumn("uuid");
   idCol.name = "id";
@@ -101,13 +119,16 @@ function newTable(): TableDef {
 
 // ─── Styles ──────────────────────────────────────────────────────────────────
 
+/** 统一输入框样式类名 */
 const inputClass =
   "h-7 w-full rounded border bg-background px-2 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500";
+/** 小节标题样式类名 */
 const sectionHeaderClass =
   "text-[10px] font-semibold uppercase tracking-wider text-muted-foreground";
 
 // ─── Sub-components ──────────────────────────────────────────────────────────
 
+/** 表列表项组件 —— 显示表名、列数量，支持选择和删除 */
 function TableListItem({
   table,
   isSelected,
@@ -153,13 +174,13 @@ function TableListItem({
   );
 }
 
+/** 列行组件 —— 显示单列的名称、类型、PK/NN/UQ 约束和默认值 */
 function ColumnRow({
   col,
   onChange,
   onDelete,
 }: {
   col: ColumnDef;
-  _tables?: TableDef[];
   onChange: (patch: Partial<ColumnDef>) => void;
   onDelete: () => void;
 }) {
@@ -235,6 +256,7 @@ function ColumnRow({
   );
 }
 
+/** 外键行组件 —— 显示外键列名→引用表→引用列的三段配置 */
 function FKRow({
   fk,
   tables,
@@ -291,6 +313,14 @@ function FKRow({
 
 // ─── Main Component ──────────────────────────────────────────────────────────
 
+/**
+ * 数据模型编辑器主组件
+ *
+ * 左侧为表列表（支持增删选），右侧为选中表的详细配置：
+ * 列定义、外键关联、行级安全策略（RLS）。
+ *
+ * @returns JSX 元素
+ */
 export function DataModelEditor() {
   const [tables, setTables] = useState<TableDef[]>([]);
   const [selectedTableId, setSelectedTableId] = useState<string | null>(null);
@@ -299,19 +329,35 @@ export function DataModelEditor() {
 
   // ── Table CRUD ──────────────────────────────────────────────────────────
 
+  /** 添加新表，自动分配默认列并选中 */
   const addTable = () => {
     const t = newTable();
     setTables((prev) => [...prev, t]);
     setSelectedTableId(t.id);
   };
 
+  /** 更新表属性，拒绝空表名 */
   const updateTable = (id: string, patch: Partial<TableDef>) => {
     setTables((prev) =>
-      prev.map((t) => (t.id === id ? { ...t, ...patch } : t)),
+      prev.map((t) => {
+        if (t.id !== id) return t;
+        const merged = { ...t, ...patch };
+        // 表名不允许为空
+        if (patch.name !== undefined && patch.name.trim() === "") {
+          return t;
+        }
+        return merged;
+      }),
     );
   };
 
+  /** 删除表（带确认），同时清空关联的外键引用 */
   const deleteTable = (id: string) => {
+    const table = tables.find((t) => t.id === id);
+    if (!table) return;
+    if (!window.confirm(`确定要删除表 "${table.name || "Untitled"}" 吗？此操作不可撤销。`)) {
+      return;
+    }
     setTables((prev) => prev.filter((t) => t.id !== id));
     if (selectedTableId === id) {
       setSelectedTableId(null);
@@ -320,6 +366,7 @@ export function DataModelEditor() {
 
   // ── Column CRUD ─────────────────────────────────────────────────────────
 
+  /** 向指定表添加新列 */
   const addColumn = (tableId: string) => {
     setTables((prev) =>
       prev.map((t) =>
@@ -328,6 +375,7 @@ export function DataModelEditor() {
     );
   };
 
+  /** 更新指定列的部分属性 */
   const updateColumn = (
     tableId: string,
     colId: string,
@@ -346,6 +394,7 @@ export function DataModelEditor() {
     );
   };
 
+  /** 删除指定列 */
   const deleteColumn = (tableId: string, colId: string) => {
     setTables((prev) =>
       prev.map((t) => {
@@ -357,6 +406,7 @@ export function DataModelEditor() {
 
   // ── FK CRUD ─────────────────────────────────────────────────────────────
 
+  /** 向指定表添加新外键 */
   const addFK = (tableId: string) => {
     setTables((prev) =>
       prev.map((t) => {
@@ -372,6 +422,7 @@ export function DataModelEditor() {
     );
   };
 
+  /** 更新指定外键的部分属性 */
   const updateFK = (
     tableId: string,
     fkId: string,
@@ -390,6 +441,7 @@ export function DataModelEditor() {
     );
   };
 
+  /** 删除指定外键 */
   const deleteFK = (tableId: string, fkId: string) => {
     setTables((prev) =>
       prev.map((t) => {
@@ -404,6 +456,7 @@ export function DataModelEditor() {
 
   // ── RLS ─────────────────────────────────────────────────────────────────
 
+  /** 切换 RLS 启用/禁用 */
   const toggleRLS = (tableId: string) => {
     setTables((prev) =>
       prev.map((t) =>
@@ -412,6 +465,7 @@ export function DataModelEditor() {
     );
   };
 
+  /** 切换 RLS 策略模板的启用/禁用 */
   const togglePolicy = (tableId: string, policy: string) => {
     setTables((prev) =>
       prev.map((t) => {
@@ -427,6 +481,7 @@ export function DataModelEditor() {
     );
   };
 
+  /** 更新自定义策略文本 */
   const updateCustomPolicy = (tableId: string, index: number, value: string) => {
     setTables((prev) =>
       prev.map((t) => {
@@ -438,6 +493,7 @@ export function DataModelEditor() {
     );
   };
 
+  /** 添加自定义策略 */
   const addCustomPolicy = (tableId: string) => {
     setTables((prev) =>
       prev.map((t) => {
@@ -447,6 +503,7 @@ export function DataModelEditor() {
     );
   };
 
+  /** 删除指定索引的策略 */
   const removePolicy = (tableId: string, index: number) => {
     setTables((prev) =>
       prev.map((t) => {
@@ -537,7 +594,6 @@ export function DataModelEditor() {
                     <ColumnRow
                       key={col.id}
                       col={col}
-                      _tables={tables}
                       onChange={(patch) =>
                         updateColumn(selectedTable.id, col.id, patch)
                       }
@@ -715,6 +771,7 @@ export function DataModelEditor() {
 
 // ─── Tiny separator for inline section headers ───────────────────────────────
 
+/** 行内分隔符组件 —— 用于小节标题间的视觉分隔 */
 function Sep() {
   return <span className="text-[10px] text-muted-foreground/40">·</span>;
 }

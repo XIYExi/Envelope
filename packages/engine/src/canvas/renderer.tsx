@@ -1,30 +1,91 @@
+/**
+ * 画布渲染器
+ *
+ * 将画布状态渲染为可视化的网格布局，支持：
+ * - 组件的可视化呈现（模拟组件外观）
+ * - 拖拽平移（鼠标拖动画布空白区域）
+ * - 组件选中与多选（Ctrl/Shift/Meta 键）
+ * - 八向缩放手柄（拖拽组件边缘或角落调整大小）
+ * - 缩放变换（Ctrl+滚轮）
+ *
+ * 网格使用 CSS Grid 布局，每个组件通过 gridColumn/gridRow 定位。
+ * 所有坐标以网格单位计算（1 为基准），渲染时转换为 CSS 网格位置。
+ *
+ * @author xiye
+ * @date 2026-06-14
+ */
+
 "use client";
 
 import { forwardRef, useCallback, useRef, useState, useEffect, type CSSProperties, type MouseEvent as RMouseEvent } from "react";
 import { twMerge } from "tailwind-merge";
 import type { CanvasComponent } from "./types";
 
+/** 单个网格单元格的渲染高度（px），对应 CSS Grid 的隐式行高 */
 const CELL_HEIGHT = 40;
+/** 单个网格单元格的渲染宽度（px），对应 CSS Grid 的列宽 */
 const CELL_WIDTH = 80;
+/** 缩放手柄的视觉尺寸（px） */
 const RESIZE_HANDLE_SIZE = 8;
 
+/**
+ * 条件类名合并工具函数
+ *
+ * 过滤掉假值后使用 tailwind-merge 合并类名，解决 Tailwind 类名冲突。
+ *
+ * @param inputs - 类名字符串或假值
+ * @returns 合并后的类名字符串
+ */
 function cn(...inputs: (string | undefined | null | false)[]): string {
   return twMerge(...inputs.filter(Boolean).map(String));
 }
 
-/** Simulate a component's visual representation from its type and props */
+/**
+ * 安全地从组件属性中提取字符串值
+ *
+ * @param props - 组件属性对象（可能为 undefined）
+ * @param key - 属性键名
+ * @param fallback - 属性不存在或类型不匹配时的默认值
+ * @returns 提取的字符串值
+ */
 function pstr(props: Record<string, unknown> | undefined, key: string, fallback: string): string {
   const v = props?.[key];
   return typeof v === "string" ? v : fallback;
 }
+
+/**
+ * 安全地从组件属性中提取数字值
+ *
+ * @param props - 组件属性对象（可能为 undefined）
+ * @param key - 属性键名
+ * @param fallback - 属性不存在或类型不匹配时的默认值
+ * @returns 提取的数字值
+ */
 function pnum(props: Record<string, unknown> | undefined, key: string, fallback: number): number {
   const v = props?.[key];
   return typeof v === "number" ? v : fallback;
 }
+
+/**
+ * 安全地从组件属性中提取布尔值
+ *
+ * @param props - 组件属性对象（可能为 undefined）
+ * @param key - 属性键名
+ * @returns 属性的布尔值（通过 !! 转换）
+ */
 function pbool(props: Record<string, unknown> | undefined, key: string): boolean {
   return !!props?.[key];
 }
 
+/**
+ * 模拟组件视觉呈现
+ *
+ * 根据组件类型和属性渲染对应的视觉占位符，
+ * 让用户在画布上预览组件外观而不执行实际逻辑。
+ *
+ * @param props - 组件属性
+ * @param props.comp - 画布组件数据
+ */
 function SimulatedContent({ comp }: { comp: CanvasComponent }) {
   const { type, props } = comp.node;
 
@@ -334,7 +395,15 @@ function SimulatedContent({ comp }: { comp: CanvasComponent }) {
   }
 }
 
-/** Render a list of child component nodes (for nested rendering) */
+/**
+ * 渲染嵌套子组件列表
+ *
+ * 用于容器组件（Card、Tabs 等）内部的子组件渲染。
+ * 当 children 为空或不存在时返回 null。
+ *
+ * @param props - 组件属性
+ * @param props.components - 子组件节点数组
+ */
 function ChildrenSlot({ components }: { components: { type: string; props?: Record<string, unknown>; id: string }[] }) {
   if (!components || components.length === 0) return null;
   return (
@@ -346,6 +415,16 @@ function ChildrenSlot({ components }: { components: { type: string; props?: Reco
   );
 }
 
+/**
+ * 渲染单个子组件的简化视觉表示
+ *
+ * 相比 SimulatedContent，子组件使用更紧凑的样式（更小的字体、无边框等），
+ * 适合在容器内部展示。
+ *
+ * @param props - 组件属性
+ * @param props.type - 组件类型名称
+ * @param props.props - 组件属性对象（可选）
+ */
 function SimulatedChildContent({ type, props }: { type: string; props?: Record<string, unknown> }) {
   switch (type) {
     case "Button":
@@ -397,10 +476,22 @@ function SimulatedChildContent({ type, props }: { type: string; props?: Record<s
   }
 }
 
-// ===== Resize Handle =====
+// ===== 缩放手柄 =====
 
+/**
+ * 缩放手柄方向
+ *
+ * 八个方向（四边 + 四角），命名使用小写罗盘缩写：
+ * n=上, s=下, e=右, w=左, ne=右上, nw=左上, se=右下, sw=左下
+ */
 type ResizeDirection = "n" | "s" | "e" | "w" | "ne" | "nw" | "se" | "sw";
 
+/**
+ * 各方向缩放手柄的定位样式
+ *
+ * 手柄定位在组件的边缘或角落外侧 50% 处，
+ * 使用负 margin 使手柄视觉居中于边缘线上。
+ */
 const resizeHandleStyles: Record<ResizeDirection, CSSProperties> = {
   n:  { top: -RESIZE_HANDLE_SIZE/2, left: "50%", marginLeft: -RESIZE_HANDLE_SIZE/2, width: RESIZE_HANDLE_SIZE, height: RESIZE_HANDLE_SIZE, cursor: "n-resize" },
   s:  { bottom: -RESIZE_HANDLE_SIZE/2, left: "50%", marginLeft: -RESIZE_HANDLE_SIZE/2, width: RESIZE_HANDLE_SIZE, height: RESIZE_HANDLE_SIZE, cursor: "s-resize" },
@@ -412,25 +503,58 @@ const resizeHandleStyles: Record<ResizeDirection, CSSProperties> = {
   sw: { bottom: -RESIZE_HANDLE_SIZE/2, left: -RESIZE_HANDLE_SIZE/2, width: RESIZE_HANDLE_SIZE, height: RESIZE_HANDLE_SIZE, cursor: "sw-resize" },
 };
 
+/** 所有缩放手柄方向的数组，用于遍历渲染 */
 const allResizeDirections: ResizeDirection[] = ["n", "s", "e", "w", "ne", "nw", "se", "sw"];
 
-// ===== Main Canvas Renderer =====
+// ===== 主画布渲染器 =====
 
+/**
+ * CanvasRenderer 组件的 Props
+ *
+ * 接收画布状态（组件列表、选中、缩放、平移等）和回调函数，
+ * 不直接依赖 Zustand Store，由父组件桥接。
+ */
 interface CanvasRendererProps {
+  /** 画布上的所有组件 */
   components: CanvasComponent[];
+  /** 当前选中的组件 ID 列表 */
   selectedIds: string[];
+  /** 选中组件回调（id: 组件ID, multi: 是否多选模式） */
   onSelect: (id: string, multi?: boolean) => void;
+  /** 清除所有选中状态回调 */
   onClearSelection: () => void;
-  onResize: (id: string, width: number, height: number) => void;
+  /** 调整组件尺寸回调（width, height: 列/行跨度；x, y 可选用于 w/n 把手） */
+  onResize: (id: string, width: number, height: number, x?: number, y?: number) => void;
+  /** 当前缩放比例 */
   zoom: number;
+  /** 当前视口的画布宽度（px） */
   viewportWidth: number;
+  /** 当前水平平移偏移量（px） */
   panX: number;
+  /** 当前垂直平移偏移量（px） */
   panY: number;
+  /** 平移回调（dx, dy: 新的绝对平移位置） */
   onPan: (dx: number, dy: number) => void;
+  /** 网格列数 */
   gridCols: number;
+  /** 网格间距（px） */
   gridGap: number;
 }
 
+/**
+ * 画布渲染器组件
+ *
+ * 将画布状态渲染为可交互的网格编辑器。
+ * 使用 forwardRef 将内部画布 div 的引用暴露给父组件（用于滚轮缩放等）。
+ *
+ * 交互行为：
+ * - 点击空白区域：清除选中
+ * - 点击组件：选中（Ctrl/Shift/Meta + 点击 = 多选）
+ * - 拖拽空白区域：平移画布（鼠标左键）
+ * - 拖拽缩放手柄：调整组件尺寸
+ *
+ * @param ref - 转发给内部画布 div 的 ref，用于父组件绑定事件
+ */
 export const CanvasRenderer = forwardRef<HTMLDivElement, CanvasRendererProps>(
   function CanvasRenderer({
     components, selectedIds, onSelect, onClearSelection, onResize,
@@ -440,8 +564,15 @@ export const CanvasRenderer = forwardRef<HTMLDivElement, CanvasRendererProps>(
     const [isPanning, setIsPanning] = useState(false);
     const panStart = useRef({ x: 0, y: 0 });
 
+    // 存储 onPan 的最新引用以避免 useCallback 依赖变化
+    const onPanRef = useRef(onPan);
+    onPanRef.current = onPan;
+
     const handleMouseDown = useCallback((e: RMouseEvent) => {
-      if (e.target === e.currentTarget || (e.target as HTMLElement).dataset.canvasBg === "true") {
+      const target = e.target;
+      const isCanvasBg = target === e.currentTarget
+        || (target instanceof HTMLElement && target.dataset.canvasBg === "true");
+      if (isCanvasBg) {
         if (e.button === 0) {
           setIsPanning(true);
           panStart.current = { x: e.clientX - panX, y: e.clientY - panY };
@@ -453,9 +584,9 @@ export const CanvasRenderer = forwardRef<HTMLDivElement, CanvasRendererProps>(
       if (isPanning) {
         const dx = e.clientX - panStart.current.x;
         const dy = e.clientY - panStart.current.y;
-        onPan(panX + dx, panY + dy);
+        onPanRef.current(dx, dy);
       }
-    }, [isPanning, panX, panY, onPan]);
+    }, [isPanning]);
 
     const handleMouseUp = useCallback(() => {
       setIsPanning(false);
@@ -489,7 +620,7 @@ export const CanvasRenderer = forwardRef<HTMLDivElement, CanvasRendererProps>(
             transformOrigin: "top left",
           }}
           onClick={(e) => {
-            if ((e.target as HTMLElement).dataset.canvasBg === "true") {
+            if (e.target instanceof HTMLElement && e.target.dataset.canvasBg === "true") {
               onClearSelection();
             }
           }}
@@ -503,7 +634,7 @@ export const CanvasRenderer = forwardRef<HTMLDivElement, CanvasRendererProps>(
             }}
           />
 
-          {/* Components grid */}
+          {/* 组件网格 */}
           <div
             className="relative grid p-4"
             style={{
@@ -547,14 +678,14 @@ export const CanvasRenderer = forwardRef<HTMLDivElement, CanvasRendererProps>(
                 >
                   <SimulatedContent comp={comp} />
 
-                  {/* Selection badge */}
+                  {/* 选中标记 */}
                   {isSelected && (
                     <div className="absolute -right-1.5 -top-1.5 z-10 flex h-5 w-5 items-center justify-center rounded-full bg-blue-500 text-[10px] font-bold text-white shadow">
                       ✓
                     </div>
                   )}
 
-                  {/* Resize handles */}
+                  {/* 缩放手柄 */}
                   {isSelected && allResizeDirections.map((dir) => (
                     <div
                       key={dir}
@@ -563,24 +694,36 @@ export const CanvasRenderer = forwardRef<HTMLDivElement, CanvasRendererProps>(
                       onMouseDown={(e) => {
                         e.stopPropagation();
                         e.preventDefault();
-                        const startX = e.clientX;
-                        const startY = e.clientY;
+                        const startClientX = e.clientX;
+                        const startClientY = e.clientY;
                         const startW = width;
                         const startH = height;
+                        const startGridX = x;
+                        const startGridY = y;
 
-                        const handleMove = (ev: globalThis.MouseEvent) => {
-                          const dx = (ev.clientX - startX) / (CELL_WIDTH * zoom);
-                          const dy = (ev.clientY - startY) / (CELL_HEIGHT * zoom);
+                        const handleMove = (ev: MouseEvent) => {
+                          const dx = (ev.clientX - startClientX) / (CELL_WIDTH * zoom);
+                          const dy = (ev.clientY - startClientY) / (CELL_HEIGHT * zoom);
 
                           let newW = startW;
                           let newH = startH;
+                          let newX = startGridX;
+                          let newY = startGridY;
 
-                          if (dir.includes("e")) newW = Math.max(1, Math.round(startW + dx));
-                          if (dir.includes("w")) newW = Math.max(1, Math.round(startW - dx));
-                          if (dir.includes("s")) newH = Math.max(1, Math.round(startH + dy));
-                          if (dir.includes("n")) newH = Math.max(1, Math.round(startH - dy));
+                          if (dir.includes("e")) newW = Math.round(Math.max(1, startW + dx));
+                          if (dir.includes("w")) {
+                            const delta = Math.round(dx);
+                            newW = Math.max(1, startW - delta);
+                            newX = startGridX + delta;
+                          }
+                          if (dir.includes("s")) newH = Math.round(Math.max(1, startH + dy));
+                          if (dir.includes("n")) {
+                            const delta = Math.round(dy);
+                            newH = Math.max(1, startH - delta);
+                            newY = startGridY + delta;
+                          }
 
-                          onResize(comp.id, newW, newH);
+                          onResize(comp.id, newW, newH, newX, newY);
                         };
 
                         const handleUp = () => {

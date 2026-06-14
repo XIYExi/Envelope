@@ -1,3 +1,12 @@
+/**
+ * 左侧导航面板 — 编辑器模式切换
+ *
+ * 提供项目级模式导航：页面编辑、数据模型、路由、流程（开发中）、API（开发中）。
+ * 下方保留组件库、主题、设置等占位（Coming Soon）。
+ *
+ * @author xiye
+ * @date 2026-06-14
+ */
 "use client";
 
 import { cn } from "@/lib/utils";
@@ -7,17 +16,25 @@ import { useEditorStore } from "@/stores/editor";
 import type { EditorMode } from "@/stores/editor.types";
 import { FileText, Database, Workflow, Globe, Plug, Puzzle, Palette, Settings } from "lucide-react";
 
+/** 左侧面板 Props */
 interface LeftPanelProps {
+  /** 面板是否处于折叠态（由父组件控制显隐） */
   collapsed: boolean;
 }
 
+/** 导航项定义 */
 interface NavItemDef {
+  /** 编辑器模式标识 */
   id: EditorMode;
+  /** 显示文本 */
   label: string;
+  /** 图标（Lucide React 组件） */
   icon: React.ReactNode;
+  /** 是否标记为开发中（禁用交互） */
   comingSoon?: boolean;
 }
 
+/** 主导航项配置 */
 const NAV_ITEMS: NavItemDef[] = [
   { id: "pages", label: "Pages", icon: <FileText className="h-3.5 w-3.5" /> },
   { id: "data-models", label: "Data Models", icon: <Database className="h-3.5 w-3.5" /> },
@@ -26,6 +43,12 @@ const NAV_ITEMS: NavItemDef[] = [
   { id: "api", label: "API Endpoints", icon: <Plug className="h-3.5 w-3.5" />, comingSoon: true },
 ];
 
+/**
+ * 左侧导航面板
+ *
+ * 模式切换时直接调用 setEditorMode，不主动重置其他状态。
+ * 各子编辑器自行在挂载时初始化所需状态。
+ */
 export function LeftPanel({ collapsed }: LeftPanelProps) {
   const { editorMode, setEditorMode } = useEditorStore();
 

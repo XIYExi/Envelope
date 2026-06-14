@@ -9,7 +9,7 @@
  * 都需要对齐到网格单元格，避免出现像素级的错位。
  *
  * @author xiye
- * @date 2026/6/13
+ * @date 2026-06-14
  */
 import type { DragItem } from "./types";
 
@@ -111,3 +111,6 @@ export const CANVAS_GRID_GAP = 4;
 
 /** 单个网格单元格的像素宽度（80px，配合 12 列 = 960px 总宽） */
 export const CANVAS_CELL_SIZE = 80;
+
+/** 单个网格单元格的像素高度（40px，与渲染器 CELL_HEIGHT 保持一致） */
+export const CANVAS_CELL_HEIGHT = 40;
