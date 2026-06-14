@@ -33,4 +33,10 @@ out/
 # Testing
 coverage/
 
+.trae/
+.qoder/
+.vscode/
+.idea/
+.mimocode/
+
 
