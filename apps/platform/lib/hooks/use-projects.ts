@@ -45,14 +45,14 @@ async function duplicateProject(id: string, name: string): Promise<Project> {
   return res.json();
 }
 
-export function useProjects() {
+export function useProjects(): any {
   return useQuery({
     queryKey: ["projects"],
     queryFn: fetchProjects,
   });
 }
 
-export function useCreateProject() {
+export function useCreateProject(): any {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: createProject,
@@ -60,7 +60,7 @@ export function useCreateProject() {
   });
 }
 
-export function useUpdateProject() {
+export function useUpdateProject(): any {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({ id, ...input }: { id: string; name?: string; description?: string }) =>
@@ -69,7 +69,7 @@ export function useUpdateProject() {
   });
 }
 
-export function useDeleteProject() {
+export function useDeleteProject(): any {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: deleteProject,
@@ -77,7 +77,7 @@ export function useDeleteProject() {
   });
 }
 
-export function useDuplicateProject() {
+export function useDuplicateProject(): any {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({ id, name }: { id: string; name: string }) => duplicateProject(id, name),

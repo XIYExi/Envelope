@@ -26,7 +26,8 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
 
   render() {
     if (this.state.hasError) {
-      if (this.props.fallback) return this.props.fallback;
+      if (this.props.fallback)
+        return this.props.fallback;
 
       return (
         <div className="flex min-h-screen items-center justify-center p-4">

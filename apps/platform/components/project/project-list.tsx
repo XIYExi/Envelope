@@ -119,7 +119,7 @@ export function ProjectList() {
         </div>
       ) : projects && projects.length > 0 ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {projects.map((project) => (
+          {projects.map((project: any) => (
             <Card key={project.id} className="group relative">
               {editingId === project.id ? (
                 <CardHeader>
