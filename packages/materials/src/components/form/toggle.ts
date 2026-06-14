@@ -1,0 +1,137 @@
+import type { MaterialDefinition } from "../../types/material";
+
+export const toggleMaterial: MaterialDefinition = {
+  name: "Toggle",
+  displayName: "Toggle",
+  description: "A two-state button that can be either on or off.",
+  category: "form",
+  icon: "ToggleLeft",
+  supportsChildren: true,
+  editableProps: [
+    {
+      key: "variant",
+      label: "Variant",
+      type: "select",
+      options: [
+        { label: "Default", value: "default" },
+        { label: "Outline", value: "outline" },
+      ],
+      defaultValue: "default",
+      group: "Appearance",
+      order: 1,
+    },
+    {
+      key: "size",
+      label: "Size",
+      type: "select",
+      options: [
+        { label: "Default", value: "default" },
+        { label: "Small", value: "sm" },
+        { label: "Large", value: "lg" },
+      ],
+      defaultValue: "default",
+      group: "Appearance",
+      order: 2,
+    },
+    {
+      key: "pressed",
+      label: "Pressed by Default",
+      type: "switch",
+      defaultValue: false,
+      group: "State",
+      order: 3,
+    },
+    {
+      key: "disabled",
+      label: "Disabled",
+      type: "switch",
+      defaultValue: false,
+      group: "State",
+      order: 4,
+    },
+    {
+      key: "className",
+      label: "Tailwind Classes",
+      type: "tailwind",
+      group: "Styling",
+      order: 10,
+    },
+    {
+      key: "comment",
+      label: "Comment",
+      type: "textarea",
+      group: "Documentation",
+      order: 20,
+    },
+  ],
+};
+
+export const toggleGroupMaterial: MaterialDefinition = {
+  name: "ToggleGroup",
+  displayName: "Toggle Group",
+  description: "A group of toggle buttons where one or multiple can be selected.",
+  category: "form",
+  icon: "Columns2",
+  supportsChildren: true,
+  editableProps: [
+    {
+      key: "type",
+      label: "Selection Type",
+      type: "select",
+      options: [
+        { label: "Single", value: "single" },
+        { label: "Multiple", value: "multiple" },
+      ],
+      defaultValue: "single",
+      group: "Behavior",
+      order: 1,
+    },
+    {
+      key: "variant",
+      label: "Variant",
+      type: "select",
+      options: [
+        { label: "Default", value: "default" },
+        { label: "Outline", value: "outline" },
+      ],
+      defaultValue: "default",
+      group: "Appearance",
+      order: 2,
+    },
+    {
+      key: "size",
+      label: "Size",
+      type: "select",
+      options: [
+        { label: "Default", value: "default" },
+        { label: "Small", value: "sm" },
+        { label: "Large", value: "lg" },
+      ],
+      defaultValue: "default",
+      group: "Appearance",
+      order: 3,
+    },
+    {
+      key: "disabled",
+      label: "Disabled",
+      type: "switch",
+      defaultValue: false,
+      group: "State",
+      order: 4,
+    },
+    {
+      key: "className",
+      label: "Tailwind Classes",
+      type: "tailwind",
+      group: "Styling",
+      order: 10,
+    },
+    {
+      key: "comment",
+      label: "Comment",
+      type: "textarea",
+      group: "Documentation",
+      order: 20,
+    },
+  ],
+};

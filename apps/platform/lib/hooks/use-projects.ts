@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient, type UseQueryResult, type UseMutationResult } from "@tanstack/react-query";
 import type { Project } from "@/lib/supabase/types";
 
 async function fetchProjects(): Promise<Project[]> {
@@ -45,14 +45,14 @@ async function duplicateProject(id: string, name: string): Promise<Project> {
   return res.json();
 }
 
-export function useProjects(): any {
+export function useProjects(): UseQueryResult<Project[], Error> {
   return useQuery({
     queryKey: ["projects"],
     queryFn: fetchProjects,
   });
 }
 
-export function useCreateProject(): any {
+export function useCreateProject(): UseMutationResult<Project, Error, { name: string; description?: string }> {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: createProject,
@@ -60,7 +60,7 @@ export function useCreateProject(): any {
   });
 }
 
-export function useUpdateProject(): any {
+export function useUpdateProject(): UseMutationResult<Project, Error, { id: string; name?: string; description?: string }> {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({ id, ...input }: { id: string; name?: string; description?: string }) =>
@@ -69,7 +69,7 @@ export function useUpdateProject(): any {
   });
 }
 
-export function useDeleteProject(): any {
+export function useDeleteProject(): UseMutationResult<void, Error, string> {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: deleteProject,
@@ -77,7 +77,7 @@ export function useDeleteProject(): any {
   });
 }
 
-export function useDuplicateProject(): any {
+export function useDuplicateProject(): UseMutationResult<Project, Error, { id: string; name: string }> {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({ id, name }: { id: string; name: string }) => duplicateProject(id, name),

@@ -1,54 +1,55 @@
-/**
- * 默认物料注册表
- *
- * 创建并导出包含所有内置组件的默认注册表实例。
- * 使用单例模式，确保全局只有一个注册表实例。
- *
- * 内置组件分类：
- * - layout: 布局组件（Card、Separator 等）
- * - form: 表单组件（Button、Input、Label 等）
- * - display: 展示组件（Avatar、Badge 等）
- * - feedback: 反馈组件（Skeleton 等）
- *
- * @author xiye
- * @date 2026/6/13
- */
-/**
- * 物料组件入口
- *
- * 统一导出所有预定义的物料组件，并提供默认注册表工厂函数。
- * 包含以下分类的组件：
- * - layout: Card、CardHeader、CardContent、CardFooter、Separator
- * - form: Button、Input、Label
- * - display: Avatar、Badge
- * - feedback: Skeleton
- *
- * @author xiye
- * @date 2026/6/14
- */
 import { createRegistry } from "../registry";
 import type { MaterialRegistry } from "../types/material";
-import { cardMaterial, cardHeaderMaterial, cardContentMaterial, cardFooterMaterial, separatorMaterial } from "./layout";
-import { buttonMaterial, inputMaterial, labelMaterial } from "./form";
-import { avatarMaterial, badgeMaterial } from "./display";
-import { skeletonMaterial } from "./feedback";
 
-/** 默认注册表单例（懒加载） */
+import { cardMaterial, cardHeaderMaterial, cardContentMaterial, cardFooterMaterial, separatorMaterial } from "./layout";
+import { scrollAreaMaterial } from "./layout";
+import { aspectRatioMaterial } from "./layout";
+import { resizablePanelGroupMaterial, resizablePanelMaterial, resizableHandleMaterial } from "./layout";
+
+import { buttonMaterial, inputMaterial, labelMaterial } from "./form";
+import { textareaMaterial } from "./form";
+import { checkboxMaterial } from "./form";
+import { radioGroupMaterial, radioGroupItemMaterial } from "./form";
+import { selectMaterial, selectItemMaterial } from "./form";
+import { switchMaterial } from "./form";
+import { toggleMaterial, toggleGroupMaterial } from "./form";
+import { sliderMaterial } from "./form";
+
+import { avatarMaterial, badgeMaterial } from "./display";
+
+import { skeletonMaterial } from "./feedback";
+import { alertMaterial, alertTitleMaterial, alertDescriptionMaterial } from "./feedback";
+import { progressMaterial } from "./feedback";
+
+import { tabsMaterial, tabsListMaterial, tabsTriggerMaterial, tabsContentMaterial } from "./navigation";
+import { breadcrumbMaterial, breadcrumbItemMaterial, breadcrumbLinkMaterial } from "./navigation";
+import { paginationMaterial, paginationItemMaterial } from "./navigation";
+
+import { tableMaterial, tableHeaderMaterial, tableBodyMaterial, tableRowMaterial, tableHeadMaterial, tableCellMaterial } from "./data";
+import { accordionMaterial, accordionItemMaterial, accordionTriggerMaterial, accordionContentMaterial } from "./data";
+
+import {
+  dialogMaterial, dialogTriggerMaterial, dialogContentMaterial,
+  dialogHeaderMaterial, dialogTitleMaterial, dialogDescriptionMaterial, dialogFooterMaterial,
+} from "./overlay";
+import {
+  sheetMaterial, sheetTriggerMaterial, sheetContentMaterial,
+  sheetHeaderMaterial, sheetTitleMaterial, sheetDescriptionMaterial,
+} from "./overlay";
+import {
+  alertDialogMaterial, alertDialogTriggerMaterial, alertDialogContentMaterial,
+  alertDialogHeaderMaterial, alertDialogActionMaterial, alertDialogCancelMaterial,
+} from "./overlay";
+import { popoverMaterial, popoverTriggerMaterial, popoverContentMaterial } from "./overlay";
+import { tooltipMaterial, tooltipTriggerMaterial, tooltipContentMaterial } from "./overlay";
+import { dropdownMenuMaterial, dropdownMenuTriggerMaterial, dropdownMenuContentMaterial, dropdownMenuItemMaterial } from "./overlay";
+import { contextMenuMaterial, contextMenuTriggerMaterial, contextMenuContentMaterial } from "./overlay";
+import { hoverCardMaterial, hoverCardTriggerMaterial, hoverCardContentMaterial } from "./overlay";
+import { drawerMaterial, drawerTriggerMaterial, drawerContentMaterial, drawerHeaderMaterial } from "./overlay";
+import { collapsibleMaterial, collapsibleTriggerMaterial, collapsibleContentMaterial } from "./overlay";
+
 let defaultRegistry: MaterialRegistry | null = null;
 
-/**
- * 创建默认物料注册表
- *
- * 返回一个预注册了所有内置物料的注册表实例。
- * 使用单例模式，首次调用时创建，后续调用返回缓存实例。
- *
- * @returns 包含所有内置物料的注册表
- *
- * @example
- * const registry = createDefaultRegistry();
- * const allMaterials = registry.getAll();
- * const formMaterials = registry.getByCategory("form");
- */
 export function createDefaultRegistry(): MaterialRegistry {
   if (defaultRegistry) return defaultRegistry;
 
@@ -61,11 +62,26 @@ export function createDefaultRegistry(): MaterialRegistry {
     cardContentMaterial,
     cardFooterMaterial,
     separatorMaterial,
+    scrollAreaMaterial,
+    aspectRatioMaterial,
+    resizablePanelGroupMaterial,
+    resizablePanelMaterial,
+    resizableHandleMaterial,
 
     // ========== 表单组件 ==========
     buttonMaterial,
     inputMaterial,
     labelMaterial,
+    textareaMaterial,
+    checkboxMaterial,
+    radioGroupMaterial,
+    radioGroupItemMaterial,
+    selectMaterial,
+    selectItemMaterial,
+    switchMaterial,
+    toggleMaterial,
+    toggleGroupMaterial,
+    sliderMaterial,
 
     // ========== 展示组件 ==========
     avatarMaterial,
@@ -73,6 +89,77 @@ export function createDefaultRegistry(): MaterialRegistry {
 
     // ========== 反馈组件 ==========
     skeletonMaterial,
+    alertMaterial,
+    alertTitleMaterial,
+    alertDescriptionMaterial,
+    progressMaterial,
+
+    // ========== 导航组件 ==========
+    tabsMaterial,
+    tabsListMaterial,
+    tabsTriggerMaterial,
+    tabsContentMaterial,
+    breadcrumbMaterial,
+    breadcrumbItemMaterial,
+    breadcrumbLinkMaterial,
+    paginationMaterial,
+    paginationItemMaterial,
+
+    // ========== 数据组件 ==========
+    tableMaterial,
+    tableHeaderMaterial,
+    tableBodyMaterial,
+    tableRowMaterial,
+    tableHeadMaterial,
+    tableCellMaterial,
+    accordionMaterial,
+    accordionItemMaterial,
+    accordionTriggerMaterial,
+    accordionContentMaterial,
+
+    // ========== 弹层组件 ==========
+    dialogMaterial,
+    dialogTriggerMaterial,
+    dialogContentMaterial,
+    dialogHeaderMaterial,
+    dialogTitleMaterial,
+    dialogDescriptionMaterial,
+    dialogFooterMaterial,
+    sheetMaterial,
+    sheetTriggerMaterial,
+    sheetContentMaterial,
+    sheetHeaderMaterial,
+    sheetTitleMaterial,
+    sheetDescriptionMaterial,
+    alertDialogMaterial,
+    alertDialogTriggerMaterial,
+    alertDialogContentMaterial,
+    alertDialogHeaderMaterial,
+    alertDialogActionMaterial,
+    alertDialogCancelMaterial,
+    popoverMaterial,
+    popoverTriggerMaterial,
+    popoverContentMaterial,
+    tooltipMaterial,
+    tooltipTriggerMaterial,
+    tooltipContentMaterial,
+    dropdownMenuMaterial,
+    dropdownMenuTriggerMaterial,
+    dropdownMenuContentMaterial,
+    dropdownMenuItemMaterial,
+    contextMenuMaterial,
+    contextMenuTriggerMaterial,
+    contextMenuContentMaterial,
+    hoverCardMaterial,
+    hoverCardTriggerMaterial,
+    hoverCardContentMaterial,
+    drawerMaterial,
+    drawerTriggerMaterial,
+    drawerContentMaterial,
+    drawerHeaderMaterial,
+    collapsibleMaterial,
+    collapsibleTriggerMaterial,
+    collapsibleContentMaterial,
   ]);
 
   defaultRegistry = registry;

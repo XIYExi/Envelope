@@ -1,5 +1,6 @@
 "use client";
 
+import { useCanvasStore } from "@envelope/engine";
 import { useEditorStore } from "@/stores/editor";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -10,33 +11,32 @@ import {
   PanelRightOpen,
   Undo2,
   Redo2,
-  MousePointer2,
   Monitor,
   Tablet,
   Smartphone,
+  Trash2,
 } from "lucide-react";
-import type { EditorState } from "@/stores/editor.types";
+import type { CanvasState } from "@envelope/engine";
 
-const viewportIcons: Record<EditorState["canvasViewport"], React.ReactNode> = {
+const viewportIcons: Record<CanvasState["viewport"], React.ReactNode> = {
   desktop: <Monitor className="h-4 w-4" />,
   tablet: <Tablet className="h-4 w-4" />,
   mobile: <Smartphone className="h-4 w-4" />,
-  fluid: <MousePointer2 className="h-4 w-4" />,
+  fluid: <Monitor className="h-4 w-4" />,
 };
 
-const viewportLabels: Record<EditorState["canvasViewport"], string> = {
-  desktop: "Desktop",
-  tablet: "Tablet",
-  mobile: "Mobile",
+const viewportLabels: Record<CanvasState["viewport"], string> = {
+  desktop: "Desktop (1440px)",
+  tablet: "Tablet (768px)",
+  mobile: "Mobile (375px)",
   fluid: "Fluid",
 };
 
-const viewports = ["desktop", "tablet", "mobile", "fluid"] as const;
+const viewports: CanvasState["viewport"][] = ["desktop", "tablet", "mobile", "fluid"];
 
 export function EditorToolbar() {
+  const { viewport, setViewport, deleteSelected, selectedIds, components } = useCanvasStore();
   const {
-    canvasViewport,
-    setCanvasViewport,
     toggleLeftPanel,
     toggleRightPanel,
     leftPanelCollapsed,
@@ -45,7 +45,17 @@ export function EditorToolbar() {
     canRedo,
     undo,
     redo,
+    pushSnapshot,
   } = useEditorStore();
+
+  const handleDelete = () => {
+    pushSnapshot();
+    deleteSelected();
+  };
+
+  const handleViewportChange = (vp: CanvasState["viewport"]) => {
+    setViewport(vp);
+  };
 
   return (
     <div className="flex h-10 items-center gap-1 border-b bg-background px-2">
@@ -72,10 +82,10 @@ export function EditorToolbar() {
         {viewports.map((vp) => (
           <Button
             key={vp}
-            variant={canvasViewport === vp ? "secondary" : "ghost"}
+            variant={viewport === vp ? "secondary" : "ghost"}
             size="sm"
             className="h-7 rounded-none px-2 first:rounded-l-md last:rounded-r-md"
-            onClick={() => setCanvasViewport(vp)}
+            onClick={() => handleViewportChange(vp)}
             title={viewportLabels[vp]}
           >
             {viewportIcons[vp]}
@@ -83,7 +93,20 @@ export function EditorToolbar() {
         ))}
       </div>
 
+      <span className="ml-1 text-[10px] text-muted-foreground">
+        {components.length} components
+      </span>
+
       <div className="flex-1" />
+
+      {selectedIds.length > 0 && (
+        <>
+          <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={handleDelete}>
+            <Trash2 className="h-4 w-4" />
+          </Button>
+          <Separator orientation="vertical" className="mx-1 h-5" />
+        </>
+      )}
 
       <Button variant="ghost" size="icon" className="h-8 w-8" onClick={toggleRightPanel}>
         {rightPanelCollapsed ? (

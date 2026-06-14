@@ -1,0 +1,66 @@
+import type { MaterialDefinition } from "../../types/material";
+
+export const sliderMaterial: MaterialDefinition = {
+  name: "Slider",
+  displayName: "Slider",
+  description: "An input where the user selects a value from within a range.",
+  category: "form",
+  icon: "GripHorizontal",
+  editableProps: [
+    {
+      key: "defaultValue",
+      label: "Default Value",
+      type: "number",
+      defaultValue: 50,
+      group: "Behavior",
+      order: 1,
+    },
+    {
+      key: "min",
+      label: "Minimum",
+      type: "number",
+      defaultValue: 0,
+      group: "Behavior",
+      order: 2,
+    },
+    {
+      key: "max",
+      label: "Maximum",
+      type: "number",
+      defaultValue: 100,
+      group: "Behavior",
+      order: 3,
+    },
+    {
+      key: "step",
+      label: "Step",
+      type: "number",
+      defaultValue: 1,
+      min: 0.1,
+      group: "Behavior",
+      order: 4,
+    },
+    {
+      key: "disabled",
+      label: "Disabled",
+      type: "switch",
+      defaultValue: false,
+      group: "State",
+      order: 5,
+    },
+    {
+      key: "className",
+      label: "Tailwind Classes",
+      type: "tailwind",
+      group: "Styling",
+      order: 10,
+    },
+    {
+      key: "comment",
+      label: "Comment",
+      type: "textarea",
+      group: "Documentation",
+      order: 20,
+    },
+  ],
+};

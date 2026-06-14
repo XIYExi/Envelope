@@ -1,14 +1,19 @@
-/**
- * 弹层组件物料导出
- *
- * 预留目录，用于放置弹层类组件的物料定义：
- * - Dialog: 对话框
- * - Sheet: 侧边抽屉
- * - Popover: 气泡弹出层
- * - Tooltip: 提示工具
- * - AlertDialog: 确认对话框
- *
- * @author xiye
- * @date 2026/6/14
- */
-export {};
+export {
+  dialogMaterial, dialogTriggerMaterial, dialogContentMaterial,
+  dialogHeaderMaterial, dialogTitleMaterial, dialogDescriptionMaterial, dialogFooterMaterial,
+} from "./dialog";
+export {
+  sheetMaterial, sheetTriggerMaterial, sheetContentMaterial,
+  sheetHeaderMaterial, sheetTitleMaterial, sheetDescriptionMaterial,
+} from "./sheet";
+export {
+  alertDialogMaterial, alertDialogTriggerMaterial, alertDialogContentMaterial,
+  alertDialogHeaderMaterial, alertDialogActionMaterial, alertDialogCancelMaterial,
+} from "./alert-dialog";
+export { popoverMaterial, popoverTriggerMaterial, popoverContentMaterial } from "./popover";
+export { tooltipMaterial, tooltipTriggerMaterial, tooltipContentMaterial } from "./tooltip";
+export { dropdownMenuMaterial, dropdownMenuTriggerMaterial, dropdownMenuContentMaterial, dropdownMenuItemMaterial } from "./dropdown-menu";
+export { contextMenuMaterial, contextMenuTriggerMaterial, contextMenuContentMaterial } from "./context-menu";
+export { hoverCardMaterial, hoverCardTriggerMaterial, hoverCardContentMaterial } from "./hover-card";
+export { drawerMaterial, drawerTriggerMaterial, drawerContentMaterial, drawerHeaderMaterial } from "./drawer";
+export { collapsibleMaterial, collapsibleTriggerMaterial, collapsibleContentMaterial } from "./collapsible";
