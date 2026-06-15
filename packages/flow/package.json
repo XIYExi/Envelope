@@ -14,11 +14,12 @@
   "dependencies": {
     "@xyflow/react": "^12.3.0",
     "yaml": "^2.5.0",
-    "zod": "^3.23.0"
+    "zod": "^3.23.0",
+    "zustand": "^4.5.7"
   },
   "devDependencies": {
-    "typescript": "^5.5.0",
-    "@types/react": "^18.3.0"
+    "@types/react": "^18.3.0",
+    "typescript": "^5.5.0"
   },
   "peerDependencies": {
     "react": "^18.3.0",

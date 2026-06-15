@@ -12,6 +12,7 @@
 import { useMemo, useCallback, useRef } from "react";
 import { useCanvasStore, PropertyEditor } from "@envelope/engine";
 import { createDefaultRegistry } from "@envelope/materials";
+import { useFlowBindingStore } from "@envelope/flow";
 import { cn } from "@/lib/utils";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -36,6 +37,8 @@ export function RightPanel({ collapsed }: RightPanelProps) {
     setPageBackground, pageBackground, pagePadding, setPagePadding,
     updateComponent,
   } = useCanvasStore();
+
+  const flowList = useFlowBindingStore((s) => s.flowList);
 
   const selected = components.filter((c) => selectedIds.includes(c.id));
   const selectedComp = selected.length === 1 ? selected[0] : null;
@@ -160,6 +163,7 @@ export function RightPanel({ collapsed }: RightPanelProps) {
                 editableProps={material.editableProps}
                 values={(selectedComp.node.props ?? {}) as Record<string, unknown>}
                 onChange={handlePropChange}
+                flowList={flowList}
               />
             ) : (
               <div className="py-2 text-center text-[10px] text-muted-foreground">

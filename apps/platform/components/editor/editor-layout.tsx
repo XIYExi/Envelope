@@ -23,6 +23,8 @@ import { RightPanel } from "./right-panel";
 import { LeftPanel } from "./left-panel";
 import { DataModelEditor } from "./data-model-editor";
 import { RoutingEditor } from "./routing-editor";
+import { ApiEndpointEditor } from "./api-endpoint-editor";
+import { FlowEditor } from "@envelope/flow";
 
 /**
  * 画布放置区域组件
@@ -63,7 +65,8 @@ const CanvasDropZone = memo(function CanvasDropZone() {
       if (e.ctrlKey || e.metaKey) {
         e.preventDefault();
         const delta = e.deltaY > 0 ? -0.05 : 0.05;
-        setZoom(zoomRef.current + delta);
+        const newZoom = Math.min(2.0, Math.max(0.25, zoomRef.current + delta));
+        setZoom(newZoom);
       }
     };
     const el = canvasRef.current;
@@ -110,6 +113,7 @@ export function EditorLayout() {
     canvasViewport, editorMode,
   } = useEditorStore();
   const { addComponent, copySelected, components, setViewport } = useCanvasStore();
+  const isPageMode = editorMode === "pages";
 
   const registry = useMemo(() => createDefaultRegistry(), []);
 
@@ -154,8 +158,9 @@ export function EditorLayout() {
     setViewport(canvasViewport);
   }, [canvasViewport, setViewport]);
 
-  // 全局键盘快捷键（仅当不在输入框内时生效）
+  // 全局键盘快捷键（仅当不在输入框内且处于 pages 模式时生效）
   useEffect(() => {
+    if (!isPageMode) return;
     /**
      * 键盘事件处理
      *
@@ -190,9 +195,8 @@ export function EditorLayout() {
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [copySelected, pushSnapshot]);
+  }, [copySelected, pushSnapshot, isPageMode]);
 
-  const isPageMode = editorMode === "pages";
 
   return (
     <div className="flex h-screen flex-col">
@@ -216,16 +220,8 @@ export function EditorLayout() {
           <div className="flex-1 overflow-hidden">
             {editorMode === "data-models" && <DataModelEditor />}
             {editorMode === "routing" && <RoutingEditor />}
-            {editorMode === "flows" && (
-              <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
-                Flow Editor — Coming Soon
-              </div>
-            )}
-            {editorMode === "api" && (
-              <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
-                API Endpoint Editor — Coming Soon
-              </div>
-            )}
+            {editorMode === "flows" && <FlowEditor />}
+            {editorMode === "api" && <ApiEndpointEditor />}
           </div>
           <RightPanel collapsed={rightPanelCollapsed} />
         </div>

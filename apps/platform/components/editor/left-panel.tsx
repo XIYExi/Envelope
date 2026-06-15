@@ -1,7 +1,7 @@
 /**
  * 左侧导航面板 — 编辑器模式切换
  *
- * 提供项目级模式导航：页面编辑、数据模型、路由、流程（开发中）、API（开发中）。
+ * 提供项目级模式导航：页面编辑、数据模型、路由、流程、API 端点。
  * 下方保留组件库、主题、设置等占位（Coming Soon）。
  *
  * @author xiye
@@ -39,8 +39,8 @@ const NAV_ITEMS: NavItemDef[] = [
   { id: "pages", label: "Pages", icon: <FileText className="h-3.5 w-3.5" /> },
   { id: "data-models", label: "Data Models", icon: <Database className="h-3.5 w-3.5" /> },
   { id: "routing", label: "Routing", icon: <Globe className="h-3.5 w-3.5" /> },
-  { id: "flows", label: "Flows", icon: <Workflow className="h-3.5 w-3.5" />, comingSoon: true },
-  { id: "api", label: "API Endpoints", icon: <Plug className="h-3.5 w-3.5" />, comingSoon: true },
+  { id: "flows", label: "Flows", icon: <Workflow className="h-3.5 w-3.5" /> },
+  { id: "api", label: "API Endpoints", icon: <Plug className="h-3.5 w-3.5" /> },
 ];
 
 /**

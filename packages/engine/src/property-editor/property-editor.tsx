@@ -19,11 +19,13 @@ import type { EditableProp } from "@envelope/materials";
  * @param editableProps - 材料的可编辑属性定义数组
  * @param values - 当前属性值对象，key 为属性字段名
  * @param onChange - 属性值变更回调，接收字段 key 和新值
+ * @param flowList - 可选，可用流程列表，供 eventBinding 字段显示下拉选择
  */
 export interface PropertyEditorProps {
   editableProps: EditableProp[];
   values: Record<string, unknown>;
   onChange: (key: string, value: unknown) => void;
+  flowList?: { id: string; name: string }[];
 }
 
 /** 将可编辑属性按 group 字段分组，使用 Map 保证插入顺序 */
@@ -55,6 +57,7 @@ interface FieldWrapperProps {
   prop: EditableProp;
   value: unknown;
   onChange: (key: string, value: unknown) => void;
+  flowList?: { id: string; name: string }[];
 }
 
 /** 文本字段 —— 单行文本输入 */
@@ -337,19 +340,40 @@ function DataBindField({ prop, value, onChange }: FieldWrapperProps) {
   );
 }
 
-/** 事件绑定字段 —— 绑定到业务流程，值为 Flow ID */
-function EventBindField({ prop, value, onChange }: FieldWrapperProps) {
+/** 事件绑定字段 —— 绑定到业务流程，有可用流程时显示下拉选择 */
+function EventBindField({ prop, value, onChange, flowList }: FieldWrapperProps) {
+  const currentValue = typeof value === "string" ? value : "";
+
   return (
     <div>
-      <FieldLabel label={prop.label} required={prop.required} comment={prop.comment ?? "Bind this event to a business flow"} />
-      <input
-        type="text"
-        value={typeof value === "string" ? value : ""}
-        placeholder={prop.placeholder ?? "flow-id"}
-        onChange={(e) => onChange(prop.key, e.target.value)}
-        className="h-7 w-full rounded border bg-background px-2 font-mono text-[10px] focus:outline-none focus:ring-1 focus:ring-blue-500"
-      />
-      <p className="mt-0.5 text-[9px] text-muted-foreground">Bind to flow ID from Flows panel</p>
+      <FieldLabel label={prop.label} required={prop.required} comment={prop.comment ?? "将组件事件绑定到业务流程"} />
+      {flowList && flowList.length > 0 ? (
+        <select
+          value={currentValue}
+          onChange={(e) => onChange(prop.key, e.target.value)}
+          className="h-7 w-full rounded border bg-background px-2 text-[10px] focus:outline-none focus:ring-1 focus:ring-blue-500"
+        >
+          <option value="">-- 不绑定 --</option>
+          {flowList.map((flow) => (
+            <option key={flow.id} value={flow.id}>
+              {flow.name} ({flow.id})
+            </option>
+          ))}
+        </select>
+      ) : (
+        <input
+          type="text"
+          value={currentValue}
+          placeholder={prop.placeholder ?? "flow-id"}
+          onChange={(e) => onChange(prop.key, e.target.value)}
+          className="h-7 w-full rounded border bg-background px-2 font-mono text-[10px] focus:outline-none focus:ring-1 focus:ring-blue-500"
+        />
+      )}
+      <p className="mt-0.5 text-[9px] text-muted-foreground">
+        {flowList && flowList.length > 0
+          ? "选择要绑定的流程"
+          : "从 Flows 面板创建流程后，此处可选择绑定"}
+      </p>
     </div>
   );
 }
@@ -384,7 +408,7 @@ const FIELD_COMPONENTS: Record<string, React.FC<FieldWrapperProps>> = {
  * @param values - 当前属性值对象
  * @param onChange - 属性值变更回调，接收字段 key 和新值
  */
-export function PropertyEditor({ editableProps, values, onChange }: PropertyEditorProps) {
+export function PropertyEditor({ editableProps, values, onChange, flowList }: PropertyEditorProps) {
   const grouped = groupProps(editableProps);
 
   if (editableProps.length === 0) {
@@ -414,6 +438,7 @@ export function PropertyEditor({ editableProps, values, onChange }: PropertyEdit
                     prop={prop}
                     value={value}
                     onChange={onChange}
+                    flowList={flowList}
                   />
                 );
               })}

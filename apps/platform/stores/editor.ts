@@ -58,8 +58,8 @@ export const useEditorStore = create<EditorState & EditorActions>()(
       /** 选中画布组件 */
       selectComponent: (id) => set({ selectedComponentId: id }),
 
-      /** 设置画布缩放比例 */
-      setCanvasScale: (canvasScale) => set({ canvasScale }),
+      /** 设置画布缩放比例（自动钳制在 0.25-2.0 范围内） */
+      setCanvasScale: (scale) => set({ canvasScale: Math.min(2.0, Math.max(0.25, scale)) }),
 
       /** 设置画布视口预设 */
       setCanvasViewport: (canvasViewport) => set({ canvasViewport }),
@@ -94,7 +94,10 @@ export const useEditorStore = create<EditorState & EditorActions>()(
       pushSnapshot: () => {
         const state = get();
         const snapshot = takeSnapshot(state);
-        const newHistory = state.history.slice(0, state.historyIndex + 1);
+        const stateObj = state as EditorState & EditorActions;
+        const lastSnapshot = stateObj.history[stateObj.historyIndex];
+        if (lastSnapshot && JSON.stringify(lastSnapshot) === JSON.stringify(snapshot)) return;
+        const newHistory = stateObj.history.slice(0, stateObj.historyIndex + 1);
         newHistory.push(snapshot);
         set({
           history: newHistory,

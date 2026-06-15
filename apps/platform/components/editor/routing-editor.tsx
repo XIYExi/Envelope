@@ -17,6 +17,7 @@ import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Plus, Trash2, Route, Globe, Shield, Menu, FileCode } from "lucide-react";
+import { useFlowBindingStore } from "@envelope/flow";
 import { cn } from "@/lib/utils";
 
 /** 路由定义 —— 包含路径、类型、父子关系、认证、SEO、导航等全部配置 */
@@ -306,6 +307,10 @@ export function RoutingEditor() {
     DEFAULT_ROUTES[0]?.id ?? null,
   );
 
+  const flowList = useFlowBindingStore((s) => s.flowList);
+  const bindEndpoint = useFlowBindingStore((s) => s.bindEndpoint);
+  const unbindEndpoint = useFlowBindingStore((s) => s.unbindEndpoint);
+
   const tree = useMemo(() => buildTree(routes), [routes]);
   const flatTree = useMemo(() => flattenTree(tree), [tree]);
 
@@ -351,7 +356,7 @@ export function RoutingEditor() {
     }
 
     setRoutes((prev) => prev.filter((r) => r.id !== id && !childIds.has(r.id)));
-    if (selectedRouteId === id || childIds.has(selectedRouteId!)) {
+    if (selectedRouteId === id || (selectedRouteId && childIds.has(selectedRouteId))) {
       const rootRoute = routes.find((r) => r.path === "/");
       setSelectedRouteId(rootRoute?.id ?? null);
     }
@@ -578,14 +583,38 @@ export function RoutingEditor() {
                         { value: "DELETE", label: "DELETE" },
                       ]}
                     />
-                    <CompactInput
-                      label="Bound Flow"
-                      value={selectedRoute.boundFlow}
-                      onChange={(v) =>
-                        updateRoute(selectedRoute.id, { boundFlow: v })
-                      }
-                      placeholder="flow-xxxx"
-                    />
+                    {flowList.length > 0 ? (
+                      <SelectField
+                        label="Bound Flow"
+                        value={selectedRoute.boundFlow}
+                        onChange={(v) => {
+                          updateRoute(selectedRoute.id, { boundFlow: v });
+                          if (v) {
+                            bindEndpoint(selectedRoute.id, v);
+                          } else {
+                            unbindEndpoint(selectedRoute.id);
+                          }
+                        }}
+                        options={[
+                          { value: "", label: "-- 不绑定 --" },
+                          ...flowList.map((f) => ({ value: f.id, label: `${f.name} (${f.id})` })),
+                        ]}
+                      />
+                    ) : (
+                      <CompactInput
+                        label="Bound Flow"
+                        value={selectedRoute.boundFlow}
+                        onChange={(v) => {
+                          updateRoute(selectedRoute.id, { boundFlow: v });
+                          if (v) {
+                            bindEndpoint(selectedRoute.id, v);
+                          } else {
+                            unbindEndpoint(selectedRoute.id);
+                          }
+                        }}
+                        placeholder="flow-xxxx"
+                      />
+                    )}
                   </div>
                 </>
               )}
