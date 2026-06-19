@@ -113,9 +113,16 @@ export function makeEventBindingKey(componentId: string, event: BindableEvent): 
  */
 export function parseEventBindingKey(key: string): ParsedEventBinding | null {
   const lastSep = key.lastIndexOf("::");
-  if (lastSep < 0) return null;
+  if (lastSep <= 0 || lastSep + 2 >= key.length) return null;
+  const componentId = key.slice(0, lastSep);
+  const eventRaw = key.slice(lastSep + 2);
+  const VALID_EVENTS = new Set<BindableEvent>([
+    "onClick", "onSubmit", "onChange", "onFocus", "onBlur",
+    "onMouseEnter", "onMouseLeave", "onKeyDown", "onPageLoad", "onPageUnload",
+  ]);
+  if (!VALID_EVENTS.has(eventRaw as BindableEvent)) return null;
   return {
-    componentId: key.slice(0, lastSep),
-    event: key.slice(lastSep + 2) as BindableEvent,
+    componentId,
+    event: eventRaw as BindableEvent,
   };
 }

@@ -73,9 +73,12 @@ type XYPosition = { x: number; y: number };
 // 工具函数
 // ═══════════════════════════════════════════════════════════════════
 
-/** 生成唯一 ID */
+/** 生成唯一 ID（兼容非浏览器环境回退） */
 function uid(): string {
-  return crypto.randomUUID();
+  if (typeof crypto !== "undefined" && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+  return `${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
 }
 
 /** 获取分类的中文名称 */
@@ -161,7 +164,7 @@ function PortHandle({ port, side, index, total }: PortHandleProps) {
  * 头部颜色和图标来自节点类型定义。
  * 选中时边框高亮。
  */
-function FlowNodeComponent({ id, data, selected }: NodeProps) {
+function FlowNodeComponent({ data, selected }: NodeProps) {
   const nodeType = data?.type as FlowNodeType | undefined;
   const label = (data?.label as string) || nodeType || "";
   const def = nodeType ? NODE_DEFINITION_MAP.get(nodeType) : undefined;
@@ -233,8 +236,11 @@ export function FlowEditor() {
     description: "",
   });
 
+  /** 初始化两个默认节点（开始 + 结束），仅在首次挂载时计算 */
+  const initialNodes = useMemo(() => getInitialNodes(), []);
+
   // React Flow 节点和边状态
-  const [nodes, setNodes, onNodesChangeBase] = useNodesState<Node>(getInitialNodes());
+  const [nodes, setNodes, onNodesChangeBase] = useNodesState<Node>(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
 
   // 选中的节点 ID
@@ -471,7 +477,7 @@ export function FlowEditor() {
     a.href = url;
     a.download = `${flowMeta.thing}.flow.yaml`;
     a.click();
-    URL.revokeObjectURL(url);
+    setTimeout(() => URL.revokeObjectURL(url), 100);
   }, [nodes, edges, flowMeta]);
 
   /**
@@ -483,13 +489,14 @@ export function FlowEditor() {
     input.accept = ".yaml,.yml";
     input.onchange = () => {
       const file = input.files?.[0];
-      if (!file) return;
+      if (!file) { input.remove(); return; }
       const reader = new FileReader();
       reader.onload = () => {
         const text = reader.result as string;
         const result = yamlToJson(text);
         if (!result.success || !result.data || typeof result.data === "string") {
           alert(`YAML 导入失败: ${result.error}`);
+          input.remove();
           return;
         }
         const flowDef = result.data;
@@ -530,9 +537,13 @@ export function FlowEditor() {
         setSelectedNodeId(null);
         setRightPanelOpen(false);
         nodeCounter.current = newNodes.length;
+        input.remove();
       };
       reader.readAsText(file);
     };
+    // 挂载到 DOM 以确保功能正常，完成后自动清理
+    input.style.display = "none";
+    document.body.appendChild(input);
     input.click();
   }, [setNodes, setEdges]);
 

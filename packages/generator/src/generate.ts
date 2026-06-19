@@ -149,8 +149,11 @@ export async function generateProject(
 
     for (const page of config.pages) {
       const pageCode = generatePageCode(page);
-      const filePath = page.path
-        ? `app/${page.path}/page.tsx`
+      const normalizedPath = page.path
+        ? page.path.replace(/^\/+|\/+$/g, "").replace(/\/+/g, "/")
+        : "";
+      const filePath = normalizedPath
+        ? `app/${normalizedPath}/page.tsx`
         : `app/page.tsx`;
 
       fs.addFile(filePath, pageCode);

@@ -16,7 +16,7 @@
 
 "use client";
 
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
@@ -552,27 +552,37 @@ export function ApiEndpointEditor() {
     setDeleteConfirm(null);
   }
 
-  /** 模拟发送测试请求 */
+  /** 模拟发送测试请求 — 使用 ref 防止闭包过期和组件卸载后的 setState */
+  const selectedRef = useRef(selected);
+  selectedRef.current = selected;
+  const testBodyRef = useRef(testRequestBody);
+  testBodyRef.current = testRequestBody;
+  const mountedRef = useRef(true);
+  useEffect(() => () => { mountedRef.current = false; }, []);
+
   function handleTestRequest() {
-    if (!selected) return;
+    if (!selectedRef.current) return;
     setTestRunning(true);
     setTestResponse("");
     setTestStatus(null);
 
-    // Mock: 模拟 800ms 延迟后返回成功或错误
+    const currentSelected = selectedRef.current;
+    const currentBody = testBodyRef.current;
+
     setTimeout(() => {
+      if (!mountedRef.current) return;
       try {
-        const body = testRequestBody.trim() ? JSON.parse(testRequestBody) : {};
-        const errors = selected.errorResponses;
+        const body = currentBody.trim() ? JSON.parse(currentBody) : {};
+        const errors = currentSelected.errorResponses;
         if (Math.random() < 0.3 && errors.length > 0) {
           const err = errors[Math.floor(Math.random() * errors.length)]!;
           setTestStatus(err.statusCode);
           setTestResponse(err.exampleBody);
         } else {
-          setTestStatus(selected.successStatus);
+          setTestStatus(currentSelected.successStatus);
           setTestResponse(
-            selected.successExample ||
-              JSON.stringify({ ok: true, method: selected.method, path: selected.path, received: body }, null, 2),
+            currentSelected.successExample ||
+              JSON.stringify({ ok: true, method: currentSelected.method, path: currentSelected.path, received: body }, null, 2),
           );
         }
       } catch {
@@ -600,6 +610,7 @@ export function ApiEndpointEditor() {
   function updateQueryParam(index: number, patch: Partial<QueryParam>) {
     if (!selected) return;
     const qp = [...selected.queryParams];
+    if (index < 0 || index >= qp.length) return;
     qp[index] = { ...qp[index], ...patch } as QueryParam;
     update(selected.id, { queryParams: qp });
   }
@@ -622,6 +633,7 @@ export function ApiEndpointEditor() {
   function updateHeader(index: number, patch: Partial<RequestHeader>) {
     if (!selected) return;
     const h = [...selected.headers];
+    if (index < 0 || index >= h.length) return;
     h[index] = { ...h[index], ...patch } as RequestHeader;
     update(selected.id, { headers: h });
   }
@@ -647,6 +659,7 @@ export function ApiEndpointEditor() {
   function updateErrorResponse(index: number, patch: Partial<ErrorResponse>) {
     if (!selected) return;
     const er = [...selected.errorResponses];
+    if (index < 0 || index >= er.length) return;
     er[index] = { ...er[index], ...patch } as ErrorResponse;
     update(selected.id, { errorResponses: er });
   }
@@ -666,7 +679,7 @@ export function ApiEndpointEditor() {
     a.href = url;
     a.download = "openapi.json";
     a.click();
-    URL.revokeObjectURL(url);
+    setTimeout(() => URL.revokeObjectURL(url), 100);
   }
 
   // ─── Render ──────────────────────────────────────────────────────────────
@@ -1045,9 +1058,10 @@ export function ApiEndpointEditor() {
                       type="number"
                       value={selected.rateLimitRPM}
                       min={1}
-                      onChange={(e) =>
-                        update(selected.id, { rateLimitRPM: Number(e.target.value) || 1 })
-                      }
+                      onChange={(e) => {
+                        const raw = e.target.value;
+                        update(selected.id, { rateLimitRPM: raw === "" ? 0 : Math.max(1, Number(raw)) });
+                      }}
                       className="h-6 w-20 rounded border bg-background px-1.5 text-[10px] focus:outline-none focus:ring-1 focus:ring-blue-500"
                     />
                     <span className="text-[10px] text-muted-foreground">requests / minute</span>

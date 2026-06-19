@@ -43,7 +43,11 @@ function propBool(props: Record<string, unknown> | undefined, key: string, fallb
   const v = props?.[key];
   if (v === undefined || v === null) return fallback;
   if (typeof v === "boolean") return v;
-  if (typeof v === "string") return v === "true";
+  if (typeof v === "string") {
+    const lower = v.toLowerCase();
+    return lower === "true" || lower === "1";
+  }
+  if (typeof v === "number") return v !== 0;
   return Boolean(v);
 }
 

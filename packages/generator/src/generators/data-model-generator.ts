@@ -105,9 +105,17 @@ function columnToSQL(col: ColumnDefinition): string {
     );
   }
 
-  // CHECK 约束
+  // CHECK 约束 — 验证括号平衡，防止语法注入
   if (col.checkConstraint) {
-    parts.push(`CHECK (${col.checkConstraint})`);
+    const expr = col.checkConstraint.trim();
+    const openParens = (expr.match(/\(/g) || []).length;
+    const closeParens = (expr.match(/\)/g) || []).length;
+    if (openParens === closeParens) {
+      parts.push(`CHECK (${expr})`);
+    } else {
+      // 括号不匹配时用 SQL 注释标记
+      parts.push(`-- WARNING: CHECK skipped — parentheses mismatch in: ${JSON.stringify(expr)}`);
+    }
   }
 
   return parts.join(" ");
