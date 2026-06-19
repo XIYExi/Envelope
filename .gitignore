@@ -7,6 +7,7 @@ node_modules/
 .next/
 dist/
 .turbo/
+*.tsbuildinfo
 
 # Environment
 .env
@@ -29,6 +30,9 @@ npm-debug.log*
 # Electron
 release/
 out/
+apps/electron/platform-build
+apps/electron/release/
+apps/electron/dist/
 
 # Testing
 coverage/
@@ -38,5 +42,4 @@ coverage/
 .vscode/
 .idea/
 .mimocode/
-
 

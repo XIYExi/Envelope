@@ -1,1 +1,1 @@
-{"/_not-found/page":"/_not-found","/(auth)/login/page":"/login","/(editor)/inner/page":"/inner","/api/auth/callback/route":"/api/auth/callback","/(auth)/signup/page":"/signup","/api/projects/route":"/api/projects","/api/projects/[id]/route":"/api/projects/[id]","/page":"/"}
+{"/_not-found/page":"/_not-found","/(auth)/login/page":"/login","/api/projects/[id]/route":"/api/projects/[id]","/(editor)/inner/page":"/inner","/page":"/","/(auth)/signup/page":"/signup","/api/auth/callback/route":"/api/auth/callback","/api/projects/route":"/api/projects"}
