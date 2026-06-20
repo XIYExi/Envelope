@@ -1,5 +1,6 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { Database } from "@/lib/supabase/database.types";
+import { resetPlatformBackendConfigForTests } from "@/lib/backend/config";
 import { importProjectArchive } from "@/lib/archive/import-archive";
 import type { ProjectArchive } from "@/lib/archive/archive-types";
 
@@ -79,15 +80,27 @@ function createMockSupabase() {
       return chain;
     };
 
-    builder.upsert = async (input: any, opts: { onConflict: string }) => {
+    builder.upsert = (input: any, opts: { onConflict: string }) => {
       const rows = Array.isArray(input) ? input : [input];
+      const affected: AnyRow[] = [];
       const keys = opts.onConflict.split(",").map((s) => s.trim());
       for (const r of rows) {
         const existing = (state as any)[t].find((x: AnyRow) => keys.every((k) => x[k] === r[k]));
-        if (existing) Object.assign(existing, r);
-        else (state as any)[t].push({ id: genId(), ...r });
+        if (existing) {
+          Object.assign(existing, r);
+          affected.push(existing);
+        } else {
+          const inserted = { ...(r?.id ? { id: r.id } : { id: genId() }), ...r };
+          (state as any)[t].push(inserted);
+          affected.push(inserted);
+        }
       }
-      return { error: null };
+      const chain: any = {};
+      chain.select = () => chain;
+      chain.single = async <T>() => ({ data: affected[0] as T, error: null });
+      chain.returns = async <T>() => ({ data: affected as T, error: null });
+      chain.then = (resolve: (value: { error: null; data: AnyRow[] }) => unknown) => resolve({ error: null, data: affected });
+      return chain;
     };
 
     builder.update = (patch: AnyRow) => {
@@ -106,13 +119,9 @@ function createMockSupabase() {
     builder.eq = (key: string, value: any) => {
       oldEq(key, value);
       if (pendingUpdate) {
-        return {
-          then: undefined,
-          ...builder,
-          async then() {
-            return applyUpdate();
-          },
-        };
+        const pendingBuilder = { ...builder } as typeof builder & { then?: () => Promise<{ error: null }> };
+        pendingBuilder.then = async () => applyUpdate();
+        return pendingBuilder;
       }
       return builder;
     };
@@ -126,6 +135,20 @@ function createMockSupabase() {
 
   return { auth, from, __state: state } as any;
 }
+
+beforeEach(() => {
+  process.env.ENVELOPE_PLATFORM_BACKEND = "supabase";
+  process.env.NEXT_PUBLIC_SUPABASE_URL = "https://example.supabase.co";
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = "test-anon-key";
+  resetPlatformBackendConfigForTests();
+});
+
+afterEach(() => {
+  delete process.env.ENVELOPE_PLATFORM_BACKEND;
+  delete process.env.NEXT_PUBLIC_SUPABASE_URL;
+  delete process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  resetPlatformBackendConfigForTests();
+});
 
 describe("archive import", () => {
   it("imports create mode and resolves references", async () => {
@@ -164,11 +187,18 @@ describe("archive import", () => {
       auth: { providers: [{ name: "email", enabled: true, config: {} }], redirect_urls: { afterLogin: "/" }, session_config: {} },
     };
 
-    const result = await importProjectArchive(supabase, archive, {
-      mode: "create",
-      conflictStrategy: "overwrite",
-      danglingRefPolicy: "error",
-    });
+    const result = await importProjectArchive(
+      archive,
+      {
+        mode: "create",
+        conflictStrategy: "overwrite",
+        danglingRefPolicy: "error",
+      },
+      {
+        ownerUserId: "user_1",
+        supabase,
+      },
+    );
 
     expect(result.projectId).toMatch(/^id_/);
     expect(supabase.__state.projects).toHaveLength(1);

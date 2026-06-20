@@ -1,22 +1,18 @@
 import { NextResponse } from "next/server";
-import { createServerSupabase } from "@/lib/supabase/server";
 import { jsonError } from "@/lib/api/response";
 import { apiErrors } from "@/lib/api/errors";
+import { requireRuntimeUserId } from "@/lib/backend/runtime-user";
 import { getArchiveExportTaskForUser, getArchiveImportTaskForUser } from "@/lib/archive/archive-task-manager";
 
 export const runtime = "nodejs";
 
 export async function GET(_request: Request, { params }: { params: { taskId: string } }) {
   try {
-    const supabase = await createServerSupabase();
-    const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-    if (sessionError) throw sessionError;
-    if (!sessionData.session?.user?.id) throw apiErrors.unauthorized();
-
-    const exportTask = getArchiveExportTaskForUser(params.taskId, sessionData.session.user.id);
+    const userId = await requireRuntimeUserId();
+    const exportTask = getArchiveExportTaskForUser(params.taskId, userId);
     if (exportTask) return NextResponse.json({ task: exportTask });
 
-    const importTask = getArchiveImportTaskForUser(params.taskId, sessionData.session.user.id);
+    const importTask = getArchiveImportTaskForUser(params.taskId, userId);
     if (importTask) return NextResponse.json({ task: importTask });
 
     throw apiErrors.notFound("Archive task not found", "ARCHIVE_TASK.NOT_FOUND");

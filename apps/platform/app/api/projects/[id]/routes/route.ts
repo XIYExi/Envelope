@@ -1,21 +1,21 @@
 import { NextResponse } from "next/server";
-import { createServerSupabase } from "@/lib/supabase/server";
 import { jsonError } from "@/lib/api/response";
-import { apiErrors } from "@/lib/api/errors";
 import { getProjectRoutes } from "@/lib/services/project-routes.service";
 
 /**
- * 只读：项目路由列表
+ * 项目路由列表接口。
  *
- * 说明：
- * - 当前主要用于编辑器侧“配置归档导出（部分选择）”拉取资源清单
+ * 核心链路：
+ * - Route Handler 只做 HTTP 协议层包装；
+ * - service 通过统一资源仓储门面选择 Supabase 或 SQLite；
+ * - 从而让本地模式下的路由查询也走相同 API。
+ *
+ * @author xiye
+ * @date 2026-06-20
+ * @since 第二阶段后端门面重构
  */
 export async function GET(_request: Request, { params }: { params: { id: string } }) {
   try {
-    const supabase = await createServerSupabase();
-    const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-    if (sessionError) throw sessionError;
-    if (!sessionData.session) throw apiErrors.unauthorized();
     const routes = await getProjectRoutes(params.id);
     return NextResponse.json(routes);
   } catch (error) {

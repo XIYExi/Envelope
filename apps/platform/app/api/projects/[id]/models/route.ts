@@ -1,21 +1,21 @@
 import { NextResponse } from "next/server";
-import { createServerSupabase } from "@/lib/supabase/server";
 import { jsonError } from "@/lib/api/response";
-import { apiErrors } from "@/lib/api/errors";
 import { getProjectModels } from "@/lib/services/project-models.service";
 
 /**
- * 只读：项目数据模型列表
+ * 项目数据模型列表接口。
  *
- * 说明：
- * - 当前主要用于编辑器侧“配置归档导出（部分选择）”拉取资源清单
+ * 核心链路：
+ * - Route Handler 只负责协议转换与异常兜底；
+ * - 实际后端选择由 service -> resource repository 门面完成；
+ * - 因此本地 SQLite 与 Supabase 模式都能复用同一入口。
+ *
+ * @author xiye
+ * @date 2026-06-20
+ * @since 第二阶段后端门面重构
  */
 export async function GET(_request: Request, { params }: { params: { id: string } }) {
   try {
-    const supabase = await createServerSupabase();
-    const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-    if (sessionError) throw sessionError;
-    if (!sessionData.session) throw apiErrors.unauthorized();
     const models = await getProjectModels(params.id);
     return NextResponse.json(models);
   } catch (error) {

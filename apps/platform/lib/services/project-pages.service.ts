@@ -1,55 +1,46 @@
-import { createServerSupabase } from "@/lib/supabase/server";
+/**
+ * 项目页面服务层。
+ *
+ * 职责：
+ * - 对 API 层暴露统一的页面读取与保存能力；
+ * - 将后端选择逻辑下沉到 `project-resources` 门面；
+ * - 保持页面领域的输入输出结构与既有 API 契约一致。
+ *
+ * @author xiye
+ * @date 2026-06-20
+ * @since 第二阶段后端门面重构
+ */
+import { getProjectResourceRepository } from "@/lib/backend/project-resources";
 import type { ProjectPage, ProjectPageInsert } from "@/lib/supabase/types";
-import { ApiError, apiErrors } from "@/lib/api/errors";
 
-function mapSupabaseAuthzError(error: unknown): ApiError | null {
-  if (typeof error !== "object" || error === null) return null;
-  const status = "status" in error ? (error as { status?: unknown }).status : undefined;
-  if (status === 401) return apiErrors.unauthorized();
-  if (status === 403) return apiErrors.forbidden();
-  return null;
-}
-
+/**
+ * 获取项目页面列表。
+ *
+ * 核心链路：
+ * - service 只面向统一资源仓储；
+ * - 仓储再根据运行时配置切换 Supabase 或 SQLite；
+ * - 返回值保持为平台统一的 `ProjectPage[]`。
+ *
+ * @param projectId 项目 ID
+ * @returns 页面列表
+ * @author xiye
+ * @date 2026-06-20
+ */
 export async function getProjectPages(projectId: string): Promise<ProjectPage[]> {
-  const supabase = await createServerSupabase();
-  const { data, error } = await supabase
-    .from("project_pages")
-    .select("*")
-    .eq("project_id", projectId)
-    .order("sort_order", { ascending: true });
-
-  if (error) {
-    console.error("Failed to fetch project pages:", error);
-    throw mapSupabaseAuthzError(error) ??
-      new ApiError({ status: 500, code: "PROJECT_PAGES.LIST_FAILED", message: "Failed to fetch project pages", details: error });
-  }
-
-  return data ?? [];
+  return getProjectResourceRepository().listPages(projectId);
 }
 
+/**
+ * 批量保存项目页面。
+ *
+ * @param projectId 项目 ID
+ * @param pages 页面列表
+ * @returns 保存后的页面列表
+ * @author xiye
+ * @date 2026-06-20
+ * @since `getProjectResourceRepository()`
+ */
 export async function upsertProjectPages(projectId: string, pages: Omit<ProjectPageInsert, "project_id">[]): Promise<ProjectPage[]> {
-  const supabase = await createServerSupabase();
-  const inserts: ProjectPageInsert[] = pages.map((p) => ({
-    project_id: projectId,
-    path: p.path,
-    title: p.title,
-    description: p.description ?? "",
-    schema: p.schema ?? {},
-    metadata: p.metadata ?? {},
-    sort_order: p.sort_order ?? 0,
-    is_published: p.is_published ?? false,
-  }));
-
-  const { error } = await supabase
-    .from("project_pages")
-    .upsert(inserts, { onConflict: "project_id,path" });
-
-  if (error) {
-    console.error("Failed to upsert project pages:", error);
-    throw mapSupabaseAuthzError(error) ??
-      new ApiError({ status: 500, code: "PROJECT_PAGES.SAVE_FAILED", message: "Failed to save project pages", details: error });
-  }
-
-  return getProjectPages(projectId);
+  return getProjectResourceRepository().upsertPages(projectId, pages);
 }
 

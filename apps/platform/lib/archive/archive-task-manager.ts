@@ -3,6 +3,7 @@ import { readFile, unlink, writeFile } from "fs/promises";
 import * as os from "os";
 import * as path from "path";
 import { createAccessTokenSupabase } from "@/lib/supabase/access-token";
+import { getPlatformBackendConfig } from "@/lib/backend/config";
 import { ensureTaskWSServer, publishTaskSnapshot } from "@/lib/ws/task-ws-server";
 import type { ArchiveExportOptions, ArchiveImportOptions } from "./archive-types";
 import { generateProjectArchiveZip } from "./export-archive";
@@ -128,7 +129,7 @@ function broadcastImport(taskId: string) {
 export function createArchiveExportTask(input: {
   projectId: string;
   ownerUserId: string;
-  accessToken: string;
+  accessToken?: string;
   options?: ArchiveExportOptions;
 }): { taskId: string; wsPort: number; wsPath: string } {
   cleanupExpired();
@@ -161,7 +162,7 @@ export function createArchiveExportTask(input: {
 async function runArchiveExportTask(taskId: string) {
   const manager = getManager();
   const task = manager.exports.get(taskId);
-  if (!task || !task.accessToken) return;
+  if (!task) return;
 
   const update = (patch: Partial<Pick<ArchiveExportTaskInternal, "state" | "stage" | "percent" | "fileName" | "error" | "filePath">>) => {
     const current = manager.exports.get(taskId);
@@ -172,7 +173,7 @@ async function runArchiveExportTask(taskId: string) {
 
   try {
     update({ state: "running", stage: "初始化", percent: 0 });
-    const supabase = createAccessTokenSupabase(task.accessToken);
+    const supabase = task.accessToken ? createAccessTokenSupabase(task.accessToken) : null;
     const { bytes, fileName } = await generateProjectArchiveZip(supabase, task.projectId, task.options, (stage, percent) => {
       update({ stage, percent });
     });
@@ -225,7 +226,7 @@ export async function getArchiveExportZipForUser(
 
 export async function createArchiveImportTask(input: {
   ownerUserId: string;
-  accessToken: string;
+  accessToken?: string;
   uploadBytes: Uint8Array;
   options: ArchiveImportOptions;
 }): Promise<{ taskId: string; wsPort: number; wsPath: string }> {
@@ -262,7 +263,7 @@ export async function createArchiveImportTask(input: {
 async function runArchiveImportTask(taskId: string) {
   const manager = getManager();
   const task = manager.imports.get(taskId);
-  if (!task || !task.accessToken) return;
+  if (!task) return;
 
   const update = (patch: Partial<Pick<ArchiveImportTaskInternal, "state" | "stage" | "percent" | "error" | "resultProjectId">>) => {
     const current = manager.imports.get(taskId);
@@ -273,15 +274,28 @@ async function runArchiveImportTask(taskId: string) {
 
   try {
     update({ state: "running", stage: "读取文件", percent: 5 });
-    const supabase = createAccessTokenSupabase(task.accessToken);
+    const backendConfig = getPlatformBackendConfig();
+    if (backendConfig.mode === "supabase" && !task.accessToken) {
+      throw new Error("Archive import requires access token in Supabase mode");
+    }
+
+    const supabase = task.accessToken ? createAccessTokenSupabase(task.accessToken) : null;
     const bytes = await readFile(task.uploadPath);
     const archive = parseArchiveZip(new Uint8Array(bytes));
 
     update({ stage: "写入数据库", percent: 20 });
-    const result = await importProjectArchive(supabase, archive, task.options, (stage, percent) => {
-      const mapped = 20 + Math.round(percent * 0.8);
-      update({ stage, percent: Math.min(100, Math.max(20, mapped)) });
-    });
+    const result = await importProjectArchive(
+      archive,
+      task.options,
+      {
+        ownerUserId: task.ownerUserId,
+        supabase,
+      },
+      (stage, percent) => {
+        const mapped = 20 + Math.round(percent * 0.8);
+        update({ stage, percent: Math.min(100, Math.max(20, mapped)) });
+      },
+    );
 
     const current = manager.imports.get(taskId);
     if (current) current.accessToken = undefined;

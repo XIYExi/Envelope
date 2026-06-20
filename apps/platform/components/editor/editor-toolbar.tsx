@@ -13,11 +13,16 @@ import { useEffect, useRef, useState } from "react";
 import { useCanvasStore } from "@envelope/engine";
 import { useEditorStore } from "@/stores/editor";
 import { useProjectPagesStore } from "@/stores/project-pages";
+import { useProjectFlowsStore } from "@/stores/project-flows";
+import { useProjectEndpointsStore } from "@/stores/project-endpoints";
+import { useProjectLocalSync } from "@/lib/hooks/use-project-local-sync";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { useSearchParams } from "next/navigation";
 import type { ArchiveExportOptions } from "@/lib/archive/archive-types";
 import { ConfigArchiveExportDialog } from "./config-archive-export-dialog";
+import { ProjectSyncCompareDialog } from "@/components/project/project-sync-compare-dialog";
 import {
   PanelLeftClose,
   PanelLeftOpen,
@@ -33,6 +38,7 @@ import {
   Download,
   LoaderCircle,
   Upload,
+  RefreshCw,
 } from "lucide-react";
 import type { CanvasState } from "@envelope/engine";
 
@@ -79,6 +85,8 @@ export function EditorToolbar() {
   } = useEditorStore();
 
   const { dirty, isSaving, error, flushAutosave, pages, currentPath, setCurrentPath } = useProjectPagesStore();
+  const flowSaving = useProjectFlowsStore((state) => state.isSaving);
+  const endpointSaving = useProjectEndpointsStore((state) => state.isSaving);
 
   const [isExporting, setIsExporting] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
@@ -95,6 +103,7 @@ export function EditorToolbar() {
   const [archiveExportStage, setArchiveExportStage] = useState<string | null>(null);
   const [archiveExportPercent, setArchiveExportPercent] = useState<number | null>(null);
   const [archiveExportDialogOpen, setArchiveExportDialogOpen] = useState(false);
+  const [compareDialogOpen, setCompareDialogOpen] = useState(false);
   const archiveExportWsRef = useRef<WebSocket | null>(null);
   const archiveExportTaskIdRef = useRef<string | null>(null);
   const archiveExportDownloadUrlRef = useRef<string | null>(null);
@@ -113,6 +122,20 @@ export function EditorToolbar() {
   const archiveImportPingTimerRef = useRef<number | null>(null);
 
   const wsClientIdStorageKey = "envelope_task_ws_client_id";
+  const sync = useProjectLocalSync(projectId, {
+    successMessage: "项目已同步到远端",
+    onBeforeSync: async () => {
+      const pageStore = useProjectPagesStore.getState();
+      if (!pageStore.dirty) return;
+
+      await pageStore.flushAutosave();
+      const latestPageState = useProjectPagesStore.getState();
+      if (latestPageState.error || latestPageState.dirty) {
+        throw new Error(latestPageState.error || "页面仍有未保存变更，请先保存后再同步");
+      }
+    },
+  });
+  const syncBusy = sync.isSyncing || sync.isResolvingBaseline || flowSaving || endpointSaving || isSaving;
 
   const getFileNameFromContentDisposition = (value: string | null | undefined) => {
     if (!value) return null;
@@ -770,6 +793,76 @@ export function EditorToolbar() {
 
       <div className="flex-1" />
 
+      {projectId && sync.supported && (
+        <>
+          <Badge variant={sync.summary.badgeVariant} className="mr-1 text-[10px]">
+            {sync.summary.badgeLabel}
+          </Badge>
+          <span className="mr-1 max-w-56 truncate text-[10px] text-muted-foreground" title={sync.summary.detail ?? undefined}>
+            {sync.summary.detail ?? "本地同步状态可用"}
+          </span>
+          <Badge variant={sync.compareSummary.badgeVariant} className="mr-1 text-[10px]">
+            {sync.compareSummary.badgeLabel}
+          </Badge>
+          {sync.compareSummary.conflictCount > 0 && (
+            <Badge variant="destructive" className="mr-1 text-[10px]">
+              冲突 {sync.compareSummary.conflictCount}
+            </Badge>
+          )}
+          {sync.compareSummary.localOnlyCount > 0 && (
+            <Badge variant="default" className="mr-1 text-[10px]">
+              本地 {sync.compareSummary.localOnlyCount}
+            </Badge>
+          )}
+          {sync.compareSummary.remoteOnlyCount > 0 && (
+            <Badge variant="secondary" className="mr-1 text-[10px]">
+              远端 {sync.compareSummary.remoteOnlyCount}
+            </Badge>
+          )}
+          <span className="mr-1 max-w-64 truncate text-[10px] text-muted-foreground" title={sync.compareSummary.detail ?? undefined}>
+            {sync.compareSummary.detail ?? "比较结果暂不可用"}
+          </span>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="mr-1 h-7 text-[10px]"
+            disabled={!sync.compareResult && sync.isComparing}
+            onClick={() => setCompareDialogOpen(true)}
+          >
+            Compare 详情
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-7 text-[10px]"
+            disabled={!sync.canPush || syncBusy || isExporting || isArchiveExporting || isArchiveImporting}
+            onClick={() => void sync.push()}
+          >
+            {sync.isSyncing ? (
+              <LoaderCircle className="mr-1 h-3 w-3 animate-spin" />
+            ) : (
+              <Upload className="mr-1 h-3 w-3" />
+            )}
+            {sync.isSyncing ? "处理中" : "Push"}
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className="ml-1 h-7 text-[10px]"
+            disabled={!sync.canPull || syncBusy || isExporting || isArchiveExporting || isArchiveImporting}
+            onClick={() => void sync.pull()}
+          >
+            {sync.isSyncing ? (
+              <LoaderCircle className="mr-1 h-3 w-3 animate-spin" />
+            ) : (
+              <Download className="mr-1 h-3 w-3" />
+            )}
+            {sync.isSyncing ? "处理中" : "Pull"}
+          </Button>
+          <Separator orientation="vertical" className="mx-1 h-5" />
+        </>
+      )}
+
       {editorMode === "pages" && (
         <>
           {pages.length > 0 && (
@@ -846,7 +939,7 @@ export function EditorToolbar() {
               variant="outline"
               size="sm"
               className="ml-1 h-7 text-[10px]"
-              disabled={isSaving || isExporting}
+              disabled={isSaving || isExporting || syncBusy}
               onClick={() => void handleExport()}
             >
               {isExporting ? (
@@ -862,7 +955,7 @@ export function EditorToolbar() {
               variant="outline"
               size="sm"
               className="ml-1 h-7 text-[10px]"
-              disabled={isSaving || isArchiveExporting || isExporting}
+              disabled={isSaving || isArchiveExporting || isExporting || syncBusy}
               onClick={() => setArchiveExportDialogOpen(true)}
               title="导出配置归档（ISC-20/98-101）"
             >
@@ -878,7 +971,7 @@ export function EditorToolbar() {
             variant="outline"
             size="sm"
             className="ml-1 h-7 text-[10px]"
-            disabled={isSaving || isArchiveImporting || isExporting || isArchiveExporting}
+            disabled={isSaving || isArchiveImporting || isExporting || isArchiveExporting || syncBusy}
             onClick={handleArchiveImportPickFile}
             title="导入配置归档（ISC-20/98-101）"
           >
@@ -904,9 +997,20 @@ export function EditorToolbar() {
         open={archiveExportDialogOpen}
         onOpenChange={setArchiveExportDialogOpen}
         projectId={projectId}
-        disabled={isSaving || isArchiveExporting || isExporting}
+        disabled={isSaving || isArchiveExporting || isExporting || syncBusy}
         isExporting={isArchiveExporting}
         onConfirm={(options) => void handleArchiveExport(options)}
+      />
+      <ProjectSyncCompareDialog
+        open={compareDialogOpen}
+        onOpenChange={setCompareDialogOpen}
+        compareResult={sync.compareResult}
+        compareSummary={sync.compareSummary}
+        disabled={!sync.supported}
+        isSubmitting={syncBusy}
+        onKeepLocal={sync.keepLocal}
+        onKeepRemote={sync.keepRemote}
+        onSetBaseline={sync.setBaseline}
       />
 
       {/* 删除（仅在有选中组件时显示） */}

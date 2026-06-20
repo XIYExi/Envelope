@@ -5,6 +5,13 @@ import { apiErrors } from "@/lib/api/errors";
 import { jsonError } from "@/lib/api/response";
 import { getProjectPages, upsertProjectPages } from "@/lib/services/project-pages.service";
 
+/**
+ * 页面保存请求体中的单个页面输入。
+ *
+ * @author xiye
+ * @date 2026-06-20
+ * @since 第二阶段后端门面重构
+ */
 const pageInputSchema = z.object({
   path: z.string().min(1),
   title: z.string().trim().min(1).max(200),
@@ -19,6 +26,18 @@ const savePagesBodySchema = z.object({
   pages: z.array(pageInputSchema).max(200),
 });
 
+/**
+ * 项目页面列表接口。
+ *
+ * 核心链路：
+ * - GET/PUT 都只依赖 service 层；
+ * - service 再通过统一资源门面选择 Supabase 或 SQLite；
+ * - 这样 API 层无需关心当前部署形态。
+ *
+ * @author xiye
+ * @date 2026-06-20
+ * @since 第二阶段后端门面重构
+ */
 export async function GET(_request: Request, { params }: { params: { id: string } }) {
   try {
     const pages = await getProjectPages(params.id);
@@ -29,6 +48,13 @@ export async function GET(_request: Request, { params }: { params: { id: string 
   }
 }
 
+/**
+ * 批量保存项目页面。
+ *
+ * @author xiye
+ * @date 2026-06-20
+ * @since `upsertProjectPages()`
+ */
 export async function PUT(request: Request, { params }: { params: { id: string } }) {
   try {
     let body: unknown;

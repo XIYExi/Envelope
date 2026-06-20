@@ -3,6 +3,9 @@ import { generateProject } from "@envelope/generator";
 import type { AuthConfig, DbSchema, PageSchema, ProjectConfig, RouteNode, RoutesConfig } from "@envelope/engine";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { apiErrors } from "@/lib/api/errors";
+import { getPlatformBackendConfig } from "@/lib/backend/config";
+import { getProjectRepository } from "@/lib/backend/projects";
+import { getProjectResourceRepository } from "@/lib/backend/project-resources";
 import type { Database } from "@/lib/supabase/database.types";
 import type {
   ProjectAuth,
@@ -15,6 +18,16 @@ import type {
 } from "@/lib/supabase/types";
 
 export type ExportProgressCallback = (stage: string, percent: number) => void;
+
+type ProjectExportSource = {
+  project: Project;
+  pages: ProjectPage[];
+  flows: ProjectFlow[];
+  endpoints: ProjectEndpoint[];
+  routes: ProjectRoute[];
+  models: ProjectModel[];
+  auth: ProjectAuth | null;
+};
 
 function isNotFoundError(error: unknown): boolean {
   return typeof error === "object" && error !== null && "code" in error && (error as { code?: unknown }).code === "PGRST116";
@@ -202,73 +215,103 @@ function normalizeDbSchemaTable(model: ProjectModel): DbSchema["tables"][number]
 }
 
 export async function generateProjectZip(
-  supabase: SupabaseClient<Database>,
+  supabase: SupabaseClient<Database> | null,
   projectId: string,
   onProgress?: ExportProgressCallback,
 ): Promise<{ zipped: Uint8Array; fileName: string; projectName: string }> {
   const report = (stage: string, percent: number) => onProgress?.(stage, percent);
+  const backendConfig = getPlatformBackendConfig();
+  let source: ProjectExportSource;
 
   report("读取项目数据...", 0);
-  const { data: projectRow, error: projectError } = await supabase
-    .from("projects")
-    .select("*")
-    .eq("id", projectId)
-    .single<Project>();
-  if (projectError) throw projectError;
-  if (!projectRow) throw apiErrors.notFound("Project not found", "PROJECT.NOT_FOUND");
+  if (backendConfig.mode === "local") {
+    const projectRepository = getProjectRepository();
+    const resourceRepository = getProjectResourceRepository();
+    source = {
+      project: await projectRepository.get(projectId),
+      pages: await resourceRepository.listPages(projectId),
+      flows: await resourceRepository.listFlows(projectId),
+      endpoints: await resourceRepository.listEndpoints(projectId),
+      routes: await resourceRepository.listRoutes(projectId),
+      models: await resourceRepository.listModels(projectId),
+      auth: await resourceRepository.getAuth(projectId),
+    };
+  } else {
+    if (!supabase) {
+      throw apiErrors.internal("Missing Supabase client for current backend mode", "EXPORT.MISSING_SUPABASE_CLIENT");
+    }
 
-  const { data: pagesData, error: pagesError } = await supabase
-    .from("project_pages")
-    .select("*")
-    .eq("project_id", projectId)
-    .order("sort_order", { ascending: true })
-    .returns<ProjectPage[]>();
-  if (pagesError) throw pagesError;
+    const { data: projectRow, error: projectError } = await supabase
+      .from("projects")
+      .select("*")
+      .eq("id", projectId)
+      .single<Project>();
+    if (projectError) throw projectError;
+    if (!projectRow) throw apiErrors.notFound("Project not found", "PROJECT.NOT_FOUND");
+
+    const { data: pagesData, error: pagesError } = await supabase
+      .from("project_pages")
+      .select("*")
+      .eq("project_id", projectId)
+      .order("sort_order", { ascending: true })
+      .returns<ProjectPage[]>();
+    if (pagesError) throw pagesError;
+
+    const { data: flowsData, error: flowsError } = await supabase
+      .from("project_flows")
+      .select("*")
+      .eq("project_id", projectId)
+      .order("created_at", { ascending: true })
+      .returns<ProjectFlow[]>();
+    if (flowsError) throw flowsError;
+
+    const { data: endpointsData, error: endpointsError } = await supabase
+      .from("project_endpoints")
+      .select("*")
+      .eq("project_id", projectId)
+      .order("created_at", { ascending: true })
+      .returns<ProjectEndpoint[]>();
+    if (endpointsError) throw endpointsError;
+
+    const { data: routesData, error: routesError } = await supabase
+      .from("project_routes")
+      .select("*")
+      .eq("project_id", projectId)
+      .order("sort_order", { ascending: true })
+      .returns<ProjectRoute[]>();
+    if (routesError) throw routesError;
+
+    const { data: modelsData, error: modelsError } = await supabase
+      .from("project_models")
+      .select("*")
+      .eq("project_id", projectId)
+      .order("created_at", { ascending: true })
+      .returns<ProjectModel[]>();
+    if (modelsError) throw modelsError;
+
+    const { data: authData, error: authError } = await supabase
+      .from("project_auth")
+      .select("*")
+      .eq("project_id", projectId)
+      .single<ProjectAuth>();
+    if (authError && !isNotFoundError(authError)) throw authError;
+
+    source = {
+      project: projectRow,
+      pages: pagesData ?? [],
+      flows: flowsData ?? [],
+      endpoints: endpointsData ?? [],
+      routes: routesData ?? [],
+      models: modelsData ?? [],
+      auth: authData ?? null,
+    };
+  }
   report("读取页面完成", 5);
-
-  const { data: flowsData, error: flowsError } = await supabase
-    .from("project_flows")
-    .select("*")
-    .eq("project_id", projectId)
-    .order("created_at", { ascending: true })
-    .returns<ProjectFlow[]>();
-  if (flowsError) throw flowsError;
   report("读取流程完成", 8);
-
-  const { data: endpointsData, error: endpointsError } = await supabase
-    .from("project_endpoints")
-    .select("*")
-    .eq("project_id", projectId)
-    .order("created_at", { ascending: true })
-    .returns<ProjectEndpoint[]>();
-  if (endpointsError) throw endpointsError;
   report("读取 API 完成", 10);
 
-  const { data: routesData, error: routesError } = await supabase
-    .from("project_routes")
-    .select("*")
-    .eq("project_id", projectId)
-    .order("sort_order", { ascending: true })
-    .returns<ProjectRoute[]>();
-  if (routesError) throw routesError;
-
-  const { data: modelsData, error: modelsError } = await supabase
-    .from("project_models")
-    .select("*")
-    .eq("project_id", projectId)
-    .order("created_at", { ascending: true })
-    .returns<ProjectModel[]>();
-  if (modelsError) throw modelsError;
-
-  const { data: authData, error: authError } = await supabase
-    .from("project_auth")
-    .select("*")
-    .eq("project_id", projectId)
-    .single<ProjectAuth>();
-  if (authError && !isNotFoundError(authError)) throw authError;
-
-  const projectConfig = (projectRow.config ?? {}) as ProjectConfig;
-  const pages = (pagesData ?? []).map((p) => {
+  const projectConfig = (source.project.config ?? {}) as ProjectConfig;
+  const pages = source.pages.map((p) => {
     const schema = (p.schema ?? {}) as Partial<PageSchema>;
     return {
       ...schema,
@@ -281,12 +324,12 @@ export async function generateProjectZip(
   });
 
   const routesConfig: RoutesConfig | undefined =
-    routesData && routesData.length > 0
-      ? { version: "3.0.0", routes: buildRouteTree(routesData) }
-      : (pagesData ?? []).length > 0
+    source.routes.length > 0
+      ? { version: "3.0.0", routes: buildRouteTree(source.routes) }
+      : source.pages.length > 0
         ? {
             version: "3.0.0",
-            routes: (pagesData ?? [])
+            routes: source.pages
               .slice()
               .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
               .map((p) => ({
@@ -301,39 +344,39 @@ export async function generateProjectZip(
           }
         : undefined;
 
-  const dbSchema: DbSchema | undefined = modelsData && modelsData.length > 0
+  const dbSchema: DbSchema | undefined = source.models.length > 0
     ? {
         version: "3.0.0",
         enums: [],
-        tables: (modelsData ?? []).map(normalizeDbSchemaTable).filter(Boolean) as DbSchema["tables"],
+        tables: source.models.map(normalizeDbSchemaTable).filter(Boolean) as DbSchema["tables"],
       }
     : undefined;
 
-  const authConfig: AuthConfig | undefined = authData
+  const authConfig: AuthConfig | undefined = source.auth
     ? {
         version: "3.0.0",
-        providers: normalizeAuthProviders(authData.providers),
-        redirectUrls: normalizeRedirectUrls(authData.redirect_urls),
-        session: normalizeSessionConfig(authData.session_config),
+        providers: normalizeAuthProviders(source.auth.providers),
+        redirectUrls: normalizeRedirectUrls(source.auth.redirect_urls),
+        session: normalizeSessionConfig(source.auth.session_config),
       }
     : undefined;
 
   report("生成代码...", 12);
   const { files, projectName } = await generateProject(
     {
-      projectName: projectRow.name ?? "envelope-export",
+      projectName: source.project.name ?? "envelope-export",
       project: projectConfig,
       routes: routesConfig,
       pages,
       dbSchema,
       auth: authConfig,
-      flows: (flowsData ?? []).map((f) => ({
+      flows: source.flows.map((f) => ({
         id: f.id,
         name: f.name,
         yaml_content: f.yaml_content ?? "",
         description: f.description ?? "",
       })),
-      endpoints: (endpointsData ?? []).map((e) => ({
+      endpoints: source.endpoints.map((e) => ({
         id: e.id,
         method: e.method,
         path: e.path,

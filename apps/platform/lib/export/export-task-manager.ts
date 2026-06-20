@@ -88,7 +88,7 @@ function cleanupExpiredTasks() {
 export function createExportTask(input: {
   projectId: string;
   ownerUserId: string;
-  accessToken: string;
+  accessToken?: string;
 }): { taskId: string; wsPort: number; wsPath: string } {
   cleanupExpiredTasks();
   const { wsPort, wsPath } = ensureTaskWSServer();
@@ -121,7 +121,7 @@ export function createExportTask(input: {
 async function runTask(taskId: string) {
   const manager = getManager();
   const task = manager.tasks.get(taskId);
-  if (!task || !task.accessToken) return;
+  if (!task) return;
 
   const update = (patch: Partial<Pick<ExportTaskInternal, "state" | "stage" | "percent" | "fileName" | "error" | "filePath">>) => {
     const current = manager.tasks.get(taskId);
@@ -132,7 +132,7 @@ async function runTask(taskId: string) {
 
   try {
     update({ state: "running", stage: "初始化", percent: 0 });
-    const supabase = createAccessTokenSupabase(task.accessToken);
+    const supabase = task.accessToken ? createAccessTokenSupabase(task.accessToken) : null;
 
     const onProgress: ExportProgressCallback = (stage, percent) => {
       update({ stage, percent });

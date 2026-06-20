@@ -1,5 +1,9 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/database.types";
+import { apiErrors } from "@/lib/api/errors";
+import { getPlatformBackendConfig } from "@/lib/backend/config";
+import { getProjectRepository } from "@/lib/backend/projects";
+import { getProjectResourceRepository } from "@/lib/backend/project-resources";
 import type {
   Project,
   ProjectAuth,
@@ -25,7 +29,6 @@ import type {
 import { archiveEndpointKey, archiveFlowKey } from "./archive-keys";
 import { createArchiveZip } from "./archive-zip";
 import { redactProjectConfig } from "./redaction";
-import { apiErrors } from "@/lib/api/errors";
 
 export type ArchiveProgressCallback = (stage: string, percent: number) => void;
 
@@ -49,12 +52,40 @@ function normalizeSelection(options?: ArchiveExportOptions): NonNullable<Project
   };
 }
 
-export async function readProjectSnapshot(
-  supabase: SupabaseClient<Database>,
+async function readProjectSnapshotFromLocal(
   projectId: string,
   onProgress?: ArchiveProgressCallback,
 ): Promise<ProjectArchiveSnapshot> {
   onProgress?.("读取项目...", 0);
+  const projectRepository = getProjectRepository();
+  const resourceRepository = getProjectResourceRepository();
+  const project = await projectRepository.get(projectId);
+  const pages = await resourceRepository.listPages(projectId);
+  const routes = await resourceRepository.listRoutes(projectId);
+  const flows = await resourceRepository.listFlows(projectId);
+  const models = await resourceRepository.listModels(projectId);
+  const endpoints = await resourceRepository.listEndpoints(projectId);
+  const auth = await resourceRepository.getAuth(projectId);
+
+  onProgress?.("读取完成", 10);
+  return {
+    project,
+    pages,
+    routes,
+    flows,
+    models,
+    endpoints,
+    auth,
+  };
+}
+
+export async function readSupabaseProjectSnapshot(
+  supabase: SupabaseClient<Database>,
+  projectId: string,
+  onProgress?: ArchiveProgressCallback,
+): Promise<ProjectArchiveSnapshot> {
+  onProgress?.("读取远端项目...", 0);
+
   const { data: project, error: projectError } = await supabase
     .from("projects")
     .select("*")
@@ -122,6 +153,21 @@ export async function readProjectSnapshot(
   };
 }
 
+export async function readProjectSnapshot(
+  supabase: SupabaseClient<Database> | null,
+  projectId: string,
+  onProgress?: ArchiveProgressCallback,
+): Promise<ProjectArchiveSnapshot> {
+  const backendConfig = getPlatformBackendConfig();
+  if (backendConfig.mode === "local") {
+    return readProjectSnapshotFromLocal(projectId, onProgress);
+  }
+  if (!supabase) {
+    throw apiErrors.internal("Missing Supabase client for current backend mode", "ARCHIVE_EXPORT.MISSING_SUPABASE_CLIENT");
+  }
+  return readSupabaseProjectSnapshot(supabase, projectId, onProgress);
+}
+
 function pickBySelection<T>(
   all: T[],
   selector: "all" | string[],
@@ -155,17 +201,12 @@ function expandRouteParents(routes: ProjectRoute[], selected: ProjectRoute[]): P
   return Array.from(set.values()).sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
 }
 
-export async function generateProjectArchiveZip(
-  supabase: SupabaseClient<Database>,
-  projectId: string,
+export function buildProjectArchiveFromSnapshot(
+  snapshot: ProjectArchiveSnapshot,
   options?: ArchiveExportOptions,
   onProgress?: ArchiveProgressCallback,
-): Promise<{ bytes: Uint8Array; fileName: string; archive: ProjectArchive }> {
+): ProjectArchive {
   const selection = normalizeSelection(options);
-  const snapshot = await readProjectSnapshot(supabase, projectId, (stage, percent) => {
-    onProgress?.(stage, percent);
-  });
-
   onProgress?.("筛选资源...", 15);
 
   const pagesSelected = pickBySelection(snapshot.pages, selection.pages, (p) => p.path);
@@ -293,6 +334,20 @@ export async function generateProjectArchiveZip(
     endpoints,
     ...(auth ? { auth } : {}),
   };
+
+  return archive;
+}
+
+export async function generateProjectArchiveZip(
+  supabase: SupabaseClient<Database> | null,
+  projectId: string,
+  options?: ArchiveExportOptions,
+  onProgress?: ArchiveProgressCallback,
+): Promise<{ bytes: Uint8Array; fileName: string; archive: ProjectArchive }> {
+  const snapshot = await readProjectSnapshot(supabase, projectId, (stage, percent) => {
+    onProgress?.(stage, percent);
+  });
+  const archive = buildProjectArchiveFromSnapshot(snapshot, options, onProgress);
 
   onProgress?.("打包归档...", 90);
   const bytes = createArchiveZip(archive);

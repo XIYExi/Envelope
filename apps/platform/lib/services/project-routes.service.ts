@@ -1,36 +1,32 @@
-import { createServerSupabase } from "@/lib/supabase/server";
+/**
+ * 项目路由服务层。
+ *
+ * 职责：
+ * - 为 API 层提供统一的项目路由读取能力；
+ * - 将后端选择逻辑下沉到 `project-resources` 门面；
+ * - 保持返回值继续兼容现有编辑器与归档链路。
+ *
+ * @author xiye
+ * @date 2026-06-20
+ * @since 第二阶段后端门面重构
+ */
+import { getProjectResourceRepository } from "@/lib/backend/project-resources";
 import type { ProjectRoute } from "@/lib/supabase/types";
-import { ApiError, apiErrors } from "@/lib/api/errors";
-
-function mapSupabaseAuthzError(error: unknown): ApiError | null {
-  if (typeof error !== "object" || error === null) return null;
-  const status = "status" in error ? (error as { status?: unknown }).status : undefined;
-  if (status === 401) return apiErrors.unauthorized();
-  if (status === 403) return apiErrors.forbidden();
-  return null;
-}
 
 /**
- * 只读：获取项目路由配置
+ * 只读：获取项目路由配置。
  *
- * 说明：
- * - 当前用于“配置归档导出（部分选择）”的资源列表展示
- * - 写入接口后续再按编辑器能力补齐
+ * 核心链路：
+ * - API 层调用 service；
+ * - service 再调用统一项目资源仓储；
+ * - 仓储最终按运行时模式切到 Supabase 或本地 SQLite。
+ *
+ * @param projectId 项目 ID
+ * @returns 路由列表
+ * @author xiye
+ * @date 2026-06-20
  */
 export async function getProjectRoutes(projectId: string): Promise<ProjectRoute[]> {
-  const supabase = await createServerSupabase();
-  const { data, error } = await supabase
-    .from("project_routes")
-    .select("*")
-    .eq("project_id", projectId)
-    .order("sort_order", { ascending: true });
-
-  if (error) {
-    console.error("Failed to fetch project routes:", error);
-    throw mapSupabaseAuthzError(error) ??
-      new ApiError({ status: 500, code: "PROJECT_ROUTES.LIST_FAILED", message: "Failed to fetch project routes", details: error });
-  }
-
-  return data ?? [];
+  return getProjectResourceRepository().listRoutes(projectId);
 }
 

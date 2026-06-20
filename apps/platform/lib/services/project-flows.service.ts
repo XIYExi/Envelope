@@ -1,55 +1,40 @@
-import { createServerSupabase } from "@/lib/supabase/server";
+/**
+ * 项目流程服务层。
+ *
+ * 职责：
+ * - 为 API 层提供统一的流程读取与保存能力；
+ * - 将后端选择逻辑下沉到 `project-resources` 门面；
+ * - 保持流程列表返回值与既有调用方兼容。
+ *
+ * @author xiye
+ * @date 2026-06-20
+ * @since 第三阶段后端门面重构
+ */
+import { getProjectResourceRepository } from "@/lib/backend/project-resources";
 import type { ProjectFlow, ProjectFlowInsert } from "@/lib/supabase/types";
-import { ApiError, apiErrors } from "@/lib/api/errors";
 
-function mapSupabaseAuthzError(error: unknown): ApiError | null {
-  if (typeof error !== "object" || error === null) return null;
-  const status = "status" in error ? (error as { status?: unknown }).status : undefined;
-  if (status === 401) return apiErrors.unauthorized();
-  if (status === 403) return apiErrors.forbidden();
-  return null;
-}
-
+/**
+ * 获取项目流程列表。
+ *
+ * @param projectId 项目 ID
+ * @returns 流程列表
+ * @author xiye
+ * @date 2026-06-20
+ */
 export async function getProjectFlows(projectId: string): Promise<ProjectFlow[]> {
-  const supabase = await createServerSupabase();
-  const { data, error } = await supabase
-    .from("project_flows")
-    .select("*")
-    .eq("project_id", projectId)
-    .order("created_at", { ascending: true });
-
-  if (error) {
-    console.error("Failed to fetch project flows:", error);
-    throw mapSupabaseAuthzError(error) ??
-      new ApiError({ status: 500, code: "PROJECT_FLOWS.LIST_FAILED", message: "Failed to fetch project flows", details: error });
-  }
-
-  return data ?? [];
+  return getProjectResourceRepository().listFlows(projectId);
 }
 
+/**
+ * 批量保存项目流程。
+ *
+ * @param projectId 项目 ID
+ * @param flows 流程列表
+ * @returns 保存后的流程列表
+ * @author xiye
+ * @date 2026-06-20
+ */
 export async function upsertProjectFlows(projectId: string, flows: Omit<ProjectFlowInsert, "project_id">[]): Promise<ProjectFlow[]> {
-  const supabase = await createServerSupabase();
-  const inserts: ProjectFlowInsert[] = flows.map((f) => ({
-    id: f.id,
-    project_id: projectId,
-    name: f.name,
-    description: f.description ?? "",
-    flow_type: f.flow_type ?? "action",
-    yaml_content: f.yaml_content ?? "",
-    trigger_event: f.trigger_event ?? null,
-    is_active: f.is_active ?? true,
-  }));
-
-  const { error } = await supabase
-    .from("project_flows")
-    .upsert(inserts, { onConflict: "id" });
-
-  if (error) {
-    console.error("Failed to upsert project flows:", error);
-    throw mapSupabaseAuthzError(error) ??
-      new ApiError({ status: 500, code: "PROJECT_FLOWS.SAVE_FAILED", message: "Failed to save project flows", details: error });
-  }
-
-  return getProjectFlows(projectId);
+  return getProjectResourceRepository().upsertFlows(projectId, flows);
 }
 

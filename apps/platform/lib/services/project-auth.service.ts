@@ -1,14 +1,17 @@
-import { createServerSupabase } from "@/lib/supabase/server";
+/**
+ * 项目鉴权配置服务层。
+ *
+ * 职责：
+ * - 为 API、导出与归档链路提供统一的鉴权配置读取入口；
+ * - 将后端选择逻辑下沉到 `project-resources` 门面；
+ * - 保持单条配置资源返回结构与既有调用方兼容。
+ *
+ * @author xiye
+ * @date 2026-06-20
+ * @since 第三阶段后端门面重构
+ */
+import { getProjectResourceRepository } from "@/lib/backend/project-resources";
 import type { ProjectAuth } from "@/lib/supabase/types";
-import { ApiError, apiErrors } from "@/lib/api/errors";
-
-function mapSupabaseAuthzError(error: unknown): ApiError | null {
-  if (typeof error !== "object" || error === null) return null;
-  const status = "status" in error ? (error as { status?: unknown }).status : undefined;
-  if (status === 401) return apiErrors.unauthorized();
-  if (status === 403) return apiErrors.forbidden();
-  return null;
-}
 
 /**
  * 只读：获取项目鉴权配置（可能为空）
@@ -18,19 +21,6 @@ function mapSupabaseAuthzError(error: unknown): ApiError | null {
  * - 鉴权配置通常是单条记录，因此返回 maybeSingle
  */
 export async function getProjectAuth(projectId: string): Promise<ProjectAuth | null> {
-  const supabase = await createServerSupabase();
-  const { data, error } = await supabase
-    .from("project_auth")
-    .select("*")
-    .eq("project_id", projectId)
-    .maybeSingle<ProjectAuth>();
-
-  if (error) {
-    console.error("Failed to fetch project auth:", error);
-    throw mapSupabaseAuthzError(error) ??
-      new ApiError({ status: 500, code: "PROJECT_AUTH.GET_FAILED", message: "Failed to fetch project auth", details: error });
-  }
-
-  return data ?? null;
+  return getProjectResourceRepository().getAuth(projectId);
 }
 

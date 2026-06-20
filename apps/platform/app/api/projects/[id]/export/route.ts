@@ -1,17 +1,20 @@
 import { NextResponse } from "next/server";
-import { createServerSupabase } from "@/lib/supabase/server";
 import { jsonError } from "@/lib/api/response";
-import { apiErrors } from "@/lib/api/errors";
+import { getPlatformBackendConfig } from "@/lib/backend/config";
+import { requireRuntimeRequestUser } from "@/lib/backend/runtime-user";
+import { createServerSupabase } from "@/lib/supabase/server";
 import { generateProjectZip } from "@/lib/export/generate-export";
 
 export const runtime = "nodejs";
 
 export async function GET(_request: Request, { params }: { params: { id: string } }) {
   try {
-    const supabase = await createServerSupabase();
-    const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-    if (sessionError) throw sessionError;
-    if (!sessionData.session) throw apiErrors.unauthorized();
+    const backendConfig = getPlatformBackendConfig();
+    if (backendConfig.mode !== "local") {
+      await requireRuntimeRequestUser();
+    }
+
+    const supabase = backendConfig.mode === "local" ? null : await createServerSupabase();
     const { zipped, fileName } = await generateProjectZip(supabase, params.id);
 
     return new NextResponse(zipped, {

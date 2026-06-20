@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
-import { createServerSupabase } from "@/lib/supabase/server";
 import { jsonError } from "@/lib/api/response";
-import { apiErrors } from "@/lib/api/errors";
+import { requireRuntimeRequestUser } from "@/lib/backend/runtime-user";
 import { createArchiveExportTask } from "@/lib/archive/archive-task-manager";
 import type { ArchiveExportOptions } from "@/lib/archive/archive-types";
 
@@ -9,11 +8,7 @@ export const runtime = "nodejs";
 
 export async function POST(request: Request, { params }: { params: { id: string } }) {
   try {
-    const supabase = await createServerSupabase();
-    const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-    if (sessionError) throw sessionError;
-    if (!sessionData.session) throw apiErrors.unauthorized();
-    if (!sessionData.session.user?.id) throw apiErrors.unauthorized();
+    const runtimeUser = await requireRuntimeRequestUser();
 
     let options: ArchiveExportOptions | undefined;
     try {
@@ -24,8 +19,8 @@ export async function POST(request: Request, { params }: { params: { id: string 
 
     const { taskId, wsPort, wsPath } = createArchiveExportTask({
       projectId: params.id,
-      ownerUserId: sessionData.session.user.id,
-      accessToken: sessionData.session.access_token,
+      ownerUserId: runtimeUser.userId,
+      accessToken: runtimeUser.accessToken,
       options,
     });
 

@@ -1,7 +1,5 @@
 import { NextResponse } from "next/server";
-import { createServerSupabase } from "@/lib/supabase/server";
 import { jsonError } from "@/lib/api/response";
-import { apiErrors } from "@/lib/api/errors";
 import { getProjectAuth } from "@/lib/services/project-auth.service";
 
 /**
@@ -12,10 +10,6 @@ import { getProjectAuth } from "@/lib/services/project-auth.service";
  */
 export async function GET(_request: Request, { params }: { params: { id: string } }) {
   try {
-    const supabase = await createServerSupabase();
-    const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-    if (sessionError) throw sessionError;
-    if (!sessionData.session) throw apiErrors.unauthorized();
     const auth = await getProjectAuth(params.id);
     return NextResponse.json(auth);
   } catch (error) {
