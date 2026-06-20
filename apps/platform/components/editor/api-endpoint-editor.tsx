@@ -17,12 +17,15 @@
 "use client";
 
 import { useState, useMemo, useCallback, useRef, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { useFlowBindingStore } from "@envelope/flow";
+import { useProjectEndpointsStore } from "@/stores/project-endpoints";
+import type { ProjectEndpoint } from "@/lib/supabase/types";
 import { cn } from "@/lib/utils";
 import {
   Plus, Trash2, Search, Download, Play,
@@ -486,6 +489,65 @@ function endsHaveAuth(endpoints: APIEndpointDef[]): boolean {
   return endpoints.some((ep) => ep.authRequired);
 }
 
+function endpointDefToRow(ep: APIEndpointDef): Omit<ProjectEndpoint, "project_id" | "created_at" | "updated_at"> {
+  return {
+    id: ep.id,
+    method: ep.method,
+    path: ep.path,
+    description: ep.description ?? "",
+    request_schema: {
+      tags: ep.tags,
+      queryParams: ep.queryParams,
+      requestBodyType: ep.requestBodyType,
+      requestBodySchema: ep.requestBodySchema,
+      headers: ep.headers,
+    } as unknown,
+    response_schema: {
+      successStatus: ep.successStatus,
+      successExample: ep.successExample,
+      errorResponses: ep.errorResponses,
+    } as unknown,
+    middleware: {
+      authRequired: ep.authRequired,
+      requiredRole: ep.requiredRole,
+      rateLimitEnabled: ep.rateLimitEnabled,
+      rateLimitRPM: ep.rateLimitRPM,
+      corsEnabled: ep.corsEnabled,
+      loggingEnabled: ep.loggingEnabled,
+    } as unknown,
+    flow_id: ep.boundFlow ? ep.boundFlow : null,
+    is_active: true,
+  };
+}
+
+function rowToEndpointDef(row: ProjectEndpoint): APIEndpointDef {
+  const req = (row.request_schema ?? {}) as any;
+  const res = (row.response_schema ?? {}) as any;
+  const mid = (row.middleware ?? {}) as any;
+  return createDefaultEndpoint({
+    id: row.id,
+    method: row.method,
+    path: row.path,
+    description: row.description ?? "",
+    tags: Array.isArray(req.tags) ? req.tags : [],
+    queryParams: Array.isArray(req.queryParams) ? req.queryParams : [],
+    requestBodyType: (req.requestBodyType as APIEndpointDef["requestBodyType"]) ?? "none",
+    requestBodySchema: typeof req.requestBodySchema === "string" ? req.requestBodySchema : "",
+    headers: Array.isArray(req.headers) ? req.headers : [],
+    authRequired: Boolean(mid.authRequired),
+    requiredRole: typeof mid.requiredRole === "string" ? mid.requiredRole : "",
+    rateLimitEnabled: Boolean(mid.rateLimitEnabled),
+    rateLimitRPM: typeof mid.rateLimitRPM === "number" ? mid.rateLimitRPM : 60,
+    corsEnabled: mid.corsEnabled !== false,
+    loggingEnabled: mid.loggingEnabled !== false,
+    boundFlow: row.flow_id ?? "",
+    customHandler: "",
+    successStatus: typeof res.successStatus === "number" ? res.successStatus : 200,
+    successExample: typeof res.successExample === "string" ? res.successExample : "",
+    errorResponses: Array.isArray(res.errorResponses) ? res.errorResponses : [],
+  });
+}
+
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 /**
@@ -495,6 +557,17 @@ function endsHaveAuth(endpoints: APIEndpointDef[]): boolean {
  * 右侧为选中端点的完整配置面板（6 个配置分区 + 导出按钮）。
  */
 export function ApiEndpointEditor() {
+  const searchParams = useSearchParams();
+  const projectId = searchParams.get("project");
+
+  const {
+    endpoints: endpointRows,
+    loadByProjectId,
+    save,
+    initializedProjectId,
+    setInitializedProjectId,
+  } = useProjectEndpointsStore();
+
   const [endpoints, setEndpoints] = useState<APIEndpointDef[]>(DEFAULT_ENDPOINTS);
   const [selectedId, setSelectedId] = useState<string | null>(
     DEFAULT_ENDPOINTS[0]?.id ?? null,
@@ -509,6 +582,41 @@ export function ApiEndpointEditor() {
   const [testRunning, setTestRunning] = useState(false);
 
   const flowList = useFlowBindingStore((s) => s.flowList);
+
+  const appliedProjectRef = useRef<string | null>(null);
+  const autosaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (!projectId) return;
+    if (initializedProjectId === projectId) return;
+    setInitializedProjectId(projectId);
+    void loadByProjectId(projectId);
+  }, [projectId, initializedProjectId, setInitializedProjectId, loadByProjectId]);
+
+  useEffect(() => {
+    if (!projectId) return;
+    if (appliedProjectRef.current === projectId) return;
+    const mapped = endpointRows.length > 0 ? endpointRows.map(rowToEndpointDef) : DEFAULT_ENDPOINTS;
+    setEndpoints(mapped);
+    setSelectedId(mapped[0]?.id ?? null);
+    appliedProjectRef.current = projectId;
+  }, [endpointRows, projectId]);
+
+  useEffect(() => {
+    if (!projectId) return;
+    useProjectEndpointsStore.setState((s) => ({
+      ...s,
+      projectId,
+      endpoints: endpoints.map((e) => ({
+        ...endpointDefToRow(e),
+        project_id: projectId,
+      })) as ProjectEndpoint[],
+    }));
+    if (autosaveTimerRef.current) clearTimeout(autosaveTimerRef.current);
+    autosaveTimerRef.current = setTimeout(() => {
+      void save();
+    }, 30_000);
+  }, [endpoints, projectId, save]);
 
   const selected = useMemo(
     () => endpoints.find((e) => e.id === selectedId) ?? null,

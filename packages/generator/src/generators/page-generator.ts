@@ -17,6 +17,8 @@
 
 import type { PageSchema, ComponentNode } from "@envelope/engine";
 import { COMPONENT_MAP, SHADCN_IMPORT_MAP, generateComponentJSX } from "./component-map";
+import { tsStringLiteral } from "../core/tsx-escape";
+import { makeEventHandlerName } from "./event-handler-names";
 
 /**
  * 页面生成选项
@@ -43,6 +45,19 @@ function collectComponentTypes(components: ComponentNode[]): Set<string> {
   };
   walk(components);
   return types;
+}
+
+function hasDeepComponents(components: ComponentNode[], predicate: (c: ComponentNode) => boolean): boolean {
+  const walk = (comps: ComponentNode[]): boolean => {
+    for (const comp of comps) {
+      if (predicate(comp)) return true;
+      if (comp.children && comp.children.length > 0) {
+        if (walk(comp.children)) return true;
+      }
+    }
+    return false;
+  };
+  return walk(components);
 }
 
 /**
@@ -130,7 +145,41 @@ function generateEventBindings(components: ComponentNode[]): string {
     for (const comp of comps) {
       if (comp.eventBindings && Object.keys(comp.eventBindings).length > 0) {
         for (const [event, handler] of Object.entries(comp.eventBindings)) {
-          bindings.push(`  // TODO: Event handler — ${comp.type}(${comp.id}) — ${event} → ${handler}`);
+          if (event === "onPageLoad") {
+            bindings.push(
+              `  useEffect(() => {`,
+              `    void callFlow(${tsStringLiteral(handler)}, {`,
+              `      componentId: ${tsStringLiteral(comp.id)},`,
+              `      event: ${tsStringLiteral(event)},`,
+              `    });`,
+              `  }, []);`,
+            );
+            continue;
+          }
+          if (event === "onPageUnload") {
+            bindings.push(
+              `  useEffect(() => {`,
+              `    return () => {`,
+              `      void callFlow(${tsStringLiteral(handler)}, {`,
+              `        componentId: ${tsStringLiteral(comp.id)},`,
+              `        event: ${tsStringLiteral(event)},`,
+              `      });`,
+              `    };`,
+              `  }, []);`,
+            );
+            continue;
+          }
+
+          const fn = makeEventHandlerName(comp.id, event);
+          bindings.push(
+            `  const ${fn} = useCallback(async (...args: unknown[]) => {`,
+            `    return callFlow(${tsStringLiteral(handler)}, {`,
+            `      componentId: ${tsStringLiteral(comp.id)},`,
+            `      event: ${tsStringLiteral(event)},`,
+            `      args,`,
+            `    });`,
+            `  }, []);`,
+          );
         }
       }
       if (comp.children && comp.children.length > 0) {
@@ -148,8 +197,8 @@ function generateEventBindings(components: ComponentNode[]): string {
 function renderBackgroundStyle(background: PageSchema["background"]): string {
   if (!background) return "";
   const styles: string[] = [];
-  if (background.color) styles.push(`backgroundColor: "${background.color}"`);
-  if (background.image) styles.push(`backgroundImage: "url(${background.image})"`);
+  if (background.color) styles.push(`backgroundColor: ${tsStringLiteral(background.color)}`);
+  if (background.image) styles.push(`backgroundImage: ${tsStringLiteral(`url(${background.image})`)}`);
   if (styles.length === 0) return "";
   return `{ ${styles.join(", ")} }`;
 }
@@ -174,8 +223,15 @@ export function generatePageCode(
   const components = page.components || [];
   const componentTypes = collectComponentTypes(components);
 
+  const hasEventBindings = hasDeepComponents(
+    components,
+    (c) => Boolean(c.eventBindings && Object.keys(c.eventBindings).length > 0),
+  );
+
   // 决定是否 use client
-  const useClient = options.forceUseClient ?? needsUseClient(componentTypes);
+  const useClient = options.forceUseClient === true
+    ? true
+    : needsUseClient(componentTypes) || hasEventBindings;
 
   // 生成 imports
   const imports = generateImports(componentTypes);
@@ -185,17 +241,19 @@ export function generatePageCode(
     imports.push(...options.imports);
   }
 
+  if (hasEventBindings) {
+    imports.push(`import { callFlow } from "@/lib/flows/client";`);
+  }
+
   // 检测是否需要 Link (next/link)
   if (componentTypes.has("Link") && !imports.some((i) => i.includes("next/link"))) {
     imports.push(`import Link from "next/link";`);
   }
 
   // 收集 React hooks 需求
-  const hasDataBindings = components.some(
-    (c: ComponentNode) => c.dataBindings && Object.keys(c.dataBindings).length > 0,
-  );
-  const hasEventBindings = components.some(
-    (c: ComponentNode) => c.eventBindings && Object.keys(c.eventBindings).length > 0,
+  const hasDataBindings = hasDeepComponents(
+    components,
+    (c) => Boolean(c.dataBindings && Object.keys(c.dataBindings).length > 0),
   );
 
   const lines: string[] = [];
@@ -212,7 +270,7 @@ export function generatePageCode(
     reactImports.push("useEffect");
   }
   if (useClient && hasEventBindings) {
-    reactImports.push("useState", "useCallback");
+    reactImports.push("useCallback");
   }
   if (reactImports.length > 0) {
     lines.push(`import { ${reactImports.join(", ")} } from "react";`);
@@ -230,8 +288,8 @@ export function generatePageCode(
 
   if (!useClient) {
     lines.push(`export const metadata = {`);
-    lines.push(`  title: "${pageTitle}",`);
-    if (pageDescription) lines.push(`  description: "${pageDescription}",`);
+    lines.push(`  title: ${tsStringLiteral(pageTitle)},`);
+    if (pageDescription) lines.push(`  description: ${tsStringLiteral(pageDescription)},`);
     lines.push(`};`);
     lines.push("");
   }
@@ -243,10 +301,10 @@ export function generatePageCode(
   if (useClient) {
     lines.push(`  // SEO — dynamic title for client component`);
     lines.push(`  useEffect(() => {`);
-    lines.push(`    document.title = "${pageTitle}";`);
+    lines.push(`    document.title = ${tsStringLiteral(pageTitle)};`);
     if (pageDescription) {
       lines.push(`    const meta = document.querySelector('meta[name="description"]');`);
-      lines.push(`    if (meta) meta.setAttribute("content", "${pageDescription}");`);
+      lines.push(`    if (meta) meta.setAttribute("content", ${tsStringLiteral(pageDescription)});`);
     }
     lines.push(`  }, []);`);
     lines.push("");
@@ -263,7 +321,6 @@ export function generatePageCode(
   // 事件绑定占位
   const eventBindingsCode = generateEventBindings(components);
   if (eventBindingsCode) {
-    lines.push(`  // ── 事件绑定 ──`);
     lines.push(eventBindingsCode);
     lines.push("");
   }
@@ -278,7 +335,7 @@ export function generatePageCode(
   const styleAttr = bgStyle ? ` style={${bgStyle}}` : "";
 
   lines.push(`  return (`);
-  lines.push(`    <div className="${containerClassStr}"${styleAttr}>`);
+  lines.push(`    <div className={${tsStringLiteral(containerClassStr)}}${styleAttr}>`);
 
   // 渲染所有顶层组件
   for (const comp of components) {

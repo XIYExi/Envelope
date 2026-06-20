@@ -54,6 +54,24 @@ export function RightPanel({ collapsed }: RightPanelProps) {
     return registry.get(selectedComp.node.type) ?? null;
   }, [selectedComp, registry]);
 
+  const editableKeyTypeMapRef = useRef<Map<string, string>>(new Map());
+  editableKeyTypeMapRef.current = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const p of material?.editableProps ?? []) {
+      map.set(p.key, p.type);
+    }
+    return map;
+  }, [material]);
+
+  const editorValues = useMemo(() => {
+    if (!selectedComp) return {};
+    return {
+      ...(selectedComp.node.props ?? {}),
+      ...(selectedComp.node.dataBindings ?? {}),
+      ...(selectedComp.node.eventBindings ?? {}),
+    } as Record<string, unknown>;
+  }, [selectedComp]);
+
   /**
    * 属性变更处理
    *
@@ -64,14 +82,54 @@ export function RightPanel({ collapsed }: RightPanelProps) {
     (key: string, value: unknown) => {
       const comp = selectedCompRef.current;
       if (!comp) return;
+      const type = editableKeyTypeMapRef.current.get(key);
+
+      if (type === "dataBinding") {
+        const current = comp.node.dataBindings ?? {};
+        const next = { ...current };
+        if (typeof value === "string" && value.trim().length > 0) {
+          next[key] = value;
+        } else {
+          delete next[key];
+        }
+        updateComponent(comp.id, {
+          node: {
+            ...comp.node,
+            dataBindings: Object.keys(next).length > 0 ? next : undefined,
+          },
+        });
+        return;
+      }
+
+      if (type === "eventBinding") {
+        const current = comp.node.eventBindings ?? {};
+        const next = { ...current };
+        if (typeof value === "string" && value.trim().length > 0) {
+          next[key] = value;
+        } else {
+          delete next[key];
+        }
+        updateComponent(comp.id, {
+          node: {
+            ...comp.node,
+            eventBindings: Object.keys(next).length > 0 ? next : undefined,
+          },
+        });
+        return;
+      }
+
       const currentProps = comp.node.props ?? {};
+      const nextProps = { ...currentProps };
+      if (value === undefined) {
+        delete nextProps[key];
+      } else {
+        nextProps[key] = value;
+      }
+
       updateComponent(comp.id, {
         node: {
           ...comp.node,
-          props: {
-            ...currentProps,
-            [key]: value,
-          },
+          props: Object.keys(nextProps).length > 0 ? nextProps : undefined,
         },
       });
     },
@@ -161,7 +219,7 @@ export function RightPanel({ collapsed }: RightPanelProps) {
             {material?.editableProps && material.editableProps.length > 0 ? (
               <PropertyEditor
                 editableProps={material.editableProps}
-                values={(selectedComp.node.props ?? {}) as Record<string, unknown>}
+                values={editorValues}
                 onChange={handlePropChange}
                 flowList={flowList}
               />

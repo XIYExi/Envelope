@@ -17,7 +17,7 @@
 "use client";
 
 import { create } from "zustand";
-import type { CanvasState, CanvasActions, CanvasComponent } from "./types";
+import type { CanvasState, CanvasActions, CanvasComponent, CanvasSnapshot } from "./types";
 
 /**
  * 生成唯一 ID
@@ -30,6 +30,30 @@ import type { CanvasState, CanvasActions, CanvasComponent } from "./types";
 function generateId(): string {
   return crypto.randomUUID();
 }
+
+function takeSnapshot(state: CanvasState): CanvasSnapshot {
+  return {
+    components: structuredClone(state.components),
+    selectedIds: structuredClone(state.selectedIds),
+    zoom: state.zoom,
+    viewport: state.viewport,
+    gridCols: state.gridCols,
+    gridGap: state.gridGap,
+    panX: state.panX,
+    panY: state.panY,
+    pageBackground: state.pageBackground,
+    pagePadding: state.pagePadding,
+  };
+}
+
+function snapshotEquals(a: CanvasSnapshot, b: CanvasSnapshot): boolean {
+  return JSON.stringify(a) === JSON.stringify(b);
+}
+
+let batching = false;
+let batchStartSnapshot: CanvasSnapshot | null = null;
+let lastCoalesceKey: string | null = null;
+let lastCoalesceAt = 0;
 
 /**
  * 画布全局状态 Store
@@ -53,109 +77,410 @@ export const useCanvasStore = create<CanvasState & CanvasActions>((set, get) => 
   panY: 0,
   pageBackground: "#ffffff",
   pagePadding: 16,
+  canUndo: false,
+  canRedo: false,
+  historyPast: [],
+  historyFuture: [],
+  historyLimit: 200,
 
   // ========== 组件操作 ==========
 
-  addComponent: (comp) =>
-    set((state) => ({ components: [...state.components, comp] })),
-
-  removeComponent: (id) =>
-    set((state) => ({
-      components: state.components.filter((c) => c.id !== id),
-      selectedIds: state.selectedIds.filter((sid) => sid !== id),
-    })),
-
-  updateComponent: (id, updates) =>
-    set((state) => ({
-      components: state.components.map((c) =>
-        c.id === id ? { ...c, ...updates } : c,
-      ),
-    })),
-
-  selectComponent: (id, multi = false) =>
+  addComponent: (comp) => {
     set((state) => {
-      if (multi) {
-        const already = state.selectedIds.includes(id);
-        return {
-          selectedIds: already
-            ? state.selectedIds.filter((s) => s !== id)
-            : [...state.selectedIds, id],
-        };
-      }
-      return { selectedIds: [id] };
-    }),
+      if (batching) return { components: [...state.components, comp] };
+      const prev = takeSnapshot(state);
+      const partial = { components: [...state.components, comp] };
+      const next = takeSnapshot({ ...(state as CanvasState), ...partial });
+      if (snapshotEquals(prev, next)) return partial;
+      const past = [...state.historyPast, prev];
+      const limitedPast = past.length > state.historyLimit ? past.slice(past.length - state.historyLimit) : past;
+      lastCoalesceKey = null;
+      return { ...partial, historyPast: limitedPast, historyFuture: [], canUndo: limitedPast.length > 0, canRedo: false };
+    });
+  },
 
-  clearSelection: () => set({ selectedIds: [] }),
+  removeComponent: (id) => {
+    set((state) => {
+      const partial = {
+        components: state.components.filter((c) => c.id !== id),
+        selectedIds: state.selectedIds.filter((sid) => sid !== id),
+      };
+      if (batching) return partial;
+      const prev = takeSnapshot(state);
+      const next = takeSnapshot({ ...(state as CanvasState), ...partial });
+      if (snapshotEquals(prev, next)) return partial;
+      const past = [...state.historyPast, prev];
+      const limitedPast = past.length > state.historyLimit ? past.slice(past.length - state.historyLimit) : past;
+      lastCoalesceKey = null;
+      return { ...partial, historyPast: limitedPast, historyFuture: [], canUndo: limitedPast.length > 0, canRedo: false };
+    });
+  },
 
-  moveComponent: (id, x, y) =>
-    set((state) => ({
-      components: state.components.map((c) => {
-        if (c.id !== id) return c;
-        const clampedX = Math.max(1, Math.min(state.gridCols, x));
-        const clampedY = Math.max(1, y);
-        return { ...c, position: { ...c.position, x: clampedX, y: clampedY } };
-      }),
-    })),
+  updateComponent: (id, updates) => {
+    set((state) => {
+      const partial = {
+        components: state.components.map((c) => (c.id === id ? { ...c, ...updates } : c)),
+      };
+      if (batching) return partial;
+      const prev = takeSnapshot(state);
+      const next = takeSnapshot({ ...(state as CanvasState), ...partial });
+      if (snapshotEquals(prev, next)) return partial;
+      const past = [...state.historyPast, prev];
+      const limitedPast = past.length > state.historyLimit ? past.slice(past.length - state.historyLimit) : past;
+      lastCoalesceKey = null;
+      return { ...partial, historyPast: limitedPast, historyFuture: [], canUndo: limitedPast.length > 0, canRedo: false };
+    });
+  },
 
-  resizeComponent: (id, width, height, x, y) =>
-    set((state) => ({
-      components: state.components.map((c) => {
-        if (c.id !== id) return c;
-        const newX = x !== undefined ? Math.max(1, Math.min(state.gridCols, x)) : c.position.x;
-        const maxWidth = state.gridCols - newX + 1;
-        const clampedWidth = Math.max(1, Math.min(maxWidth, width));
-        const clampedHeight = Math.max(1, height);
-        return {
-          ...c,
-          position: { ...c.position, x: newX, width: clampedWidth, height: clampedHeight },
-        };
-      }),
-    })),
+  selectComponent: (id, multi = false) => {
+    set((state) => {
+      const partial = multi
+        ? (() => {
+            const already = state.selectedIds.includes(id);
+            return {
+              selectedIds: already ? state.selectedIds.filter((s) => s !== id) : [...state.selectedIds, id],
+            };
+          })()
+        : { selectedIds: [id] };
+      if (batching) return partial;
+      const prev = takeSnapshot(state);
+      const next = takeSnapshot({ ...(state as CanvasState), ...partial });
+      if (snapshotEquals(prev, next)) return partial;
 
-  setZoom: (zoom) => set({ zoom: Math.max(0.25, Math.min(2, zoom)) }),
-  setViewport: (viewport) => set({ viewport }),
-  setGridCols: (gridCols) => set({ gridCols }),
-  setGridGap: (gridGap) => set({ gridGap }),
-  setPan: (panX, panY) => set({ panX, panY }),
-  setPageBackground: (pageBackground) => set({ pageBackground }),
-  setPagePadding: (pagePadding) => set({ pagePadding }),
+      const now = Date.now();
+      const coalesce = lastCoalesceKey === "select" && now - lastCoalesceAt < 250;
+      lastCoalesceKey = "select";
+      lastCoalesceAt = now;
+      if (coalesce) return { ...partial, historyFuture: [], canRedo: false };
+
+      const past = [...state.historyPast, prev];
+      const limitedPast = past.length > state.historyLimit ? past.slice(past.length - state.historyLimit) : past;
+      return { ...partial, historyPast: limitedPast, historyFuture: [], canUndo: limitedPast.length > 0, canRedo: false };
+    });
+  },
+
+  clearSelection: () => {
+    set((state) => {
+      const partial = { selectedIds: [] as string[] };
+      if (batching) return partial;
+      const prev = takeSnapshot(state);
+      const next = takeSnapshot({ ...(state as CanvasState), ...partial });
+      if (snapshotEquals(prev, next)) return partial;
+      const past = [...state.historyPast, prev];
+      const limitedPast = past.length > state.historyLimit ? past.slice(past.length - state.historyLimit) : past;
+      lastCoalesceKey = null;
+      return { ...partial, historyPast: limitedPast, historyFuture: [], canUndo: limitedPast.length > 0, canRedo: false };
+    });
+  },
+
+  moveComponent: (id, x, y) => {
+    set((state) => {
+      const partial = {
+        components: state.components.map((c) => {
+          if (c.id !== id) return c;
+          const clampedX = Math.max(1, Math.min(state.gridCols, x));
+          const clampedY = Math.max(1, y);
+          return { ...c, position: { ...c.position, x: clampedX, y: clampedY } };
+        }),
+      };
+      if (batching) return partial;
+      const prev = takeSnapshot(state);
+      const next = takeSnapshot({ ...(state as CanvasState), ...partial });
+      if (snapshotEquals(prev, next)) return partial;
+
+      const now = Date.now();
+      const coalesce = lastCoalesceKey === "move" && now - lastCoalesceAt < 250;
+      lastCoalesceKey = "move";
+      lastCoalesceAt = now;
+      if (coalesce) return { ...partial, historyFuture: [], canRedo: false };
+
+      const past = [...state.historyPast, prev];
+      const limitedPast = past.length > state.historyLimit ? past.slice(past.length - state.historyLimit) : past;
+      return { ...partial, historyPast: limitedPast, historyFuture: [], canUndo: limitedPast.length > 0, canRedo: false };
+    });
+  },
+
+  resizeComponent: (id, width, height, x, y) => {
+    set((state) => {
+      const partial = {
+        components: state.components.map((c) => {
+          if (c.id !== id) return c;
+          const newX = x !== undefined ? Math.max(1, Math.min(state.gridCols, x)) : c.position.x;
+          const maxWidth = state.gridCols - newX + 1;
+          const clampedWidth = Math.max(1, Math.min(maxWidth, width));
+          const clampedHeight = Math.max(1, height);
+          const newY = y !== undefined ? Math.max(1, y) : c.position.y;
+          return {
+            ...c,
+            position: { ...c.position, x: newX, y: newY, width: clampedWidth, height: clampedHeight },
+          };
+        }),
+      };
+      if (batching) return partial;
+      const prev = takeSnapshot(state);
+      const next = takeSnapshot({ ...(state as CanvasState), ...partial });
+      if (snapshotEquals(prev, next)) return partial;
+
+      const now = Date.now();
+      const coalesce = lastCoalesceKey === "resize" && now - lastCoalesceAt < 250;
+      lastCoalesceKey = "resize";
+      lastCoalesceAt = now;
+      if (coalesce) return { ...partial, historyFuture: [], canRedo: false };
+
+      const past = [...state.historyPast, prev];
+      const limitedPast = past.length > state.historyLimit ? past.slice(past.length - state.historyLimit) : past;
+      return { ...partial, historyPast: limitedPast, historyFuture: [], canUndo: limitedPast.length > 0, canRedo: false };
+    });
+  },
+
+  setZoom: (zoom) => {
+    set((state) => {
+      const partial = { zoom: Math.max(0.25, Math.min(2, zoom)) };
+      if (batching) return partial;
+      const prev = takeSnapshot(state);
+      const next = takeSnapshot({ ...(state as CanvasState), ...partial });
+      if (snapshotEquals(prev, next)) return partial;
+
+      const now = Date.now();
+      const coalesce = lastCoalesceKey === "zoom" && now - lastCoalesceAt < 250;
+      lastCoalesceKey = "zoom";
+      lastCoalesceAt = now;
+      if (coalesce) return { ...partial, historyFuture: [], canRedo: false };
+
+      const past = [...state.historyPast, prev];
+      const limitedPast = past.length > state.historyLimit ? past.slice(past.length - state.historyLimit) : past;
+      return { ...partial, historyPast: limitedPast, historyFuture: [], canUndo: limitedPast.length > 0, canRedo: false };
+    });
+  },
+  setViewport: (viewport) => {
+    set((state) => {
+      const partial = { viewport };
+      if (batching) return partial;
+      const prev = takeSnapshot(state);
+      const next = takeSnapshot({ ...(state as CanvasState), ...partial });
+      if (snapshotEquals(prev, next)) return partial;
+      const past = [...state.historyPast, prev];
+      const limitedPast = past.length > state.historyLimit ? past.slice(past.length - state.historyLimit) : past;
+      lastCoalesceKey = null;
+      return { ...partial, historyPast: limitedPast, historyFuture: [], canUndo: limitedPast.length > 0, canRedo: false };
+    });
+  },
+  setGridCols: (gridCols) => {
+    set((state) => {
+      const partial = { gridCols };
+      if (batching) return partial;
+      const prev = takeSnapshot(state);
+      const next = takeSnapshot({ ...(state as CanvasState), ...partial });
+      if (snapshotEquals(prev, next)) return partial;
+      const past = [...state.historyPast, prev];
+      const limitedPast = past.length > state.historyLimit ? past.slice(past.length - state.historyLimit) : past;
+      lastCoalesceKey = null;
+      return { ...partial, historyPast: limitedPast, historyFuture: [], canUndo: limitedPast.length > 0, canRedo: false };
+    });
+  },
+  setGridGap: (gridGap) => {
+    set((state) => {
+      const partial = { gridGap };
+      if (batching) return partial;
+      const prev = takeSnapshot(state);
+      const next = takeSnapshot({ ...(state as CanvasState), ...partial });
+      if (snapshotEquals(prev, next)) return partial;
+      const past = [...state.historyPast, prev];
+      const limitedPast = past.length > state.historyLimit ? past.slice(past.length - state.historyLimit) : past;
+      lastCoalesceKey = null;
+      return { ...partial, historyPast: limitedPast, historyFuture: [], canUndo: limitedPast.length > 0, canRedo: false };
+    });
+  },
+  setPan: (panX, panY) => {
+    set((state) => {
+      const partial = { panX, panY };
+      if (batching) return partial;
+      const prev = takeSnapshot(state);
+      const next = takeSnapshot({ ...(state as CanvasState), ...partial });
+      if (snapshotEquals(prev, next)) return partial;
+
+      const now = Date.now();
+      const coalesce = lastCoalesceKey === "pan" && now - lastCoalesceAt < 250;
+      lastCoalesceKey = "pan";
+      lastCoalesceAt = now;
+      if (coalesce) return { ...partial, historyFuture: [], canRedo: false };
+
+      const past = [...state.historyPast, prev];
+      const limitedPast = past.length > state.historyLimit ? past.slice(past.length - state.historyLimit) : past;
+      return { ...partial, historyPast: limitedPast, historyFuture: [], canUndo: limitedPast.length > 0, canRedo: false };
+    });
+  },
+  setPageBackground: (pageBackground) => {
+    set((state) => {
+      const partial = { pageBackground };
+      if (batching) return partial;
+      const prev = takeSnapshot(state);
+      const next = takeSnapshot({ ...(state as CanvasState), ...partial });
+      if (snapshotEquals(prev, next)) return partial;
+      const past = [...state.historyPast, prev];
+      const limitedPast = past.length > state.historyLimit ? past.slice(past.length - state.historyLimit) : past;
+      lastCoalesceKey = null;
+      return { ...partial, historyPast: limitedPast, historyFuture: [], canUndo: limitedPast.length > 0, canRedo: false };
+    });
+  },
+  setPagePadding: (pagePadding) => {
+    set((state) => {
+      const partial = { pagePadding };
+      if (batching) return partial;
+      const prev = takeSnapshot(state);
+      const next = takeSnapshot({ ...(state as CanvasState), ...partial });
+      if (snapshotEquals(prev, next)) return partial;
+      const past = [...state.historyPast, prev];
+      const limitedPast = past.length > state.historyLimit ? past.slice(past.length - state.historyLimit) : past;
+      lastCoalesceKey = null;
+      return { ...partial, historyPast: limitedPast, historyFuture: [], canUndo: limitedPast.length > 0, canRedo: false };
+    });
+  },
 
   copySelected: () => {
-    const { components, selectedIds } = get();
-    const componentMap = new Map(components.map((c) => [c.id, c]));
-    const copies = selectedIds
-      .map((sid) => componentMap.get(sid))
-      .filter((c): c is CanvasComponent => c !== undefined);
+    set((state) => {
+      const componentMap = new Map(state.components.map((c) => [c.id, c]));
+      const copies = state.selectedIds
+        .map((sid) => componentMap.get(sid))
+        .filter((c): c is CanvasComponent => c !== undefined);
 
-    const newComps: CanvasComponent[] = copies.map((c) => {
-      const clonedNode = structuredClone(c.node);
-      clonedNode.id = generateId();
-      return {
-        id: generateId(),
-        node: clonedNode,
-        position: { ...c.position, x: c.position.x + 2, y: c.position.y + 1 },
+      const newComps: CanvasComponent[] = copies.map((c) => {
+        const clonedNode = structuredClone(c.node);
+        clonedNode.id = generateId();
+        return {
+          id: generateId(),
+          node: clonedNode,
+          position: { ...c.position, x: c.position.x + 2, y: c.position.y + 1 },
+        };
+      });
+
+      const partial = {
+        components: [...state.components, ...newComps],
+        selectedIds: newComps.map((c) => c.id),
       };
-    });
 
-    set((state) => ({
-      components: [...state.components, ...newComps],
-      selectedIds: newComps.map((c) => c.id),
-    }));
+      if (batching) return partial;
+      const prev = takeSnapshot(state);
+      const next = takeSnapshot({ ...(state as CanvasState), ...partial });
+      if (snapshotEquals(prev, next)) return partial;
+      const past = [...state.historyPast, prev];
+      const limitedPast = past.length > state.historyLimit ? past.slice(past.length - state.historyLimit) : past;
+      lastCoalesceKey = null;
+      return { ...partial, historyPast: limitedPast, historyFuture: [], canUndo: limitedPast.length > 0, canRedo: false };
+    });
   },
 
   deleteSelected: () => {
-    const { selectedIds } = get();
-    set((state) => ({
-      components: state.components.filter((c) => !selectedIds.includes(c.id)),
-      selectedIds: [],
-    }));
+    set((state) => {
+      const partial = {
+        components: state.components.filter((c) => !state.selectedIds.includes(c.id)),
+        selectedIds: [] as string[],
+      };
+      if (batching) return partial;
+      const prev = takeSnapshot(state);
+      const next = takeSnapshot({ ...(state as CanvasState), ...partial });
+      if (snapshotEquals(prev, next)) return partial;
+      const past = [...state.historyPast, prev];
+      const limitedPast = past.length > state.historyLimit ? past.slice(past.length - state.historyLimit) : past;
+      lastCoalesceKey = null;
+      return { ...partial, historyPast: limitedPast, historyFuture: [], canUndo: limitedPast.length > 0, canRedo: false };
+    });
   },
 
-  clearAll: () => set({ components: [], selectedIds: [] }),
+  clearAll: () => {
+    set((state) => {
+      const partial = { components: [] as CanvasComponent[], selectedIds: [] as string[] };
+      if (batching) return partial;
+      const prev = takeSnapshot(state);
+      const next = takeSnapshot({ ...(state as CanvasState), ...partial });
+      if (snapshotEquals(prev, next)) return partial;
+      const past = [...state.historyPast, prev];
+      const limitedPast = past.length > state.historyLimit ? past.slice(past.length - state.historyLimit) : past;
+      lastCoalesceKey = null;
+      return { ...partial, historyPast: limitedPast, historyFuture: [], canUndo: limitedPast.length > 0, canRedo: false };
+    });
+  },
 
   getSelectedComponents: () => {
     const { components, selectedIds } = get();
     return components.filter((c) => selectedIds.includes(c.id));
+  },
+
+  undo: () => {
+    set((state) => {
+      if (state.historyPast.length === 0) return {};
+      const past = state.historyPast.slice();
+      const prev = past.pop()!;
+      const current = takeSnapshot(state);
+      const future = [...state.historyFuture, current];
+      lastCoalesceKey = null;
+      return {
+        ...prev,
+        historyPast: past,
+        historyFuture: future,
+        canUndo: past.length > 0,
+        canRedo: future.length > 0,
+      };
+    });
+  },
+
+  redo: () => {
+    set((state) => {
+      if (state.historyFuture.length === 0) return {};
+      const future = state.historyFuture.slice();
+      const next = future.pop()!;
+      const current = takeSnapshot(state);
+      const past = [...state.historyPast, current];
+      const limitedPast = past.length > state.historyLimit ? past.slice(past.length - state.historyLimit) : past;
+      lastCoalesceKey = null;
+      return {
+        ...next,
+        historyPast: limitedPast,
+        historyFuture: future,
+        canUndo: limitedPast.length > 0,
+        canRedo: future.length > 0,
+      };
+    });
+  },
+
+  clearHistory: () => {
+    lastCoalesceKey = null;
+    batchStartSnapshot = null;
+    batching = false;
+    set({ historyPast: [], historyFuture: [], canUndo: false, canRedo: false });
+  },
+
+  hydrate: (partial) => {
+    lastCoalesceKey = null;
+    batchStartSnapshot = null;
+    batching = false;
+    set({ ...partial, historyPast: [], historyFuture: [], canUndo: false, canRedo: false });
+  },
+
+  batch: (fn) => {
+    if (batching) {
+      fn();
+      return;
+    }
+    batching = true;
+    batchStartSnapshot = takeSnapshot(get());
+    lastCoalesceKey = null;
+    lastCoalesceAt = 0;
+    try {
+      fn();
+    } finally {
+      batching = false;
+      const before = batchStartSnapshot;
+      batchStartSnapshot = null;
+      if (!before) return;
+      const after = takeSnapshot(get());
+      if (snapshotEquals(before, after)) return;
+      set((state) => {
+        const past = [...state.historyPast, before];
+        const limitedPast = past.length > state.historyLimit ? past.slice(past.length - state.historyLimit) : past;
+        return { historyPast: limitedPast, historyFuture: [], canUndo: limitedPast.length > 0, canRedo: false };
+      });
+    }
   },
 }));
 

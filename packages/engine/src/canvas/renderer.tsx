@@ -539,6 +539,8 @@ interface CanvasRendererProps {
   gridCols: number;
   /** 网格间距（px） */
   gridGap: number;
+  pageBackground?: string;
+  pagePadding?: number;
 }
 
 /**
@@ -559,6 +561,7 @@ export const CanvasRenderer = forwardRef<HTMLDivElement, CanvasRendererProps>(
   function CanvasRenderer({
     components, selectedIds, onSelect, onClearSelection, onResize,
     zoom, viewportWidth, panX, panY, onPan, gridCols, gridGap,
+    pageBackground, pagePadding,
   }, ref) {
     const containerRef = useRef<HTMLDivElement>(null);
     const [isPanning, setIsPanning] = useState(false);
@@ -618,6 +621,7 @@ export const CanvasRenderer = forwardRef<HTMLDivElement, CanvasRendererProps>(
             minHeight: "600px",
             transform: `scale(${zoom})`,
             transformOrigin: "top left",
+            backgroundColor: pageBackground,
           }}
           onClick={(e) => {
             if (e.target instanceof HTMLElement && e.target.dataset.canvasBg === "true") {
@@ -636,10 +640,11 @@ export const CanvasRenderer = forwardRef<HTMLDivElement, CanvasRendererProps>(
 
           {/* 组件网格 */}
           <div
-            className="relative grid p-4"
+            className="relative grid"
             style={{
               gridTemplateColumns: `repeat(${gridCols}, 1fr)`,
               gap: `${gridGap}px`,
+              padding: typeof pagePadding === "number" ? `${pagePadding}px` : undefined,
             }}
           >
             {components.length === 0 && (

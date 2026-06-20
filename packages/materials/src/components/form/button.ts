@@ -102,5 +102,13 @@ export const buttonMaterial: MaterialDefinition = {
       order: 20,
       comment: "Documentation note that will appear in generated code.",
     },
+    {
+      key: "onClick",
+      label: "onClick Flow",
+      type: "eventBinding",
+      group: "Events",
+      order: 30,
+      comment: "Bind this event to a Flow (flow_id).",
+    },
   ],
 };

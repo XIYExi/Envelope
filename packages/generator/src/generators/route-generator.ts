@@ -13,6 +13,7 @@
  */
 import type { RoutesConfig, RouteNode } from "@envelope/engine";
 import type { VirtualFile } from "../core/file-system";
+import { jsxText, tsStringLiteral } from "../core/tsx-escape";
 
 /** 页面元数据（用于匹配路由到页面） */
 interface PageInfo {
@@ -66,14 +67,14 @@ function generatePageContent(
     metadataLines.push("");
     metadataLines.push("export const metadata: Metadata = {");
     if (title) {
-      metadataLines.push(`  title: "${escapeString(title)}",`);
+      metadataLines.push(`  title: ${tsStringLiteral(title)},`);
     }
     if (description) {
-      metadataLines.push(`  description: "${escapeString(description)}",`);
+      metadataLines.push(`  description: ${tsStringLiteral(description)},`);
     }
     if (ogImage) {
       metadataLines.push(`  openGraph: {`);
-      metadataLines.push(`    images: ["${escapeString(ogImage)}"],`);
+      metadataLines.push(`    images: [${tsStringLiteral(ogImage)}],`);
       metadataLines.push(`  },`);
     }
     metadataLines.push("};");
@@ -86,8 +87,8 @@ function generatePageContent(
     `export default function Page() {`,
     `  return (`,
     `    <main className="container mx-auto p-4">`,
-    `      <h1 className="text-2xl font-bold">${escapeString(title)}</h1>`,
-    description ? `      <p className="text-muted-foreground mt-2">${escapeString(description)}</p>` : "",
+    `      <h1 className="text-2xl font-bold">${jsxText(title)}</h1>`,
+    description ? `      <p className="text-muted-foreground mt-2">${jsxText(description)}</p>` : "",
     `    </main>`,
     `  );`,
     `}`,
@@ -106,9 +107,9 @@ function generateLayoutContent(route: RouteNode): string {
   const metadataLines: string[] = [];
   if (metaTitle) {
     metadataLines.push(`export const metadata: Metadata = {`);
-    metadataLines.push(`  title: "${escapeString(metaTitle)}",`);
+    metadataLines.push(`  title: ${tsStringLiteral(metaTitle)},`);
     if (metaDesc) {
-      metadataLines.push(`  description: "${escapeString(metaDesc)}",`);
+      metadataLines.push(`  description: ${tsStringLiteral(metaDesc)},`);
     }
     metadataLines.push(`};`);
     metadataLines.push(``);
@@ -116,9 +117,10 @@ function generateLayoutContent(route: RouteNode): string {
 
   return [
     `import type { Metadata } from "next";`,
+    `import type { ReactNode } from "react";`,
     ``,
     ...metadataLines,
-    `export default function Layout({ children }: { children: React.ReactNode }) {`,
+    `export default function Layout({ children }: { children: ReactNode }) {`,
     `  return (`,
     `    <div className="min-h-screen">`,
     `      {children}`,
@@ -200,13 +202,6 @@ function generateApiRouteContent(route: RouteNode): string {
 }
 
 /**
- * 转义字符串中的特殊字符（用于 JSX 和模板字符串）
- */
-function escapeString(s: string): string {
-  return s.replace(/\\/g, "\\\\").replace(/"/g, '\\"').replace(/\n/g, "\\n");
-}
-
-/**
  * 递归遍历路由树，生成所有页面文件
  *
  * @param nodes - 当前层级的路由节点
@@ -229,7 +224,7 @@ function walkRouteTree(
 
     // 如果关联了页面 ID，生成 page.tsx
     if (node.pageId) {
-      const pageInfo = node.pageId ? pages.get(node.pageId) : undefined;
+      const pageInfo = node.pageId ? (pages.get(node.pageId) ?? findPageByPath(fullPath, pages)) : undefined;
       files.push({
         path: `${dirPath}/page.tsx`,
         content: generatePageContent(node, fullPath, pageInfo),
@@ -379,6 +374,7 @@ export function generateRouteFiles(
       path: "app/layout.tsx",
       content: [
         `import type { Metadata } from "next";`,
+        `import type { ReactNode } from "react";`,
         `import "./globals.css";`,
         ``,
         `export const metadata: Metadata = {`,
@@ -388,7 +384,7 @@ export function generateRouteFiles(
         `  },`,
         `};`,
         ``,
-        `export default function RootLayout({ children }: { children: React.ReactNode }) {`,
+        `export default function RootLayout({ children }: { children: ReactNode }) {`,
         `  return (`,
         `    <html lang="en">`,
         `      <body>{children}</body>`,

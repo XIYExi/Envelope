@@ -8,6 +8,10 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 const publicPaths = ["/login", "/signup", "/"];
 
+function isPublicPath(pathname: string): boolean {
+  return publicPaths.some((p) => pathname === p || (p !== "/" && pathname.startsWith(`${p}/`)));
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -32,9 +36,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!isLoading) {
-      const isPublic = publicPaths.some(
-        (p) => pathname === p || (p !== "/" && pathname.startsWith(p)),
-      );
+      const isPublic = isPublicPath(pathname);
       if (!user && !isPublic) {
         router.push("/login");
       }

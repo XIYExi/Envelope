@@ -9,10 +9,15 @@
  */
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import { useCanvasStore } from "@envelope/engine";
 import { useEditorStore } from "@/stores/editor";
+import { useProjectPagesStore } from "@/stores/project-pages";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { useSearchParams } from "next/navigation";
+import type { ArchiveExportOptions } from "@/lib/archive/archive-types";
+import { ConfigArchiveExportDialog } from "./config-archive-export-dialog";
 import {
   PanelLeftClose,
   PanelLeftOpen,
@@ -24,6 +29,10 @@ import {
   Tablet,
   Smartphone,
   Trash2,
+  Save,
+  Download,
+  LoaderCircle,
+  Upload,
 } from "lucide-react";
 import type { CanvasState } from "@envelope/engine";
 
@@ -50,30 +59,655 @@ const viewports: CanvasState["viewport"][] = ["desktop", "tablet", "mobile", "fl
  * 编辑器工具栏
  *
  * - 左面板切换按钮
- * - 撤销/重做（由 editor store 的 canUndo/canRedo 控制）
+ * - 撤销/重做（由 canvas store 的 canUndo/canRedo 控制）
  * - 视口切换（通过 editor store 统一管理，避免双源写入）
  * - 组件计数
  * - 删除选中组件（无确认对话框，直接删除，可通过撤销恢复）
  * - 右面板切换按钮
  */
 export function EditorToolbar() {
-  const { viewport, setViewport, deleteSelected, selectedIds, components } = useCanvasStore();
+  const searchParams = useSearchParams();
+  const projectId = searchParams.get("project");
+  const { viewport, setViewport, deleteSelected, selectedIds, components, canUndo, canRedo, undo, redo } = useCanvasStore();
   const {
     toggleLeftPanel,
     toggleRightPanel,
     leftPanelCollapsed,
     rightPanelCollapsed,
-    canUndo,
-    canRedo,
-    undo,
-    redo,
-    pushSnapshot,
     setCanvasViewport,
+    editorMode,
   } = useEditorStore();
+
+  const { dirty, isSaving, error, flushAutosave, pages, currentPath, setCurrentPath } = useProjectPagesStore();
+
+  const [isExporting, setIsExporting] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
+  const [exportStage, setExportStage] = useState<string | null>(null);
+  const [exportPercent, setExportPercent] = useState<number | null>(null);
+  const exportWsRef = useRef<WebSocket | null>(null);
+  const exportTaskIdRef = useRef<string | null>(null);
+  const exportDownloadUrlRef = useRef<string | null>(null);
+  const reconnectAttemptsRef = useRef(0);
+  const exportPingTimerRef = useRef<number | null>(null);
+
+  const [isArchiveExporting, setIsArchiveExporting] = useState(false);
+  const [archiveExportError, setArchiveExportError] = useState<string | null>(null);
+  const [archiveExportStage, setArchiveExportStage] = useState<string | null>(null);
+  const [archiveExportPercent, setArchiveExportPercent] = useState<number | null>(null);
+  const [archiveExportDialogOpen, setArchiveExportDialogOpen] = useState(false);
+  const archiveExportWsRef = useRef<WebSocket | null>(null);
+  const archiveExportTaskIdRef = useRef<string | null>(null);
+  const archiveExportDownloadUrlRef = useRef<string | null>(null);
+  const archiveExportReconnectRef = useRef(0);
+  const archiveExportPingTimerRef = useRef<number | null>(null);
+
+  const [isArchiveImporting, setIsArchiveImporting] = useState(false);
+  const [archiveImportError, setArchiveImportError] = useState<string | null>(null);
+  const [archiveImportStage, setArchiveImportStage] = useState<string | null>(null);
+  const [archiveImportPercent, setArchiveImportPercent] = useState<number | null>(null);
+  const [archiveImportResultProjectId, setArchiveImportResultProjectId] = useState<string | null>(null);
+  const archiveImportWsRef = useRef<WebSocket | null>(null);
+  const archiveImportTaskIdRef = useRef<string | null>(null);
+  const archiveImportReconnectRef = useRef(0);
+  const importFileInputRef = useRef<HTMLInputElement | null>(null);
+  const archiveImportPingTimerRef = useRef<number | null>(null);
+
+  const wsClientIdStorageKey = "envelope_task_ws_client_id";
+
+  const getFileNameFromContentDisposition = (value: string | null | undefined) => {
+    if (!value) return null;
+    const utf8Match = value.match(/filename\*\s*=\s*UTF-8''([^;]+)/i);
+    if (utf8Match?.[1]) {
+      try {
+        return decodeURIComponent(utf8Match[1]);
+      } catch {
+        return utf8Match[1];
+      }
+    }
+    const match = value.match(/filename\s*=\s*"([^"]+)"/i) ?? value.match(/filename\s*=\s*([^;]+)/i);
+    return match?.[1]?.trim() ?? null;
+  };
+
+  const downloadExport = async (downloadUrl: string, fallbackName: string) => {
+    const res = await fetch(downloadUrl, { method: "GET" });
+    if (!res.ok) {
+      const contentType = res.headers.get("content-type") ?? "";
+      if (contentType.includes("application/json")) {
+        const payload = (await res.json()) as { error?: { message?: string } };
+        throw new Error(payload.error?.message || `Download failed: ${res.status}`);
+      }
+      throw new Error(`Download failed: ${res.status}`);
+    }
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = getFileNameFromContentDisposition(res.headers.get("content-disposition")) ?? fallbackName;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 10_000);
+  };
+
+  const connectExportWs = (wsPort: number, wsPath: string) => {
+    const taskId = exportTaskIdRef.current;
+    if (!taskId) return;
+
+    if (exportWsRef.current) {
+      try {
+        exportWsRef.current.close();
+      } catch {
+      }
+      exportWsRef.current = null;
+    }
+    if (exportPingTimerRef.current) {
+      window.clearInterval(exportPingTimerRef.current);
+      exportPingTimerRef.current = null;
+    }
+
+    const protocol = window.location.protocol === "https:" ? "wss" : "ws";
+    const host = window.location.hostname;
+    const url = `${protocol}://${host}:${wsPort}${wsPath}`;
+
+    const ws = new WebSocket(url);
+    exportWsRef.current = ws;
+
+    ws.onopen = () => {
+      reconnectAttemptsRef.current = 0;
+      const existingClientId = window.localStorage.getItem(wsClientIdStorageKey);
+      ws.send(JSON.stringify({ type: "register", ...(existingClientId ? { clientId: existingClientId } : {}) }));
+      ws.send(JSON.stringify({ type: "subscribe", taskId }));
+      if (!exportPingTimerRef.current) {
+        exportPingTimerRef.current = window.setInterval(() => {
+          try {
+            ws.send(JSON.stringify({ type: "ping" }));
+          } catch {
+          }
+        }, 20_000);
+      }
+    };
+
+    ws.onmessage = async (event) => {
+      let msg: unknown;
+      try {
+        msg = JSON.parse(String(event.data));
+      } catch {
+        return;
+      }
+      if (!msg || typeof msg !== "object") return;
+      const record = msg as Record<string, unknown>;
+      if (record.type === "registered" && typeof record.clientId === "string") {
+        window.localStorage.setItem(wsClientIdStorageKey, record.clientId);
+        return;
+      }
+      if (record.type !== "snapshot") return;
+      const payload = record.payload as Record<string, unknown> | undefined;
+      const task = (payload?.task ?? payload) as Record<string, unknown> | undefined;
+      if (!task) return;
+
+      const state = task.state;
+      const stage = task.stage;
+      const percent = task.percent;
+      if (typeof stage === "string") setExportStage(stage);
+      if (typeof percent === "number") setExportPercent(percent);
+
+      if (state === "done") {
+        const downloadUrl = exportDownloadUrlRef.current;
+        exportTaskIdRef.current = null;
+        exportDownloadUrlRef.current = null;
+        try {
+          ws.close();
+        } catch {
+        }
+        exportWsRef.current = null;
+        if (exportPingTimerRef.current) {
+          window.clearInterval(exportPingTimerRef.current);
+          exportPingTimerRef.current = null;
+        }
+
+        if (downloadUrl && projectId) {
+          try {
+            await downloadExport(downloadUrl, `project-${projectId.slice(0, 8)}.zip`);
+          } catch (e) {
+            const message = e instanceof Error ? e.message : "导出失败";
+            setExportError(message);
+            window.alert(message);
+          }
+        }
+
+        setIsExporting(false);
+      }
+
+      if (state === "error") {
+        const err = task.error;
+        const message = typeof err === "string" ? err : "导出失败";
+        setExportError(message);
+        window.alert(message);
+        exportTaskIdRef.current = null;
+        exportDownloadUrlRef.current = null;
+        setIsExporting(false);
+        try {
+          ws.close();
+        } catch {
+        }
+        exportWsRef.current = null;
+        if (exportPingTimerRef.current) {
+          window.clearInterval(exportPingTimerRef.current);
+          exportPingTimerRef.current = null;
+        }
+      }
+    };
+
+    ws.onclose = () => {
+      if (!exportTaskIdRef.current) return;
+      if (!isExporting) return;
+      const attempt = reconnectAttemptsRef.current + 1;
+      reconnectAttemptsRef.current = attempt;
+      const delay = Math.min(2000 * attempt, 10_000);
+      setTimeout(() => connectExportWs(wsPort, wsPath), delay);
+    };
+
+    ws.onerror = () => {
+      try {
+        ws.close();
+      } catch {
+      }
+    };
+  };
+
+  const connectArchiveExportWs = (wsPort: number, wsPath: string) => {
+    const taskId = archiveExportTaskIdRef.current;
+    if (!taskId) return;
+
+    if (archiveExportWsRef.current) {
+      try {
+        archiveExportWsRef.current.close();
+      } catch {
+      }
+      archiveExportWsRef.current = null;
+    }
+    if (archiveExportPingTimerRef.current) {
+      window.clearInterval(archiveExportPingTimerRef.current);
+      archiveExportPingTimerRef.current = null;
+    }
+
+    const protocol = window.location.protocol === "https:" ? "wss" : "ws";
+    const host = window.location.hostname;
+    const url = `${protocol}://${host}:${wsPort}${wsPath}`;
+
+    const ws = new WebSocket(url);
+    archiveExportWsRef.current = ws;
+
+    ws.onopen = () => {
+      archiveExportReconnectRef.current = 0;
+      const existingClientId = window.localStorage.getItem(wsClientIdStorageKey);
+      ws.send(JSON.stringify({ type: "register", ...(existingClientId ? { clientId: existingClientId } : {}) }));
+      ws.send(JSON.stringify({ type: "subscribe", taskId }));
+      if (!archiveExportPingTimerRef.current) {
+        archiveExportPingTimerRef.current = window.setInterval(() => {
+          try {
+            ws.send(JSON.stringify({ type: "ping" }));
+          } catch {
+          }
+        }, 20_000);
+      }
+    };
+
+    ws.onmessage = async (event) => {
+      let msg: unknown;
+      try {
+        msg = JSON.parse(String(event.data));
+      } catch {
+        return;
+      }
+      if (!msg || typeof msg !== "object") return;
+      const record = msg as Record<string, unknown>;
+      if (record.type === "registered" && typeof record.clientId === "string") {
+        window.localStorage.setItem(wsClientIdStorageKey, record.clientId);
+        return;
+      }
+      if (record.type !== "snapshot") return;
+      const payload = record.payload as Record<string, unknown> | undefined;
+      const task = (payload?.task ?? payload) as Record<string, unknown> | undefined;
+      if (!task || task.kind !== "archive_export") return;
+
+      const state = task.state;
+      const stage = task.stage;
+      const percent = task.percent;
+      if (typeof stage === "string") setArchiveExportStage(stage);
+      if (typeof percent === "number") setArchiveExportPercent(percent);
+
+      if (state === "done") {
+        const downloadUrl = archiveExportDownloadUrlRef.current;
+        archiveExportTaskIdRef.current = null;
+        archiveExportDownloadUrlRef.current = null;
+        try {
+          ws.close();
+        } catch {
+        }
+        archiveExportWsRef.current = null;
+        if (archiveExportPingTimerRef.current) {
+          window.clearInterval(archiveExportPingTimerRef.current);
+          archiveExportPingTimerRef.current = null;
+        }
+
+        if (downloadUrl && projectId) {
+          try {
+            await downloadExport(downloadUrl, `project-${projectId.slice(0, 8)}-archive.zip`);
+          } catch (e) {
+            const message = e instanceof Error ? e.message : "导出失败";
+            setArchiveExportError(message);
+            window.alert(message);
+          }
+        }
+        setIsArchiveExporting(false);
+      }
+
+      if (state === "error") {
+        const err = task.error;
+        const message = typeof err === "string" ? err : "导出失败";
+        setArchiveExportError(message);
+        window.alert(message);
+        archiveExportTaskIdRef.current = null;
+        archiveExportDownloadUrlRef.current = null;
+        setIsArchiveExporting(false);
+        try {
+          ws.close();
+        } catch {
+        }
+        archiveExportWsRef.current = null;
+        if (archiveExportPingTimerRef.current) {
+          window.clearInterval(archiveExportPingTimerRef.current);
+          archiveExportPingTimerRef.current = null;
+        }
+      }
+    };
+
+    ws.onclose = () => {
+      if (!archiveExportTaskIdRef.current) return;
+      if (!isArchiveExporting) return;
+      const attempt = archiveExportReconnectRef.current + 1;
+      archiveExportReconnectRef.current = attempt;
+      const delay = Math.min(2000 * attempt, 10_000);
+      setTimeout(() => connectArchiveExportWs(wsPort, wsPath), delay);
+    };
+
+    ws.onerror = () => {
+      try {
+        ws.close();
+      } catch {
+      }
+    };
+  };
+
+  const connectArchiveImportWs = (wsPort: number, wsPath: string) => {
+    const taskId = archiveImportTaskIdRef.current;
+    if (!taskId) return;
+
+    if (archiveImportWsRef.current) {
+      try {
+        archiveImportWsRef.current.close();
+      } catch {
+      }
+      archiveImportWsRef.current = null;
+    }
+    if (archiveImportPingTimerRef.current) {
+      window.clearInterval(archiveImportPingTimerRef.current);
+      archiveImportPingTimerRef.current = null;
+    }
+
+    const protocol = window.location.protocol === "https:" ? "wss" : "ws";
+    const host = window.location.hostname;
+    const url = `${protocol}://${host}:${wsPort}${wsPath}`;
+
+    const ws = new WebSocket(url);
+    archiveImportWsRef.current = ws;
+
+    ws.onopen = () => {
+      archiveImportReconnectRef.current = 0;
+      const existingClientId = window.localStorage.getItem(wsClientIdStorageKey);
+      ws.send(JSON.stringify({ type: "register", ...(existingClientId ? { clientId: existingClientId } : {}) }));
+      ws.send(JSON.stringify({ type: "subscribe", taskId }));
+      if (!archiveImportPingTimerRef.current) {
+        archiveImportPingTimerRef.current = window.setInterval(() => {
+          try {
+            ws.send(JSON.stringify({ type: "ping" }));
+          } catch {
+          }
+        }, 20_000);
+      }
+    };
+
+    ws.onmessage = (event) => {
+      let msg: unknown;
+      try {
+        msg = JSON.parse(String(event.data));
+      } catch {
+        return;
+      }
+      if (!msg || typeof msg !== "object") return;
+      const record = msg as Record<string, unknown>;
+      if (record.type === "registered" && typeof record.clientId === "string") {
+        window.localStorage.setItem(wsClientIdStorageKey, record.clientId);
+        return;
+      }
+      if (record.type !== "snapshot") return;
+      const payload = record.payload as Record<string, unknown> | undefined;
+      const task = (payload?.task ?? payload) as Record<string, unknown> | undefined;
+      if (!task || task.kind !== "archive_import") return;
+
+      const state = task.state;
+      const stage = task.stage;
+      const percent = task.percent;
+      if (typeof stage === "string") setArchiveImportStage(stage);
+      if (typeof percent === "number") setArchiveImportPercent(percent);
+
+      if (typeof task.resultProjectId === "string") setArchiveImportResultProjectId(task.resultProjectId);
+
+      if (state === "done") {
+        archiveImportTaskIdRef.current = null;
+        try {
+          ws.close();
+        } catch {
+        }
+        archiveImportWsRef.current = null;
+        if (archiveImportPingTimerRef.current) {
+          window.clearInterval(archiveImportPingTimerRef.current);
+          archiveImportPingTimerRef.current = null;
+        }
+        setIsArchiveImporting(false);
+      }
+
+      if (state === "error") {
+        const err = task.error;
+        const message = typeof err === "string" ? err : "导入失败";
+        setArchiveImportError(message);
+        window.alert(message);
+        archiveImportTaskIdRef.current = null;
+        setIsArchiveImporting(false);
+        try {
+          ws.close();
+        } catch {
+        }
+        archiveImportWsRef.current = null;
+        if (archiveImportPingTimerRef.current) {
+          window.clearInterval(archiveImportPingTimerRef.current);
+          archiveImportPingTimerRef.current = null;
+        }
+      }
+    };
+
+    ws.onclose = () => {
+      if (!archiveImportTaskIdRef.current) return;
+      if (!isArchiveImporting) return;
+      const attempt = archiveImportReconnectRef.current + 1;
+      archiveImportReconnectRef.current = attempt;
+      const delay = Math.min(2000 * attempt, 10_000);
+      setTimeout(() => connectArchiveImportWs(wsPort, wsPath), delay);
+    };
+
+    ws.onerror = () => {
+      try {
+        ws.close();
+      } catch {
+      }
+    };
+  };
+
+  useEffect(() => {
+    return () => {
+      if (exportWsRef.current) {
+        try {
+          exportWsRef.current.close();
+        } catch {
+        }
+        exportWsRef.current = null;
+      }
+      if (exportPingTimerRef.current) {
+        window.clearInterval(exportPingTimerRef.current);
+        exportPingTimerRef.current = null;
+      }
+      if (archiveExportWsRef.current) {
+        try {
+          archiveExportWsRef.current.close();
+        } catch {
+        }
+        archiveExportWsRef.current = null;
+      }
+      if (archiveExportPingTimerRef.current) {
+        window.clearInterval(archiveExportPingTimerRef.current);
+        archiveExportPingTimerRef.current = null;
+      }
+      if (archiveImportWsRef.current) {
+        try {
+          archiveImportWsRef.current.close();
+        } catch {
+        }
+        archiveImportWsRef.current = null;
+      }
+      if (archiveImportPingTimerRef.current) {
+        window.clearInterval(archiveImportPingTimerRef.current);
+        archiveImportPingTimerRef.current = null;
+      }
+    };
+  }, []);
+
+  const handleExport = async () => {
+    if (!projectId) return;
+    if (isExporting) return;
+    setIsExporting(true);
+    setExportError(null);
+    setExportStage("准备导出");
+    setExportPercent(0);
+    try {
+      if (dirty) {
+        setExportStage("保存中");
+        await flushAutosave();
+      }
+      setExportStage("启动任务");
+      const res = await fetch(`/api/projects/${projectId}/export/tasks`, { method: "POST" });
+      if (!res.ok) {
+        const contentType = res.headers.get("content-type") ?? "";
+        if (contentType.includes("application/json")) {
+          const payload = (await res.json()) as { error?: { message?: string } };
+          throw new Error(payload.error?.message || `Export failed: ${res.status}`);
+        }
+        throw new Error(`Export failed: ${res.status}`);
+      }
+      const payload = (await res.json()) as {
+        taskId?: string;
+        wsPort?: number;
+        wsPath?: string;
+        downloadUrl?: string;
+      };
+      if (!payload.taskId || typeof payload.wsPort !== "number" || typeof payload.wsPath !== "string" || !payload.downloadUrl) {
+        throw new Error("Invalid export task response");
+      }
+      exportTaskIdRef.current = payload.taskId;
+      exportDownloadUrlRef.current = payload.downloadUrl;
+      setExportStage("导出中");
+      setExportPercent(1);
+      connectExportWs(payload.wsPort, payload.wsPath);
+    } catch (e) {
+      const message = e instanceof Error ? e.message : "导出失败";
+      setExportError(message);
+      window.alert(message);
+      exportTaskIdRef.current = null;
+      exportDownloadUrlRef.current = null;
+      setExportStage(null);
+      setExportPercent(null);
+      setIsExporting(false);
+    }
+  };
+
+  const handleArchiveExport = async (options?: ArchiveExportOptions) => {
+    if (!projectId) return;
+    if (isArchiveExporting) return;
+    setIsArchiveExporting(true);
+    setArchiveExportError(null);
+    setArchiveExportStage("准备导出配置包");
+    setArchiveExportPercent(0);
+    try {
+      if (dirty) {
+        setArchiveExportStage("保存中");
+        await flushAutosave();
+      }
+      setArchiveExportStage("启动任务");
+      const res = await fetch(`/api/projects/${projectId}/archive/tasks`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(options ?? { redactSecrets: true }),
+      });
+      if (!res.ok) {
+        const contentType = res.headers.get("content-type") ?? "";
+        if (contentType.includes("application/json")) {
+          const payload = (await res.json()) as { error?: { message?: string } };
+          throw new Error(payload.error?.message || `Export failed: ${res.status}`);
+        }
+        throw new Error(`Export failed: ${res.status}`);
+      }
+      const payload = (await res.json()) as {
+        taskId?: string;
+        wsPort?: number;
+        wsPath?: string;
+        downloadUrl?: string;
+      };
+      if (!payload.taskId || typeof payload.wsPort !== "number" || typeof payload.wsPath !== "string" || !payload.downloadUrl) {
+        throw new Error("Invalid archive export task response");
+      }
+      archiveExportTaskIdRef.current = payload.taskId;
+      archiveExportDownloadUrlRef.current = payload.downloadUrl;
+      setArchiveExportStage("导出中");
+      setArchiveExportPercent(1);
+      connectArchiveExportWs(payload.wsPort, payload.wsPath);
+    } catch (e) {
+      const message = e instanceof Error ? e.message : "导出失败";
+      setArchiveExportError(message);
+      window.alert(message);
+      archiveExportTaskIdRef.current = null;
+      archiveExportDownloadUrlRef.current = null;
+      setArchiveExportStage(null);
+      setArchiveExportPercent(null);
+      setIsArchiveExporting(false);
+    }
+  };
+
+  const handleArchiveImportPickFile = () => {
+    if (isArchiveImporting) return;
+    importFileInputRef.current?.click();
+  };
+
+  const handleArchiveImportFileSelected = async (file: File | null) => {
+    if (!file) return;
+    if (isArchiveImporting) return;
+    setIsArchiveImporting(true);
+    setArchiveImportError(null);
+    setArchiveImportStage("上传中");
+    setArchiveImportPercent(0);
+    setArchiveImportResultProjectId(null);
+    try {
+      const form = new FormData();
+      form.append("file", file);
+      form.append("options", JSON.stringify({ mode: "create", conflictStrategy: "overwrite", danglingRefPolicy: "error" }));
+
+      const res = await fetch(`/api/archive/import/tasks`, { method: "POST", body: form });
+      if (!res.ok) {
+        const contentType = res.headers.get("content-type") ?? "";
+        if (contentType.includes("application/json")) {
+          const payload = (await res.json()) as { error?: { message?: string } };
+          throw new Error(payload.error?.message || `Import failed: ${res.status}`);
+        }
+        throw new Error(`Import failed: ${res.status}`);
+      }
+
+      const payload = (await res.json()) as {
+        taskId?: string;
+        wsPort?: number;
+        wsPath?: string;
+      };
+      if (!payload.taskId || typeof payload.wsPort !== "number" || typeof payload.wsPath !== "string") {
+        throw new Error("Invalid archive import task response");
+      }
+      archiveImportTaskIdRef.current = payload.taskId;
+      setArchiveImportStage("导入中");
+      setArchiveImportPercent(1);
+      connectArchiveImportWs(payload.wsPort, payload.wsPath);
+    } catch (e) {
+      const message = e instanceof Error ? e.message : "导入失败";
+      setArchiveImportError(message);
+      window.alert(message);
+      archiveImportTaskIdRef.current = null;
+      setArchiveImportStage(null);
+      setArchiveImportPercent(null);
+      setIsArchiveImporting(false);
+    } finally {
+      if (importFileInputRef.current) importFileInputRef.current.value = "";
+    }
+  };
+
 
   /** 删除选中组件（先压入快照以支持撤销） */
   const handleDelete = () => {
-    pushSnapshot();
     deleteSelected();
   };
 
@@ -135,6 +769,145 @@ export function EditorToolbar() {
       </span>
 
       <div className="flex-1" />
+
+      {editorMode === "pages" && (
+        <>
+          {pages.length > 0 && (
+            <select
+              value={currentPath ?? pages[0]?.path ?? "/"}
+              onChange={(e) => {
+                const next = e.target.value;
+                void flushAutosave().finally(() => setCurrentPath(next));
+              }}
+              className="mr-1 h-7 max-w-48 rounded border bg-background px-2 text-[10px]"
+            >
+              {pages.map((p) => (
+                <option key={p.path} value={p.path}>
+                  {p.title} ({p.path})
+                </option>
+              ))}
+            </select>
+          )}
+          {error && (
+            <span className="mr-1 max-w-48 truncate text-[10px] text-destructive" title={error}>
+              保存失败
+            </span>
+          )}
+          {exportError && (
+            <span className="mr-1 max-w-48 truncate text-[10px] text-destructive" title={exportError}>
+              导出失败
+            </span>
+          )}
+          {archiveExportError && (
+            <span className="mr-1 max-w-48 truncate text-[10px] text-destructive" title={archiveExportError}>
+              配置导出失败
+            </span>
+          )}
+          {archiveImportError && (
+            <span className="mr-1 max-w-48 truncate text-[10px] text-destructive" title={archiveImportError}>
+              配置导入失败
+            </span>
+          )}
+          {isExporting && exportStage && (
+            <span className="mr-1 max-w-56 truncate text-[10px] text-muted-foreground" title={exportStage}>
+              {exportStage}
+              {typeof exportPercent === "number" ? ` (${exportPercent}%)` : ""}
+            </span>
+          )}
+          {isArchiveExporting && archiveExportStage && (
+            <span className="mr-1 max-w-56 truncate text-[10px] text-muted-foreground" title={archiveExportStage}>
+              {archiveExportStage}
+              {typeof archiveExportPercent === "number" ? ` (${archiveExportPercent}%)` : ""}
+            </span>
+          )}
+          {isArchiveImporting && archiveImportStage && (
+            <span className="mr-1 max-w-56 truncate text-[10px] text-muted-foreground" title={archiveImportStage}>
+              {archiveImportStage}
+              {typeof archiveImportPercent === "number" ? ` (${archiveImportPercent}%)` : ""}
+            </span>
+          )}
+          {!isArchiveImporting && archiveImportResultProjectId && (
+            <span className="mr-1 max-w-56 truncate text-[10px] text-muted-foreground" title={archiveImportResultProjectId}>
+              已导入：{archiveImportResultProjectId.slice(0, 8)}
+            </span>
+          )}
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-7 text-[10px]"
+            disabled={isSaving || !dirty}
+            onClick={() => void flushAutosave()}
+          >
+            <Save className="mr-1 h-3 w-3" />
+            {isSaving ? "保存中" : dirty ? "保存" : "已保存"}
+          </Button>
+          {projectId && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="ml-1 h-7 text-[10px]"
+              disabled={isSaving || isExporting}
+              onClick={() => void handleExport()}
+            >
+              {isExporting ? (
+                <LoaderCircle className="mr-1 h-3 w-3 animate-spin" />
+              ) : (
+                <Download className="mr-1 h-3 w-3" />
+              )}
+              {isExporting ? "导出中" : "导出"}
+            </Button>
+          )}
+          {projectId && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="ml-1 h-7 text-[10px]"
+              disabled={isSaving || isArchiveExporting || isExporting}
+              onClick={() => setArchiveExportDialogOpen(true)}
+              title="导出配置归档（ISC-20/98-101）"
+            >
+              {isArchiveExporting ? (
+                <LoaderCircle className="mr-1 h-3 w-3 animate-spin" />
+              ) : (
+                <Download className="mr-1 h-3 w-3" />
+              )}
+              {isArchiveExporting ? "配置导出中" : "配置导出"}
+            </Button>
+          )}
+          <Button
+            variant="outline"
+            size="sm"
+            className="ml-1 h-7 text-[10px]"
+            disabled={isSaving || isArchiveImporting || isExporting || isArchiveExporting}
+            onClick={handleArchiveImportPickFile}
+            title="导入配置归档（ISC-20/98-101）"
+          >
+            {isArchiveImporting ? (
+              <LoaderCircle className="mr-1 h-3 w-3 animate-spin" />
+            ) : (
+              <Upload className="mr-1 h-3 w-3" />
+            )}
+            {isArchiveImporting ? "配置导入中" : "配置导入"}
+          </Button>
+          <input
+            ref={importFileInputRef}
+            type="file"
+            accept=".zip"
+            className="hidden"
+            onChange={(e) => void handleArchiveImportFileSelected(e.target.files?.[0] ?? null)}
+          />
+          <Separator orientation="vertical" className="mx-1 h-5" />
+        </>
+      )}
+
+      <ConfigArchiveExportDialog
+        open={archiveExportDialogOpen}
+        onOpenChange={setArchiveExportDialogOpen}
+        projectId={projectId}
+        disabled={isSaving || isArchiveExporting || isExporting}
+        isExporting={isArchiveExporting}
+        onConfirm={(options) => void handleArchiveExport(options)}
+      />
 
       {/* 删除（仅在有选中组件时显示） */}
       {selectedIds.length > 0 && (

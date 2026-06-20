@@ -21,6 +21,7 @@
  */
 import type { ProjectConfig } from "@envelope/engine";
 import type { VirtualFile } from "../core/file-system";
+import { tsStringLiteral } from "../core/tsx-escape";
 
 /**
  * 生成 package.json
@@ -174,7 +175,7 @@ function generateTailwindConfig(config: ProjectConfig): string {
     `        sm: "calc(var(--radius) - 4px)",`,
     `      },`,
     `      fontFamily: {`,
-    `        sans: ["${fontFamily}", "system-ui", "sans-serif"],`,
+    `        sans: [${tsStringLiteral(fontFamily)}, "system-ui", "sans-serif"],`,
     `      },`,
     `    },`,
     `  },`,
@@ -410,26 +411,27 @@ function generateRootLayout(config: ProjectConfig): string {
 
   return [
     `import type { Metadata } from "next";`,
+    `import type { ReactNode } from "react";`,
     `import "./globals.css";`,
     ``,
     `export const metadata: Metadata = {`,
     `  title: {`,
-    `    template: "${escapeTemplateString(titleTemplate)}",`,
+    `    template: ${tsStringLiteral(titleTemplate)},`,
     `    default: "Envelope App",`,
     `  },`,
-    `  description: "${defaultDesc}",`,
+    `  description: ${tsStringLiteral(defaultDesc)},`,
     `};`,
     ``,
     `export default function RootLayout({`,
     `  children,`,
     `}: {`,
-    `  children: React.ReactNode;`,
+    `  children: ReactNode;`,
     `}) {`,
     `  return (`,
     `    <html lang="en" suppressHydrationWarning>`,
     `      <body`,
     `        className="min-h-screen bg-background font-sans antialiased"`,
-    `        style={{ fontFamily: "${fontFamily}" }}`,
+    `        style={{ fontFamily: ${tsStringLiteral(fontFamily)} }}`,
     `      >`,
     `        {children}`,
     `      </body>`,
@@ -438,13 +440,6 @@ function generateRootLayout(config: ProjectConfig): string {
     `}`,
     ``
   ].join("\n");
-}
-
-/**
- * 转义模板字符串中的特殊字符
- */
-function escapeTemplateString(s: string): string {
-  return s.replace(/\\/g, "\\\\").replace(/"/g, '\\"').replace(/\n/g, "\\n");
 }
 
 /**

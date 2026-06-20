@@ -1,9 +1,25 @@
 import { useQuery, useMutation, useQueryClient, type UseQueryResult, type UseMutationResult } from "@tanstack/react-query";
 import type { Project } from "@/lib/supabase/types";
 
+async function getApiErrorMessage(res: Response, fallback: string): Promise<string> {
+  try {
+    const data: unknown = await res.json();
+    if (typeof data === "object" && data !== null && "error" in data) {
+      const err = (data as { error?: unknown }).error;
+      if (typeof err === "string") return err;
+      if (typeof err === "object" && err !== null && "message" in err) {
+        const message = (err as { message?: unknown }).message;
+        if (typeof message === "string") return message;
+      }
+    }
+  } catch {
+  }
+  return fallback;
+}
+
 async function fetchProjects(): Promise<Project[]> {
   const res = await fetch("/api/projects");
-  if (!res.ok) throw new Error("Failed to fetch projects");
+  if (!res.ok) throw new Error(await getApiErrorMessage(res, "Failed to fetch projects"));
   return res.json();
 }
 
@@ -14,8 +30,7 @@ async function createProject(input: { name: string; description?: string }): Pro
     body: JSON.stringify(input),
   });
   if (!res.ok) {
-    const err = await res.json();
-    throw new Error(err.error ?? "Failed to create project");
+    throw new Error(await getApiErrorMessage(res, "Failed to create project"));
   }
   return res.json();
 }
@@ -26,13 +41,13 @@ async function updateProject(id: string, input: { name?: string; description?: s
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(input),
   });
-  if (!res.ok) throw new Error("Failed to update project");
+  if (!res.ok) throw new Error(await getApiErrorMessage(res, "Failed to update project"));
   return res.json();
 }
 
 async function deleteProject(id: string): Promise<void> {
   const res = await fetch(`/api/projects/${id}`, { method: "DELETE" });
-  if (!res.ok) throw new Error("Failed to delete project");
+  if (!res.ok) throw new Error(await getApiErrorMessage(res, "Failed to delete project"));
 }
 
 async function duplicateProject(id: string, name: string): Promise<Project> {
@@ -41,7 +56,7 @@ async function duplicateProject(id: string, name: string): Promise<Project> {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ name }),
   });
-  if (!res.ok) throw new Error("Failed to duplicate project");
+  if (!res.ok) throw new Error(await getApiErrorMessage(res, "Failed to duplicate project"));
   return res.json();
 }
 

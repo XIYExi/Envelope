@@ -33,14 +33,35 @@ export interface VirtualFile {
 export class VirtualFS {
   private files: Map<string, string> = new Map();
 
+  private normalizeAndValidatePath(filePath: string): string {
+    const normalized = filePath.replace(/\\/g, "/").replace(/^\.\/+/, "").trim();
+    if (!normalized) {
+      throw new Error(`VirtualFS: filePath is empty`);
+    }
+    if (normalized.includes("\0")) {
+      throw new Error(`VirtualFS: filePath contains null byte: ${normalized}`);
+    }
+    if (path.posix.isAbsolute(normalized) || path.win32.isAbsolute(normalized)) {
+      throw new Error(`VirtualFS: absolute path is not allowed: ${normalized}`);
+    }
+    const segments = normalized.split("/");
+    if (segments.some((seg) => seg === "..")) {
+      throw new Error(`VirtualFS: path traversal is not allowed: ${normalized}`);
+    }
+    const collapsed = path.posix.normalize(normalized);
+    if (!collapsed || collapsed === "." || collapsed.startsWith("../")) {
+      throw new Error(`VirtualFS: invalid relative path: ${normalized}`);
+    }
+    return collapsed;
+  }
+
   /**
    * 添加文件到虚拟文件系统
    * @param filePath - 相对路径
    * @param content - 文件内容
    */
   addFile(filePath: string, content: string): void {
-    // 规范化路径分隔符
-    const normalized = filePath.replace(/\\/g, "/");
+    const normalized = this.normalizeAndValidatePath(filePath);
     this.files.set(normalized, content);
   }
 
@@ -60,7 +81,7 @@ export class VirtualFS {
    * @returns 文件内容，如果不存在则返回 undefined
    */
   getFile(filePath: string): string | undefined {
-    return this.files.get(filePath.replace(/\\/g, "/"));
+    return this.files.get(this.normalizeAndValidatePath(filePath));
   }
 
   /**
@@ -81,7 +102,7 @@ export class VirtualFS {
    * @param filePath - 相对路径
    */
   hasFile(filePath: string): boolean {
-    return this.files.has(filePath.replace(/\\/g, "/"));
+    return this.files.has(this.normalizeAndValidatePath(filePath));
   }
 
   /**
@@ -89,7 +110,7 @@ export class VirtualFS {
    * @param filePath - 相对路径
    */
   removeFile(filePath: string): void {
-    this.files.delete(filePath.replace(/\\/g, "/"));
+    this.files.delete(this.normalizeAndValidatePath(filePath));
   }
 
   /**
@@ -104,8 +125,14 @@ export class VirtualFS {
    * @param basePath - 输出根目录
    */
   toDirectory(basePath: string): void {
+    const baseResolved = path.resolve(basePath);
     for (const [relativePath, content] of this.files) {
-      const fullPath = path.join(basePath, relativePath);
+      const safeRelativePath = this.normalizeAndValidatePath(relativePath);
+      const fullPath = path.join(basePath, safeRelativePath);
+      const fullResolved = path.resolve(fullPath);
+      if (!fullResolved.toLowerCase().startsWith((baseResolved + path.sep).toLowerCase())) {
+        throw new Error(`VirtualFS: resolved path escapes basePath: ${safeRelativePath}`);
+      }
       const dir = path.dirname(fullPath);
 
       if (!fs.existsSync(dir)) {

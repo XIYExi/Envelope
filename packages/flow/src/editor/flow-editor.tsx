@@ -228,7 +228,12 @@ const nodeTypes = {
  * 三栏布局：节点面板（左）| ReactFlow 画布（中）| 节点配置（右）
  * 初始化时自动创建 event.start 和 event.end 节点。
  */
-export function FlowEditor() {
+export interface FlowEditorProps {
+  initialFlow?: FlowDefinition;
+  onChange?: (flow: FlowDefinition) => void;
+}
+
+export function FlowEditor({ initialFlow, onChange }: FlowEditorProps = {}) {
   // 流程元信息
   const [flowMeta, setFlowMeta] = useState<FlowEditorState>({
     thing: "untitled-flow",
@@ -242,6 +247,50 @@ export function FlowEditor() {
   // React Flow 节点和边状态
   const [nodes, setNodes, onNodesChangeBase] = useNodesState<Node>(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
+
+  const appliedInitialFlowKeyRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!initialFlow) return;
+    const key = `${initialFlow.thing}:${initialFlow.version}:${initialFlow.nodes.length}:${initialFlow.edges.length}`;
+    if (appliedInitialFlowKeyRef.current === key) return;
+
+    setFlowMeta({
+      thing: initialFlow.thing,
+      version: initialFlow.version,
+      description: initialFlow.description ?? "",
+    });
+
+    const newNodes: Node[] = initialFlow.nodes.map((fn: FlowNodeData) => ({
+      id: fn.id,
+      type: "flowNode",
+      position: { x: fn.position.x, y: fn.position.y },
+      data: {
+        type: fn.type,
+        label: fn.label ?? NODE_DEFINITION_MAP.get(fn.type)?.label ?? fn.type,
+        config: fn.config,
+      },
+    }));
+
+    const newEdges: Edge[] = initialFlow.edges.map((fe: FlowEdgeData) => ({
+      id: fe.id,
+      source: fe.source,
+      sourceHandle: fe.sourceHandle,
+      target: fe.target,
+      targetHandle: fe.targetHandle,
+      type: "smoothstep",
+      style: { stroke: "#64748b", strokeWidth: 1.5 },
+      markerEnd: { type: MarkerType.ArrowClosed, color: "#64748b", width: 12, height: 12 },
+      label: fe.label as string | undefined,
+    }));
+
+    setNodes(newNodes);
+    setEdges(newEdges);
+    setSelectedNodeId(null);
+    setRightPanelOpen(false);
+    nodeCounter.current = newNodes.length;
+    appliedInitialFlowKeyRef.current = key;
+  }, [initialFlow, setNodes, setEdges]);
 
   // 选中的节点 ID
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
@@ -414,16 +463,12 @@ export function FlowEditor() {
   // 流程级操作
   // ═══════════════════════════════════════════════════════════════
 
-  /**
-   * 将当前画布状态转换为 FlowDefinition 并导出 YAML
-   */
-  const exportYaml = useCallback(() => {
+  const buildFlowDefinition = useCallback((): FlowDefinition => {
     const flowNodes: FlowNodeData[] = nodes.map((n) => {
       const nodeType = n.data?.type as FlowNodeType | undefined;
       if (!nodeType) {
         throw new Error(`节点 ${n.id} 缺少 type 字段，无法导出。请删除该节点后重试。`);
       }
-      const def = NODE_DEFINITION_MAP.get(nodeType);
       return {
         id: n.id,
         type: nodeType,
@@ -450,13 +495,28 @@ export function FlowEditor() {
       };
     });
 
-    const flowDef: FlowDefinition = {
+    return {
       thing: flowMeta.thing,
       version: flowMeta.version,
       description: flowMeta.description || undefined,
       nodes: flowNodes,
       edges: flowEdges,
     };
+  }, [nodes, edges, flowMeta]);
+
+  useEffect(() => {
+    if (!onChange) return;
+    try {
+      onChange(buildFlowDefinition());
+    } catch {
+    }
+  }, [buildFlowDefinition, onChange]);
+
+  /**
+   * 将当前画布状态转换为 FlowDefinition 并导出 YAML
+   */
+  const exportYaml = useCallback(() => {
+    const flowDef = buildFlowDefinition();
 
     const result = validateFlow(flowDef);
     if (!result.valid) {
@@ -478,7 +538,7 @@ export function FlowEditor() {
     a.download = `${flowMeta.thing}.flow.yaml`;
     a.click();
     setTimeout(() => URL.revokeObjectURL(url), 100);
-  }, [nodes, edges, flowMeta]);
+  }, [buildFlowDefinition, flowMeta.thing]);
 
   /**
    * 从 YAML 文件导入流程

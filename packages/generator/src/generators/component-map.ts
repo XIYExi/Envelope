@@ -12,6 +12,8 @@
  */
 
 import type { ComponentNode } from "@envelope/engine";
+import { jsxText, sanitizeJsxComment, tsStringLiteral } from "../core/tsx-escape";
+import { makeEventHandlerName } from "./event-handler-names";
 
 /**
  * 组件生成器函数签名
@@ -61,23 +63,8 @@ function propNum(props: Record<string, unknown> | undefined, key: string, fallba
   return Number.isNaN(n) ? fallback : n;
 }
 
-/**
- * 安全转义 JSX 文本内容中的特殊字符
- * 防止 `<`, `>`, `{`, `}` 破坏 JSX 解析
- */
-function escapeText(s: string): string {
-  return s
-    .replace(/</g, "{'<'}")
-    .replace(/>/g, "{'>'}")
-    .replace(/\{/g, "{'{'}")
-    .replace(/\}/g, "{'}'}");
-}
-
-/**
- * 安全转义 JSX 属性值中的引号
- */
-function escapeAttr(s: string): string {
-  return s.replace(/"/g, "&quot;");
+function jsxAttrString(name: string, value: string): string {
+  return `${name}={${tsStringLiteral(value)}}`;
 }
 
 /**
@@ -85,7 +72,7 @@ function escapeAttr(s: string): string {
  */
 function comment(comp: ComponentNode, indent: string): string {
   if (!comp.comment) return "";
-  return `${indent}{/* ${comp.comment} */}\n`;
+  return `${indent}{/* ${sanitizeJsxComment(String(comp.comment))} */}\n`;
 }
 
 /**
@@ -95,6 +82,16 @@ function cx(comp: ComponentNode, extra = ""): string {
   const tw = comp.tailwindClasses || "";
   if (!tw && !extra) return "";
   return [tw, extra].filter(Boolean).join(" ");
+}
+
+function eventAttrs(comp: ComponentNode): string[] {
+  if (!comp.eventBindings) return [];
+  const attrs: string[] = [];
+  for (const event of Object.keys(comp.eventBindings)) {
+    if (event === "onPageLoad" || event === "onPageUnload") continue;
+    attrs.push(`${event}={${makeEventHandlerName(comp.id, event)}}`);
+  }
+  return attrs;
 }
 
 /**
@@ -196,13 +193,12 @@ export const COMPONENT_MAP: Record<string, ComponentGenerator> = {
 
   "Container": (comp, childrenJSX, indent) => {
     const tw = cx(comp);
-    const childIndent = indent + "  ";
-    return `${comment(comp, indent)}${indent}<div${tw ? ` className="${tw}"` : ""}>\n${childrenJSX}${indent}</div>`;
+    return `${comment(comp, indent)}${indent}<div${tw ? ` ${jsxAttrString("className", tw)}` : ""}>\n${childrenJSX}${indent}</div>`;
   },
 
   "Card": (comp, childrenJSX, indent) => {
     const tw = cx(comp);
-    return `${comment(comp, indent)}${indent}<Card${tw ? ` className="${tw}"` : ""}>\n${childrenJSX}${indent}</Card>`;
+    return `${comment(comp, indent)}${indent}<Card${tw ? ` ${jsxAttrString("className", tw)}` : ""}>\n${childrenJSX}${indent}</Card>`;
   },
 
   "CardHeader": (comp, childrenJSX, indent) => {
@@ -210,57 +206,57 @@ export const COMPONENT_MAP: Record<string, ComponentGenerator> = {
     if (!childrenJSX) {
       const title = propStr(comp.props, "title");
       const description = propStr(comp.props, "description");
-      return `${comment(comp, indent)}${indent}<CardHeader${tw ? ` className="${escapeAttr(tw)}"` : ""}>\n${indent}  <CardTitle>${escapeText(title || "Title")}</CardTitle>\n${description ? `${indent}  <CardDescription>${escapeText(description)}</CardDescription>\n` : ""}${indent}</CardHeader>`;
+      return `${comment(comp, indent)}${indent}<CardHeader${tw ? ` ${jsxAttrString("className", tw)}` : ""}>\n${indent}  <CardTitle>${jsxText(title || "Title")}</CardTitle>\n${description ? `${indent}  <CardDescription>${jsxText(description)}</CardDescription>\n` : ""}${indent}</CardHeader>`;
     }
-    return `${comment(comp, indent)}${indent}<CardHeader${tw ? ` className="${tw}"` : ""}>\n${childrenJSX}${indent}</CardHeader>`;
+    return `${comment(comp, indent)}${indent}<CardHeader${tw ? ` ${jsxAttrString("className", tw)}` : ""}>\n${childrenJSX}${indent}</CardHeader>`;
   },
 
   "CardContent": (comp, childrenJSX, indent) => {
     const tw = cx(comp);
-    return `${comment(comp, indent)}${indent}<CardContent${tw ? ` className="${tw}"` : ""}>\n${childrenJSX}${indent}</CardContent>`;
+    return `${comment(comp, indent)}${indent}<CardContent${tw ? ` ${jsxAttrString("className", tw)}` : ""}>\n${childrenJSX}${indent}</CardContent>`;
   },
 
   "CardFooter": (comp, childrenJSX, indent) => {
     const tw = cx(comp);
-    return `${comment(comp, indent)}${indent}<CardFooter${tw ? ` className="${tw}"` : ""}>\n${childrenJSX}${indent}</CardFooter>`;
+    return `${comment(comp, indent)}${indent}<CardFooter${tw ? ` ${jsxAttrString("className", tw)}` : ""}>\n${childrenJSX}${indent}</CardFooter>`;
   },
 
   "CardTitle": (comp, _childrenJSX, indent) => {
     const tw = cx(comp);
     const text = propStr(comp.props, "text", "Card Title");
-    return `${comment(comp, indent)}${indent}<CardTitle${tw ? ` className="${escapeAttr(tw)}"` : ""}>${escapeText(text)}</CardTitle>`;
+    return `${comment(comp, indent)}${indent}<CardTitle${tw ? ` ${jsxAttrString("className", tw)}` : ""}>${jsxText(text)}</CardTitle>`;
   },
 
   "CardDescription": (comp, _childrenJSX, indent) => {
     const tw = cx(comp);
     const text = propStr(comp.props, "text", "");
-    return `${comment(comp, indent)}${indent}<CardDescription${tw ? ` className="${escapeAttr(tw)}"` : ""}>${escapeText(text)}</CardDescription>`;
+    return `${comment(comp, indent)}${indent}<CardDescription${tw ? ` ${jsxAttrString("className", tw)}` : ""}>${jsxText(text)}</CardDescription>`;
   },
 
   "FlexCol": (comp, childrenJSX, indent) => {
     const tw = cx(comp, "flex flex-col");
-    return `${comment(comp, indent)}${indent}<div className="${tw}">\n${childrenJSX}${indent}</div>`;
+    return `${comment(comp, indent)}${indent}<div ${jsxAttrString("className", tw)}>\n${childrenJSX}${indent}</div>`;
   },
 
   "FlexRow": (comp, childrenJSX, indent) => {
     const tw = cx(comp, "flex flex-row");
-    return `${comment(comp, indent)}${indent}<div className="${tw}">\n${childrenJSX}${indent}</div>`;
+    return `${comment(comp, indent)}${indent}<div ${jsxAttrString("className", tw)}>\n${childrenJSX}${indent}</div>`;
   },
 
   "GridContainer": (comp, childrenJSX, indent) => {
     const tw = cx(comp, "grid");
-    return `${comment(comp, indent)}${indent}<div className="${tw}">\n${childrenJSX}${indent}</div>`;
+    return `${comment(comp, indent)}${indent}<div ${jsxAttrString("className", tw)}>\n${childrenJSX}${indent}</div>`;
   },
 
   "Section": (comp, childrenJSX, indent) => {
     const tw = cx(comp);
-    return `${comment(comp, indent)}${indent}<section${tw ? ` className="${tw}"` : ""}>\n${childrenJSX}${indent}</section>`;
+    return `${comment(comp, indent)}${indent}<section${tw ? ` ${jsxAttrString("className", tw)}` : ""}>\n${childrenJSX}${indent}</section>`;
   },
 
   "Separator": (comp, _childrenJSX, indent) => {
     const tw = cx(comp);
     const orientation = propStr(comp.props, "orientation", "horizontal");
-    return `${comment(comp, indent)}${indent}<Separator${tw ? ` className="${tw}"` : ""}${orientation !== "horizontal" ? ` orientation="${orientation}"` : ""} />`;
+    return `${comment(comp, indent)}${indent}<Separator${tw ? ` ${jsxAttrString("className", tw)}` : ""}${orientation !== "horizontal" ? ` ${jsxAttrString("orientation", orientation)}` : ""} />`;
   },
 
   /* ──────────────────────────────────────────────
@@ -273,10 +269,11 @@ export const COMPONENT_MAP: Record<string, ComponentGenerator> = {
     const size = propStr(p, "size", "default");
     const disabled = propBool(p, "disabled");
     const tw = cx(comp);
-    const attrs = [`variant="${variant}"`, `size="${size}"`];
+    const attrs = [`variant={${tsStringLiteral(variant)}}`, `size={${tsStringLiteral(size)}}`];
+    attrs.push(...eventAttrs(comp));
     if (disabled) attrs.push("disabled");
-    if (tw) attrs.push(`className="${tw}"`);
-    const label = childrenJSX ? `\n${childrenJSX}\n${indent}` : escapeText(propStr(p, "text", "Button"));
+    if (tw) attrs.push(`className={${tsStringLiteral(tw)}}`);
+    const label = childrenJSX ? `\n${childrenJSX}\n${indent}` : jsxText(propStr(p, "text", "Button"));
     return `${comment(comp, indent)}${indent}<Button ${attrs.join(" ")}>${label}</Button>`;
   },
 
@@ -287,11 +284,12 @@ export const COMPONENT_MAP: Record<string, ComponentGenerator> = {
     const defaultValue = propStr(p, "defaultValue", "");
     const disabled = propBool(p, "disabled");
     const tw = cx(comp);
-    const attrs: string[] = [`type="${inputType}"`];
-    if (placeholder) attrs.push(`placeholder="${placeholder}"`);
-    if (defaultValue) attrs.push(`defaultValue="${defaultValue}"`);
+    const attrs: string[] = [jsxAttrString("type", inputType)];
+    attrs.push(...eventAttrs(comp));
+    if (placeholder) attrs.push(jsxAttrString("placeholder", placeholder));
+    if (defaultValue) attrs.push(jsxAttrString("defaultValue", defaultValue));
     if (disabled) attrs.push("disabled");
-    if (tw) attrs.push(`className="${tw}"`);
+    if (tw) attrs.push(jsxAttrString("className", tw));
     return `${comment(comp, indent)}${indent}<Input ${attrs.join(" ")} />`;
   },
 
@@ -302,10 +300,11 @@ export const COMPONENT_MAP: Record<string, ComponentGenerator> = {
     const disabled = propBool(p, "disabled");
     const tw = cx(comp);
     const attrs: string[] = [];
-    if (placeholder) attrs.push(`placeholder="${placeholder}"`);
+    attrs.push(...eventAttrs(comp));
+    if (placeholder) attrs.push(jsxAttrString("placeholder", placeholder));
     if (rows) attrs.push(`rows={${rows}}`);
     if (disabled) attrs.push("disabled");
-    if (tw) attrs.push(`className="${tw}"`);
+    if (tw) attrs.push(jsxAttrString("className", tw));
     return `${comment(comp, indent)}${indent}<Textarea ${attrs.join(" ")} />`;
   },
 
@@ -316,9 +315,12 @@ export const COMPONENT_MAP: Record<string, ComponentGenerator> = {
     const tw = cx(comp);
     const options = (p?.options as Array<{ label: string; value: string }> | undefined) || [];
     const optionsJSX = options
-      .map((opt) => `${indent}  <SelectItem value="${escapeAttr(opt.value)}">${escapeText(opt.label)}</SelectItem>`)
+      .map((opt) => `${indent}  <SelectItem ${jsxAttrString("value", opt.value)}>${jsxText(opt.label)}</SelectItem>`)
       .join("\n");
-    return `${comment(comp, indent)}${indent}<Select${defaultValue ? ` defaultValue="${defaultValue}"` : ""}>\n${indent}  <SelectTrigger${tw ? ` className="${tw}"` : ""}>\n${indent}    <SelectValue placeholder="${placeholder}" />\n${indent}  </SelectTrigger>\n${indent}  <SelectContent>\n${optionsJSX || `${indent}    ${childrenJSX}`}\n${indent}  </SelectContent>\n${indent}</Select>`;
+    const attrs: string[] = [];
+    attrs.push(...eventAttrs(comp));
+    if (defaultValue) attrs.push(jsxAttrString("defaultValue", defaultValue));
+    return `${comment(comp, indent)}${indent}<Select${attrs.length ? " " + attrs.join(" ") : ""}>\n${indent}  <SelectTrigger${tw ? ` ${jsxAttrString("className", tw)}` : ""}>\n${indent}    <SelectValue ${jsxAttrString("placeholder", placeholder)} />\n${indent}  </SelectTrigger>\n${indent}  <SelectContent>\n${optionsJSX || `${indent}    ${childrenJSX}`}\n${indent}  </SelectContent>\n${indent}</Select>`;
   },
 
   "Checkbox": (comp, _childrenJSX, indent) => {
@@ -328,11 +330,12 @@ export const COMPONENT_MAP: Record<string, ComponentGenerator> = {
     const tw = cx(comp);
     const label = propStr(p, "label", "");
     const attrs: string[] = [];
+    attrs.push(...eventAttrs(comp));
     if (checked) attrs.push("defaultChecked");
     if (disabled) attrs.push("disabled");
-    if (tw) attrs.push(`className="${tw}"`);
+    if (tw) attrs.push(jsxAttrString("className", tw));
     if (label) {
-      return `${comment(comp, indent)}${indent}<div className="flex items-center gap-2">\n${indent}  <Checkbox ${attrs.join(" ")} />\n${indent}  <Label>${escapeText(label)}</Label>\n${indent}</div>`;
+      return `${comment(comp, indent)}${indent}<div className="flex items-center gap-2">\n${indent}  <Checkbox ${attrs.join(" ")} />\n${indent}  <Label>${jsxText(label)}</Label>\n${indent}</div>`;
     }
     return `${comment(comp, indent)}${indent}<Checkbox ${attrs.join(" ")} />`;
   },
@@ -343,9 +346,10 @@ export const COMPONENT_MAP: Record<string, ComponentGenerator> = {
     const disabled = propBool(p, "disabled");
     const tw = cx(comp);
     const attrs: string[] = [];
+    attrs.push(...eventAttrs(comp));
     if (checked) attrs.push("defaultChecked");
     if (disabled) attrs.push("disabled");
-    if (tw) attrs.push(`className="${tw}"`);
+    if (tw) attrs.push(jsxAttrString("className", tw));
     return `${comment(comp, indent)}${indent}<Switch ${attrs.join(" ")} />`;
   },
 
@@ -355,49 +359,53 @@ export const COMPONENT_MAP: Record<string, ComponentGenerator> = {
     const tw = cx(comp);
     const options = (p?.options as Array<{ label: string; value: string }> | undefined) || [];
     const optionsJSX = options
-      .map((opt) => `${indent}  <div className="flex items-center gap-2">\n${indent}    <RadioGroupItem value="${escapeAttr(opt.value)}" id="${escapeAttr(opt.value)}" />\n${indent}    <Label htmlFor="${escapeAttr(opt.value)}">${escapeText(opt.label)}</Label>\n${indent}  </div>`)
+      .map((opt) => `${indent}  <div className="flex items-center gap-2">\n${indent}    <RadioGroupItem ${jsxAttrString("value", opt.value)} ${jsxAttrString("id", opt.value)} />\n${indent}    <Label ${jsxAttrString("htmlFor", opt.value)}>${jsxText(opt.label)}</Label>\n${indent}  </div>`)
       .join("\n");
-    return `${comment(comp, indent)}${indent}<RadioGroup${defaultValue ? ` defaultValue="${defaultValue}"` : ""}${tw ? ` className="${tw}"` : ""}>\n${optionsJSX || childrenJSX}\n${indent}</RadioGroup>`;
+    const attrs: string[] = [];
+    attrs.push(...eventAttrs(comp));
+    if (defaultValue) attrs.push(jsxAttrString("defaultValue", defaultValue));
+    if (tw) attrs.push(jsxAttrString("className", tw));
+    return `${comment(comp, indent)}${indent}<RadioGroup${attrs.length ? " " + attrs.join(" ") : ""}>\n${optionsJSX || childrenJSX}\n${indent}</RadioGroup>`;
   },
 
   "Label": (comp, childrenJSX, indent) => {
     const p = comp.props as Record<string, unknown> | undefined;
     const htmlFor = propStr(p, "htmlFor", "");
     const tw = cx(comp);
-    const text = childrenJSX || escapeText(propStr(p, "text", "Label"));
+    const text = childrenJSX || jsxText(propStr(p, "text", "Label"));
     const attrs: string[] = [];
-    if (htmlFor) attrs.push(`htmlFor="${escapeAttr(htmlFor)}"`);
-    if (tw) attrs.push(`className="${escapeAttr(tw)}"`);
+    if (htmlFor) attrs.push(jsxAttrString("htmlFor", htmlFor));
+    if (tw) attrs.push(jsxAttrString("className", tw));
     return `${comment(comp, indent)}${indent}<Label${attrs.length ? " " + attrs.join(" ") : ""}>${text}</Label>`;
   },
 
   "FormItem": (comp, childrenJSX, indent) => {
     const tw = cx(comp);
-    return `${comment(comp, indent)}${indent}<FormItem${tw ? ` className="${tw}"` : ""}>\n${childrenJSX}${indent}</FormItem>`;
+    return `${comment(comp, indent)}${indent}<FormItem${tw ? ` ${jsxAttrString("className", tw)}` : ""}>\n${childrenJSX}${indent}</FormItem>`;
   },
 
   "FormLabel": (comp, _childrenJSX, indent) => {
     const p = comp.props as Record<string, unknown> | undefined;
     const text = propStr(p, "text", "Label");
     const tw = cx(comp);
-    return `${comment(comp, indent)}${indent}<FormLabel${tw ? ` className="${escapeAttr(tw)}"` : ""}>${escapeText(text)}</FormLabel>`;
+    return `${comment(comp, indent)}${indent}<FormLabel${tw ? ` ${jsxAttrString("className", tw)}` : ""}>${jsxText(text)}</FormLabel>`;
   },
 
   "FormControl": (comp, childrenJSX, indent) => {
     const tw = cx(comp);
-    return `${comment(comp, indent)}${indent}<FormControl${tw ? ` className="${tw}"` : ""}>\n${childrenJSX}${indent}</FormControl>`;
+    return `${comment(comp, indent)}${indent}<FormControl${tw ? ` ${jsxAttrString("className", tw)}` : ""}>\n${childrenJSX}${indent}</FormControl>`;
   },
 
   "FormMessage": (comp, _childrenJSX, indent) => {
     const tw = cx(comp);
-    return `${comment(comp, indent)}${indent}<FormMessage${tw ? ` className="${tw}"` : ""} />`;
+    return `${comment(comp, indent)}${indent}<FormMessage${tw ? ` ${jsxAttrString("className", tw)}` : ""} />`;
   },
 
   "DatePicker": (comp, _childrenJSX, indent) => {
     const p = comp.props as Record<string, unknown> | undefined;
     const placeholder = propStr(p, "placeholder", "Pick a date");
     const tw = cx(comp);
-    return `${comment(comp, indent)}${indent}<DatePicker${tw ? ` className="${tw}"` : ""} placeholder="${placeholder}" />`;
+    return `${comment(comp, indent)}${indent}<DatePicker${tw ? ` ${jsxAttrString("className", tw)}` : ""} ${jsxAttrString("placeholder", placeholder)} />`;
   },
 
   /* ──────────────────────────────────────────────
@@ -408,8 +416,8 @@ export const COMPONENT_MAP: Record<string, ComponentGenerator> = {
     const p = comp.props as Record<string, unknown> | undefined;
     const variant = propStr(p, "variant", "default");
     const tw = cx(comp);
-    const text = childrenJSX || escapeText(propStr(p, "text", "Badge"));
-    return `${comment(comp, indent)}${indent}<Badge variant="${escapeAttr(variant)}"${tw ? ` className="${escapeAttr(tw)}"` : ""}>${text}</Badge>`;
+    const text = childrenJSX || jsxText(propStr(p, "text", "Badge"));
+    return `${comment(comp, indent)}${indent}<Badge ${jsxAttrString("variant", variant)}${tw ? ` ${jsxAttrString("className", tw)}` : ""}>${text}</Badge>`;
   },
 
   "Avatar": (comp, _childrenJSX, indent) => {
@@ -417,37 +425,38 @@ export const COMPONENT_MAP: Record<string, ComponentGenerator> = {
     const src = propStr(p, "src", "");
     const fallback = propStr(p, "fallback", "U");
     const tw = cx(comp);
-    return `${comment(comp, indent)}${indent}<Avatar${tw ? ` className="${tw}"` : ""}>\n${indent}  <AvatarImage src="${src}" />\n${indent}  <AvatarFallback>${fallback}</AvatarFallback>\n${indent}</Avatar>`;
+    return `${comment(comp, indent)}${indent}<Avatar${tw ? ` ${jsxAttrString("className", tw)}` : ""}>\n${indent}  <AvatarImage ${jsxAttrString("src", src)} />\n${indent}  <AvatarFallback>${jsxText(fallback)}</AvatarFallback>\n${indent}</Avatar>`;
   },
 
   "Skeleton": (comp, childrenJSX, indent) => {
     const tw = cx(comp);
     if (childrenJSX) {
-      return `${comment(comp, indent)}${indent}<Skeleton${tw ? ` className="${escapeAttr(tw)}"` : ""}>\n${childrenJSX}${indent}</Skeleton>`;
+      return `${comment(comp, indent)}${indent}<Skeleton${tw ? ` ${jsxAttrString("className", tw)}` : ""}>\n${childrenJSX}${indent}</Skeleton>`;
     }
     const finalClass = [tw, "h-4 w-full rounded"].filter(Boolean).join(" ");
-    return `${comment(comp, indent)}${indent}<Skeleton className="${escapeAttr(finalClass)}" />`;
+    return `${comment(comp, indent)}${indent}<Skeleton ${jsxAttrString("className", finalClass)} />`;
   },
 
   "Tooltip": (comp, childrenJSX, indent) => {
     const p = comp.props as Record<string, unknown> | undefined;
     const content = propStr(p, "content", "Tooltip content");
     const tw = cx(comp);
-    return `${comment(comp, indent)}${indent}<TooltipProvider>\n${indent}  <Tooltip>\n${indent}    <TooltipTrigger${tw ? ` className="${tw}"` : ""}>\n${childrenJSX}${indent}    </TooltipTrigger>\n${indent}    <TooltipContent>\n${indent}      <p>${content}</p>\n${indent}    </TooltipContent>\n${indent}  </Tooltip>\n${indent}</TooltipProvider>`;
+    return `${comment(comp, indent)}${indent}<TooltipProvider>\n${indent}  <Tooltip>\n${indent}    <TooltipTrigger${tw ? ` ${jsxAttrString("className", tw)}` : ""}>\n${childrenJSX}${indent}    </TooltipTrigger>\n${indent}    <TooltipContent>\n${indent}      <p>${jsxText(content)}</p>\n${indent}    </TooltipContent>\n${indent}  </Tooltip>\n${indent}</TooltipProvider>`;
   },
 
   "Progress": (comp, _childrenJSX, indent) => {
     const p = comp.props as Record<string, unknown> | undefined;
     const value = propNum(p, "value", 0);
     const tw = cx(comp);
-    return `${comment(comp, indent)}${indent}<Progress value={${value}}${tw ? ` className="${tw}"` : ""} />`;
+    return `${comment(comp, indent)}${indent}<Progress value={${value}}${tw ? ` ${jsxAttrString("className", tw)}` : ""} />`;
   },
 
   "HoverCard": (comp, childrenJSX, indent) => {
     const p = comp.props as Record<string, unknown> | undefined;
     const content = propStr(p, "content", "");
     const tw = cx(comp);
-    return `${comment(comp, indent)}${indent}<HoverCard>\n${indent}  <HoverCardTrigger${tw ? ` className="${tw}"` : ""}>\n${childrenJSX}${indent}  </HoverCardTrigger>\n${indent}  <HoverCardContent>\n${indent}    ${content || childrenJSX}\n${indent}  </HoverCardContent>\n${indent}</HoverCard>`;
+    const body = content ? jsxText(content) : childrenJSX;
+    return `${comment(comp, indent)}${indent}<HoverCard>\n${indent}  <HoverCardTrigger${tw ? ` ${jsxAttrString("className", tw)}` : ""}>\n${childrenJSX}${indent}  </HoverCardTrigger>\n${indent}  <HoverCardContent>\n${indent}    ${body}\n${indent}  </HoverCardContent>\n${indent}</HoverCard>`;
   },
 
   /* ──────────────────────────────────────────────
@@ -460,7 +469,7 @@ export const COMPONENT_MAP: Record<string, ComponentGenerator> = {
     const title = propStr(p, "title", "");
     const description = propStr(p, "description", "");
     const tw = cx(comp);
-    return `${comment(comp, indent)}${indent}<Alert variant="${escapeAttr(variant)}"${tw ? ` className="${escapeAttr(tw)}"` : ""}>\n${title ? `${indent}  <AlertTitle>${escapeText(title)}</AlertTitle>\n` : ""}${description ? `${indent}  <AlertDescription>${escapeText(description)}</AlertDescription>\n` : ""}${childrenJSX}${indent}</Alert>`;
+    return `${comment(comp, indent)}${indent}<Alert ${jsxAttrString("variant", variant)}${tw ? ` ${jsxAttrString("className", tw)}` : ""}>\n${title ? `${indent}  <AlertTitle>${jsxText(title)}</AlertTitle>\n` : ""}${description ? `${indent}  <AlertDescription>${jsxText(description)}</AlertDescription>\n` : ""}${childrenJSX}${indent}</Alert>`;
   },
 
   "Dialog": (comp, childrenJSX, indent) => {
@@ -469,7 +478,7 @@ export const COMPONENT_MAP: Record<string, ComponentGenerator> = {
     const description = propStr(p, "description", "");
     const triggerLabel = propStr(p, "trigger", "Open");
     const tw = cx(comp);
-    return `${comment(comp, indent)}${indent}<Dialog>\n${indent}  <DialogTrigger${tw ? ` className="${escapeAttr(tw)}"` : ""}>${escapeText(triggerLabel)}</DialogTrigger>\n${indent}  <DialogContent>\n${indent}    <DialogHeader>\n${indent}      <DialogTitle>${escapeText(title)}</DialogTitle>\n${description ? `${indent}      <DialogDescription>${escapeText(description)}</DialogDescription>\n` : ""}${indent}    </DialogHeader>\n${childrenJSX}${indent}  </DialogContent>\n${indent}</Dialog>`;
+    return `${comment(comp, indent)}${indent}<Dialog>\n${indent}  <DialogTrigger${tw ? ` ${jsxAttrString("className", tw)}` : ""}>${jsxText(triggerLabel)}</DialogTrigger>\n${indent}  <DialogContent>\n${indent}    <DialogHeader>\n${indent}      <DialogTitle>${jsxText(title)}</DialogTitle>\n${description ? `${indent}      <DialogDescription>${jsxText(description)}</DialogDescription>\n` : ""}${indent}    </DialogHeader>\n${childrenJSX}${indent}  </DialogContent>\n${indent}</Dialog>`;
   },
 
   "AlertDialog": (comp, childrenJSX, indent) => {
@@ -478,15 +487,15 @@ export const COMPONENT_MAP: Record<string, ComponentGenerator> = {
     const description = propStr(p, "description", "");
     const triggerLabel = propStr(p, "trigger", "Open");
     const tw = cx(comp);
-    return `${comment(comp, indent)}${indent}<AlertDialog>\n${indent}  <AlertDialogTrigger${tw ? ` className="${escapeAttr(tw)}"` : ""}>${escapeText(triggerLabel)}</AlertDialogTrigger>\n${indent}  <AlertDialogContent>\n${indent}    <AlertDialogHeader>\n${indent}      <AlertDialogTitle>${escapeText(title)}</AlertDialogTitle>\n${description ? `${indent}      <AlertDialogDescription>${escapeText(description)}</AlertDialogDescription>\n` : ""}${indent}    </AlertDialogHeader>\n${childrenJSX}${indent}  </AlertDialogContent>\n${indent}</AlertDialog>`;
+    return `${comment(comp, indent)}${indent}<AlertDialog>\n${indent}  <AlertDialogTrigger${tw ? ` ${jsxAttrString("className", tw)}` : ""}>${jsxText(triggerLabel)}</AlertDialogTrigger>\n${indent}  <AlertDialogContent>\n${indent}    <AlertDialogHeader>\n${indent}      <AlertDialogTitle>${jsxText(title)}</AlertDialogTitle>\n${description ? `${indent}      <AlertDialogDescription>${jsxText(description)}</AlertDialogDescription>\n` : ""}${indent}    </AlertDialogHeader>\n${childrenJSX}${indent}  </AlertDialogContent>\n${indent}</AlertDialog>`;
   },
 
   "Toast": (comp, _childrenJSX, indent) => {
-    // Toast 不在行内生成 — 由页面级 useToast hook 管理
     const p = comp.props as Record<string, unknown> | undefined;
     const title = propStr(p, "title", "");
     const description = propStr(p, "description", "");
-    return `${comment(comp, indent)}${indent}{/* Toast: ${title}${description ? ` — ${description}` : ""} — 由页面级 useToast 钩子管理 */}`;
+    const note = `Toast: ${title}${description ? ` — ${description}` : ""} — 由页面级 useToast 钩子管理`;
+    return `${comment(comp, indent)}${indent}{/* ${sanitizeJsxComment(note)} */}`;
   },
 
   "Sheet": (comp, childrenJSX, indent) => {
@@ -496,7 +505,7 @@ export const COMPONENT_MAP: Record<string, ComponentGenerator> = {
     const triggerLabel = propStr(p, "trigger", "Open");
     const side = propStr(p, "side", "right");
     const tw = cx(comp);
-    return `${comment(comp, indent)}${indent}<Sheet>\n${indent}  <SheetTrigger${tw ? ` className="${escapeAttr(tw)}"` : ""}>${escapeText(triggerLabel)}</SheetTrigger>\n${indent}  <SheetContent side="${escapeAttr(side)}">\n${indent}    <SheetHeader>\n${indent}      <SheetTitle>${escapeText(title)}</SheetTitle>\n${description ? `${indent}      <SheetDescription>${escapeText(description)}</SheetDescription>\n` : ""}${indent}    </SheetHeader>\n${childrenJSX}${indent}  </SheetContent>\n${indent}</Sheet>`;
+    return `${comment(comp, indent)}${indent}<Sheet>\n${indent}  <SheetTrigger${tw ? ` ${jsxAttrString("className", tw)}` : ""}>${jsxText(triggerLabel)}</SheetTrigger>\n${indent}  <SheetContent ${jsxAttrString("side", side)}>\n${indent}    <SheetHeader>\n${indent}      <SheetTitle>${jsxText(title)}</SheetTitle>\n${description ? `${indent}      <SheetDescription>${jsxText(description)}</SheetDescription>\n` : ""}${indent}    </SheetHeader>\n${childrenJSX}${indent}  </SheetContent>\n${indent}</Sheet>`;
   },
 
   /* ──────────────────────────────────────────────
@@ -511,12 +520,12 @@ export const COMPONENT_MAP: Record<string, ComponentGenerator> = {
       .map((item, i) => {
         const isLast = i === items.length - 1;
         if (isLast) {
-          return `${indent}  <BreadcrumbItem>\n${indent}    <BreadcrumbPage>${escapeText(item.label)}</BreadcrumbPage>\n${indent}  </BreadcrumbItem>`;
+          return `${indent}  <BreadcrumbItem>\n${indent}    <BreadcrumbPage>${jsxText(item.label)}</BreadcrumbPage>\n${indent}  </BreadcrumbItem>`;
         }
-        return `${indent}  <BreadcrumbItem>\n${indent}    <BreadcrumbLink href="${escapeAttr(item.href || "#")}">${escapeText(item.label)}</BreadcrumbLink>\n${indent}  </BreadcrumbItem>`;
+        return `${indent}  <BreadcrumbItem>\n${indent}    <BreadcrumbLink ${jsxAttrString("href", item.href || "#")}>${jsxText(item.label)}</BreadcrumbLink>\n${indent}  </BreadcrumbItem>`;
       })
       .join("\n");
-    return `${comment(comp, indent)}${indent}<Breadcrumb${tw ? ` className="${tw}"` : ""}>\n${indent}  <BreadcrumbList>\n${itemsJSX}\n${indent}  </BreadcrumbList>\n${indent}</Breadcrumb>`;
+    return `${comment(comp, indent)}${indent}<Breadcrumb${tw ? ` ${jsxAttrString("className", tw)}` : ""}>\n${indent}  <BreadcrumbList>\n${itemsJSX}\n${indent}  </BreadcrumbList>\n${indent}</Breadcrumb>`;
   },
 
   "Tabs": (comp, childrenJSX, indent) => {
@@ -525,9 +534,9 @@ export const COMPONENT_MAP: Record<string, ComponentGenerator> = {
     const items = (p?.items as Array<{ label: string; value: string }> | undefined) || [];
     const tw = cx(comp);
     const triggersJSX = items
-      .map((item) => `${indent}    <TabsTrigger value="${item.value}">${item.label}</TabsTrigger>`)
+      .map((item) => `${indent}    <TabsTrigger ${jsxAttrString("value", item.value)}>${jsxText(item.label)}</TabsTrigger>`)
       .join("\n");
-    return `${comment(comp, indent)}${indent}<Tabs defaultValue="${defaultValue}"${tw ? ` className="${tw}"` : ""}>\n${indent}  <TabsList>\n${triggersJSX}\n${indent}  </TabsList>\n${childrenJSX}${indent}</Tabs>`;
+    return `${comment(comp, indent)}${indent}<Tabs ${jsxAttrString("defaultValue", defaultValue)}${tw ? ` ${jsxAttrString("className", tw)}` : ""}>\n${indent}  <TabsList>\n${triggersJSX}\n${indent}  </TabsList>\n${childrenJSX}${indent}</Tabs>`;
   },
 
   "NavigationMenu": (comp, _childrenJSX, indent) => {
@@ -535,24 +544,27 @@ export const COMPONENT_MAP: Record<string, ComponentGenerator> = {
     const items = (p?.items as Array<{ label: string; href: string }> | undefined) || [];
     const tw = cx(comp);
     const itemsJSX = items
-      .map((item) => `${indent}  <NavigationMenuItem>\n${indent}    <NavigationMenuLink href="${escapeAttr(item.href || "#")}">${escapeText(item.label)}</NavigationMenuLink>\n${indent}  </NavigationMenuItem>`)
+      .map((item) => `${indent}  <NavigationMenuItem>\n${indent}    <NavigationMenuLink ${jsxAttrString("href", item.href || "#")}>${jsxText(item.label)}</NavigationMenuLink>\n${indent}  </NavigationMenuItem>`)
       .join("\n");
-    return `${comment(comp, indent)}${indent}<NavigationMenu${tw ? ` className="${tw}"` : ""}>\n${indent}  <NavigationMenuList>\n${itemsJSX}\n${indent}  </NavigationMenuList>\n${indent}</NavigationMenu>`;
+    return `${comment(comp, indent)}${indent}<NavigationMenu${tw ? ` ${jsxAttrString("className", tw)}` : ""}>\n${indent}  <NavigationMenuList>\n${itemsJSX}\n${indent}  </NavigationMenuList>\n${indent}</NavigationMenu>`;
   },
 
   "Pagination": (comp, _childrenJSX, indent) => {
     const p = comp.props as Record<string, unknown> | undefined;
     const totalPages = propNum(p, "totalPages", 5);
     const tw = cx(comp);
-    return `${comment(comp, indent)}${indent}<Pagination${tw ? ` className="${tw}"` : ""}>\n${indent}  <PaginationContent>\n${indent}    <PaginationItem>\n${indent}      <PaginationPrevious href="#" />\n${indent}    </PaginationItem>\n${Array.from({ length: totalPages }, (_, i) => `${indent}    <PaginationItem>\n${indent}      <PaginationLink href="#">${i + 1}</PaginationLink>\n${indent}    </PaginationItem>`).join("\n")}\n${indent}    <PaginationItem>\n${indent}      <PaginationNext href="#" />\n${indent}    </PaginationItem>\n${indent}  </PaginationContent>\n${indent}</Pagination>`;
+    return `${comment(comp, indent)}${indent}<Pagination${tw ? ` ${jsxAttrString("className", tw)}` : ""}>\n${indent}  <PaginationContent>\n${indent}    <PaginationItem>\n${indent}      <PaginationPrevious href="#" />\n${indent}    </PaginationItem>\n${Array.from({ length: totalPages }, (_, i) => `${indent}    <PaginationItem>\n${indent}      <PaginationLink href="#">${i + 1}</PaginationLink>\n${indent}    </PaginationItem>`).join("\n")}\n${indent}    <PaginationItem>\n${indent}      <PaginationNext href="#" />\n${indent}    </PaginationItem>\n${indent}  </PaginationContent>\n${indent}</Pagination>`;
   },
 
   "Link": (comp, childrenJSX, indent) => {
     const p = comp.props as Record<string, unknown> | undefined;
     const href = propStr(p, "href", "#");
     const tw = cx(comp);
-    const text = childrenJSX || propStr(p, "text", "Link");
-    return `${comment(comp, indent)}${indent}<Link href="${href}"${tw ? ` className="${tw}"` : ""}>${text}</Link>`;
+    const text = childrenJSX || jsxText(propStr(p, "text", "Link"));
+    const attrs: string[] = [jsxAttrString("href", href)];
+    attrs.push(...eventAttrs(comp));
+    if (tw) attrs.push(jsxAttrString("className", tw));
+    return `${comment(comp, indent)}${indent}<Link${attrs.length ? " " + attrs.join(" ") : ""}>${text}</Link>`;
   },
 
   /* ──────────────────────────────────────────────
@@ -561,7 +573,7 @@ export const COMPONENT_MAP: Record<string, ComponentGenerator> = {
 
   "Table": (comp, childrenJSX, indent) => {
     const tw = cx(comp);
-    return `${comment(comp, indent)}${indent}<Table${tw ? ` className="${tw}"` : ""}>\n${childrenJSX}${indent}</Table>`;
+    return `${comment(comp, indent)}${indent}<Table${tw ? ` ${jsxAttrString("className", tw)}` : ""}>\n${childrenJSX}${indent}</Table>`;
   },
 
   "DataTable": (comp, _childrenJSX, indent) => {
@@ -570,43 +582,43 @@ export const COMPONENT_MAP: Record<string, ComponentGenerator> = {
     const data = (p?.data as Array<Record<string, unknown>> | undefined) || [];
     const tw = cx(comp);
     const headerJSX = columns
-      .map((col) => `${indent}      <TableHead>${col.header}</TableHead>`)
+      .map((col) => `${indent}      <TableHead>${jsxText(col.header)}</TableHead>`)
       .join("\n");
     const bodyJSX = data
       .map((row, ri) => {
         const cells = columns
-          .map((col) => `${indent}        <TableCell>{/* ${String(row[col.key] ?? "")} */}</TableCell>`)
+          .map((col) => `${indent}        <TableCell>{/* ${sanitizeJsxComment(String(row[col.key] ?? ""))} */}</TableCell>`)
           .join("\n");
         return `${indent}    <TableRow key={${ri}}>\n${cells}\n${indent}    </TableRow>`;
       })
       .join("\n");
-    return `${comment(comp, indent)}${indent}<Table${tw ? ` className="${tw}"` : ""}>\n${indent}  <TableHeader>\n${indent}    <TableRow>\n${headerJSX}\n${indent}    </TableRow>\n${indent}  </TableHeader>\n${indent}  <TableBody>\n${bodyJSX}\n${indent}  </TableBody>\n${indent}</Table>`;
+    return `${comment(comp, indent)}${indent}<Table${tw ? ` ${jsxAttrString("className", tw)}` : ""}>\n${indent}  <TableHeader>\n${indent}    <TableRow>\n${headerJSX}\n${indent}    </TableRow>\n${indent}  </TableHeader>\n${indent}  <TableBody>\n${bodyJSX}\n${indent}  </TableBody>\n${indent}</Table>`;
   },
 
   "TableHead": (comp, childrenJSX, indent) => {
     const tw = cx(comp);
-    return `${comment(comp, indent)}${indent}<TableHead${tw ? ` className="${tw}"` : ""}>${childrenJSX || propStr(comp.props, "text", "Head")}</TableHead>`;
+    return `${comment(comp, indent)}${indent}<TableHead${tw ? ` ${jsxAttrString("className", tw)}` : ""}>${childrenJSX || jsxText(propStr(comp.props, "text", "Head"))}</TableHead>`;
   },
 
   "TableBody": (comp, childrenJSX, indent) => {
     const tw = cx(comp);
-    return `${comment(comp, indent)}${indent}<TableBody${tw ? ` className="${tw}"` : ""}>\n${childrenJSX}${indent}</TableBody>`;
+    return `${comment(comp, indent)}${indent}<TableBody${tw ? ` ${jsxAttrString("className", tw)}` : ""}>\n${childrenJSX}${indent}</TableBody>`;
   },
 
   "TableRow": (comp, childrenJSX, indent) => {
     const tw = cx(comp);
-    return `${comment(comp, indent)}${indent}<TableRow${tw ? ` className="${tw}"` : ""}>\n${childrenJSX}${indent}</TableRow>`;
+    return `${comment(comp, indent)}${indent}<TableRow${tw ? ` ${jsxAttrString("className", tw)}` : ""}>\n${childrenJSX}${indent}</TableRow>`;
   },
 
   "TableCell": (comp, childrenJSX, indent) => {
     const tw = cx(comp);
-    return `${comment(comp, indent)}${indent}<TableCell${tw ? ` className="${tw}"` : ""}>${childrenJSX || propStr(comp.props, "text", "Cell")}</TableCell>`;
+    return `${comment(comp, indent)}${indent}<TableCell${tw ? ` ${jsxAttrString("className", tw)}` : ""}>${childrenJSX || jsxText(propStr(comp.props, "text", "Cell"))}</TableCell>`;
   },
 
   "TableCaption": (comp, _childrenJSX, indent) => {
     const tw = cx(comp);
     const text = propStr(comp.props, "text", "");
-    return `${comment(comp, indent)}${indent}<TableCaption${tw ? ` className="${tw}"` : ""}>${text}</TableCaption>`;
+    return `${comment(comp, indent)}${indent}<TableCaption${tw ? ` ${jsxAttrString("className", tw)}` : ""}>${jsxText(text)}</TableCaption>`;
   },
 
   /* ──────────────────────────────────────────────
@@ -619,9 +631,9 @@ export const COMPONENT_MAP: Record<string, ComponentGenerator> = {
     const items = (p?.items as Array<{ label: string; onClick?: string }> | undefined) || [];
     const tw = cx(comp);
     const itemsJSX = items.length
-      ? items.map((item) => `${indent}    <DropdownMenuItem>${escapeText(item.label)}</DropdownMenuItem>`).join("\n")
+      ? items.map((item) => `${indent}    <DropdownMenuItem>${jsxText(item.label)}</DropdownMenuItem>`).join("\n")
       : childrenJSX || `${indent}    <DropdownMenuItem>Item 1</DropdownMenuItem>`;
-    return `${comment(comp, indent)}${indent}<DropdownMenu>\n${indent}  <DropdownMenuTrigger${tw ? ` className="${tw}"` : ""}>${triggerLabel}</DropdownMenuTrigger>\n${indent}  <DropdownMenuContent>\n${itemsJSX}\n${indent}  </DropdownMenuContent>\n${indent}</DropdownMenu>`;
+    return `${comment(comp, indent)}${indent}<DropdownMenu>\n${indent}  <DropdownMenuTrigger${tw ? ` ${jsxAttrString("className", tw)}` : ""}>${jsxText(triggerLabel)}</DropdownMenuTrigger>\n${indent}  <DropdownMenuContent>\n${itemsJSX}\n${indent}  </DropdownMenuContent>\n${indent}</DropdownMenu>`;
   },
 
   "Popover": (comp, childrenJSX, indent) => {
@@ -629,7 +641,8 @@ export const COMPONENT_MAP: Record<string, ComponentGenerator> = {
     const triggerLabel = propStr(p, "trigger", "Open");
     const content = propStr(p, "content", "");
     const tw = cx(comp);
-    return `${comment(comp, indent)}${indent}<Popover>\n${indent}  <PopoverTrigger${tw ? ` className="${tw}"` : ""}>${triggerLabel}</PopoverTrigger>\n${indent}  <PopoverContent>\n${indent}    ${content || childrenJSX}\n${indent}  </PopoverContent>\n${indent}</Popover>`;
+    const body = content ? jsxText(content) : childrenJSX;
+    return `${comment(comp, indent)}${indent}<Popover>\n${indent}  <PopoverTrigger${tw ? ` ${jsxAttrString("className", tw)}` : ""}>${jsxText(triggerLabel)}</PopoverTrigger>\n${indent}  <PopoverContent>\n${indent}    ${body}\n${indent}  </PopoverContent>\n${indent}</Popover>`;
   },
 
   "ContextMenu": (comp, childrenJSX, indent) => {
@@ -637,9 +650,9 @@ export const COMPONENT_MAP: Record<string, ComponentGenerator> = {
     const items = (p?.items as Array<{ label: string }> | undefined) || [];
     const tw = cx(comp);
     const itemsJSX = items.length
-      ? items.map((item) => `${indent}    <ContextMenuItem>${item.label}</ContextMenuItem>`).join("\n")
+      ? items.map((item) => `${indent}    <ContextMenuItem>${jsxText(item.label)}</ContextMenuItem>`).join("\n")
       : childrenJSX || `${indent}    <ContextMenuItem>Action</ContextMenuItem>`;
-    return `${comment(comp, indent)}${indent}<ContextMenu>\n${indent}  <ContextMenuTrigger${tw ? ` className="${tw}"` : ""}>\n${childrenJSX || `${indent}    Right-click here`}\n${indent}  </ContextMenuTrigger>\n${indent}  <ContextMenuContent>\n${itemsJSX}\n${indent}  </ContextMenuContent>\n${indent}</ContextMenu>`;
+    return `${comment(comp, indent)}${indent}<ContextMenu>\n${indent}  <ContextMenuTrigger${tw ? ` ${jsxAttrString("className", tw)}` : ""}>\n${childrenJSX || `${indent}    ${jsxText("Right-click here")}`}\n${indent}  </ContextMenuTrigger>\n${indent}  <ContextMenuContent>\n${itemsJSX}\n${indent}  </ContextMenuContent>\n${indent}</ContextMenu>`;
   },
 };
 
@@ -676,5 +689,6 @@ export function generateComponentJSX(comp: ComponentNode, depth = 0): string {
 
   // 未映射组件类型 — 生成带注释的 <div> 占位符
   const tw = cx(comp);
-  return `${comment(comp, indent)}${indent}{/* 未映射组件类型: ${comp.type} */}\n${indent}<div${tw ? ` className="${tw}"` : ""}>\n${childrenJSX || `${indent}  {/* ${comp.type} */}`}\n${indent}</div>`;
+  const typeNote = sanitizeJsxComment(String(comp.type));
+  return `${comment(comp, indent)}${indent}{/* 未映射组件类型: ${typeNote} */}\n${indent}<div${tw ? ` ${jsxAttrString("className", tw)}` : ""}>\n${childrenJSX || `${indent}  {/* ${typeNote} */}`}\n${indent}</div>`;
 }

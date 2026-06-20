@@ -3,10 +3,14 @@ import { createServerSupabase } from "@/lib/supabase/server";
 
 const publicPaths = ["/login", "/signup", "/api/auth/callback"];
 
+function isPublicPath(pathname: string): boolean {
+  return publicPaths.some((p) => pathname === p || pathname.startsWith(`${p}/`));
+}
+
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  if (publicPaths.some((p) => pathname === p || pathname.startsWith(p))) {
+  if (isPublicPath(pathname)) {
     return NextResponse.next();
   }
 

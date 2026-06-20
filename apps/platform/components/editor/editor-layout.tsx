@@ -13,10 +13,13 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, memo } from "react";
+import { useSearchParams } from "next/navigation";
 import { DndContext, useDroppable, pointerWithin, type DragEndEvent } from "@dnd-kit/core";
 import { createDefaultRegistry } from "@envelope/materials";
-import { useCanvasStore, createCanvasComponent, CanvasRenderer, VIEWPORT_WIDTHS } from "@envelope/engine";
+import { useCanvasStore, createCanvasComponent, CanvasRenderer, VIEWPORT_WIDTHS, type CanvasSnapshot } from "@envelope/engine";
 import { useEditorStore } from "@/stores/editor";
+import { useProjectPagesStore, componentNodesToCanvasComponents } from "@/stores/project-pages";
+import { useProjectFlowsStore } from "@/stores/project-flows";
 import { EditorToolbar } from "./editor-toolbar";
 import { MaterialPanel } from "./material-panel";
 import { RightPanel } from "./right-panel";
@@ -24,7 +27,8 @@ import { LeftPanel } from "./left-panel";
 import { DataModelEditor } from "./data-model-editor";
 import { RoutingEditor } from "./routing-editor";
 import { ApiEndpointEditor } from "./api-endpoint-editor";
-import { FlowEditor } from "@envelope/flow";
+import { ProjectFlowEditor } from "./project-flow-editor";
+import { useFlowBindingStore } from "@envelope/flow";
 
 /**
  * 画布放置区域组件
@@ -36,11 +40,12 @@ const CanvasDropZone = memo(function CanvasDropZone() {
   const {
     components, selectedIds, selectComponent, clearSelection,
     zoom, viewport, panX, panY, gridCols, gridGap,
+    pageBackground, pagePadding,
     resizeComponent, setZoom, setPan,
   } = useCanvasStore();
 
   const viewportWidth = VIEWPORT_WIDTHS[viewport];
-  const canvasRef = useRef<HTMLDivElement | null>(null);
+  const dropZoneRef = useRef<HTMLDivElement | null>(null);
 
   const { setNodeRef, isOver } = useDroppable({
     id: "canvas-drop-zone",
@@ -50,11 +55,11 @@ const CanvasDropZone = memo(function CanvasDropZone() {
   const zoomRef = useRef(zoom);
   zoomRef.current = zoom;
 
-  /** 合并 Droppable 的 ref 与本地 canvasRef */
+  /** 合并 Droppable 的 ref 与本地 dropZoneRef */
   const combinedRef = useCallback(
     (node: HTMLDivElement | null) => {
       setNodeRef(node);
-      canvasRef.current = node;
+      dropZoneRef.current = node;
     },
     [setNodeRef],
   );
@@ -69,7 +74,7 @@ const CanvasDropZone = memo(function CanvasDropZone() {
         setZoom(newZoom);
       }
     };
-    const el = canvasRef.current;
+    const el = dropZoneRef.current;
     if (el) {
       el.addEventListener("wheel", handleWheel, { passive: false });
       return () => el.removeEventListener("wheel", handleWheel);
@@ -82,7 +87,6 @@ const CanvasDropZone = memo(function CanvasDropZone() {
       className={`flex-1 overflow-hidden ${isOver ? "bg-blue-50/30" : ""}`}
     >
       <CanvasRenderer
-        ref={canvasRef as React.Ref<HTMLDivElement>}
         components={components}
         selectedIds={selectedIds}
         onSelect={selectComponent}
@@ -95,6 +99,8 @@ const CanvasDropZone = memo(function CanvasDropZone() {
         onPan={(x, y) => setPan(x, y)}
         gridCols={gridCols}
         gridGap={gridGap}
+        pageBackground={pageBackground}
+        pagePadding={pagePadding}
       />
     </div>
   );
@@ -108,12 +114,35 @@ const CanvasDropZone = memo(function CanvasDropZone() {
  * 其他模式渲染对应的专属编辑器（数据模型、路由等）。
  */
 export function EditorLayout() {
+  const searchParams = useSearchParams();
+  const projectId = searchParams.get("project");
+
   const {
-    leftPanelCollapsed, rightPanelCollapsed, pushSnapshot,
+    leftPanelCollapsed, rightPanelCollapsed,
     canvasViewport, editorMode,
   } = useEditorStore();
-  const { addComponent, copySelected, components, setViewport } = useCanvasStore();
+  const { addComponent, copySelected, components, setViewport, deleteSelected, undo, redo, pageBackground, pagePadding } = useCanvasStore();
   const isPageMode = editorMode === "pages";
+
+  const {
+    loadByProjectId,
+    isLoading: isLoadingPages,
+    initializedProjectId,
+    setInitializedProjectId,
+    getCurrentPage,
+    currentPath,
+  } = useProjectPagesStore();
+
+  const {
+    loadByProjectId: loadFlowsByProjectId,
+    initializedProjectId: initializedFlowProjectId,
+    setInitializedProjectId: setInitializedFlowProjectId,
+    flows,
+  } = useProjectFlowsStore();
+
+  const appliedPageKeyRef = useRef<string | null>(null);
+  const hydratingRef = useRef(false);
+  const skipNextSyncRef = useRef(false);
 
   const registry = useMemo(() => createDefaultRegistry(), []);
 
@@ -147,10 +176,9 @@ export function EditorLayout() {
       const category = material?.category ?? "layout";
 
       const comp = createCanvasComponent(materialName, category, {}, components);
-      pushSnapshot();
       addComponent(comp);
     },
-    [addComponent, pushSnapshot, materialMap, components],
+    [addComponent, materialMap, components],
   );
 
   // 编辑器 store 中的视口变化同步到画布 store
@@ -158,44 +186,113 @@ export function EditorLayout() {
     setViewport(canvasViewport);
   }, [canvasViewport, setViewport]);
 
+  useEffect(() => {
+    if (!projectId || !isPageMode) return;
+    if (initializedProjectId === projectId) return;
+    appliedPageKeyRef.current = null;
+    useProjectPagesStore.getState().cancelAutosave();
+    setInitializedProjectId(projectId);
+    loadByProjectId(projectId);
+  }, [projectId, isPageMode, initializedProjectId, setInitializedProjectId, loadByProjectId]);
+
+  useEffect(() => {
+    if (!projectId) return;
+    if (initializedFlowProjectId === projectId) return;
+    setInitializedFlowProjectId(projectId);
+    loadFlowsByProjectId(projectId);
+  }, [projectId, initializedFlowProjectId, setInitializedFlowProjectId, loadFlowsByProjectId]);
+
+  useEffect(() => {
+    const desired = (flows ?? []).map((f) => ({ id: f.id, name: f.name }));
+    const { flowList, registerFlow, unregisterFlow } = useFlowBindingStore.getState();
+
+    const existingMap = new Map(flowList.map((f) => [f.id, f.name]));
+    const desiredIds = new Set(desired.map((f) => f.id));
+
+    for (const f of desired) {
+      const existingName = existingMap.get(f.id);
+      if (existingName !== f.name) {
+        registerFlow(f.id, f.name);
+      }
+    }
+
+    for (const id of existingMap.keys()) {
+      if (!desiredIds.has(id)) {
+        unregisterFlow(id);
+      }
+    }
+  }, [flows]);
+
+  useEffect(() => {
+    if (!projectId || !isPageMode) return;
+    if (isLoadingPages) return;
+    const pageKey = `${projectId}:${currentPath ?? ""}`;
+    if (appliedPageKeyRef.current === pageKey) return;
+    const current = getCurrentPage();
+    if (!current) return;
+
+    hydratingRef.current = true;
+    skipNextSyncRef.current = true;
+    try {
+      const canvasComponents = componentNodesToCanvasComponents(current.schema.components ?? []);
+      const hydratePartial: Partial<CanvasSnapshot> = { components: canvasComponents, selectedIds: [] };
+      if (current.schema.background?.color) hydratePartial.pageBackground = current.schema.background.color;
+      if (typeof current.schema.padding === "number") hydratePartial.pagePadding = current.schema.padding;
+      useCanvasStore.getState().hydrate(hydratePartial);
+    } finally {
+      hydratingRef.current = false;
+      appliedPageKeyRef.current = pageKey;
+    }
+  }, [projectId, isPageMode, isLoadingPages, getCurrentPage, currentPath]);
+
+  useEffect(() => {
+    if (!isPageMode) return;
+    if (hydratingRef.current) return;
+    if (skipNextSyncRef.current) {
+      skipNextSyncRef.current = false;
+      return;
+    }
+    useProjectPagesStore.getState().syncCurrentPageFromCanvas({ components, pageBackground, pagePadding });
+    useProjectPagesStore.getState().scheduleAutosave(30_000);
+  }, [components, isPageMode, pageBackground, pagePadding]);
+
   // 全局键盘快捷键（仅当不在输入框内且处于 pages 模式时生效）
   useEffect(() => {
     if (!isPageMode) return;
-    /**
-     * 键盘事件处理
-     *
-     * Ctrl+C: 复制选中组件
-     * Ctrl+X: 剪切选中组件（复制后删除）
-     * Delete/Backspace: 删除选中组件
-     * 所有操作前自动压入快照以支持撤销
-     */
     function handleKeyDown(e: KeyboardEvent) {
       // 在输入框/文本域中不拦截快捷键
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+      if (e.target instanceof HTMLElement && e.target.isContentEditable) return;
 
       if ((e.ctrlKey || e.metaKey) && e.key === "c") {
         e.preventDefault();
-        pushSnapshot();
         copySelected();
       }
       if ((e.ctrlKey || e.metaKey) && e.key === "x") {
         e.preventDefault();
-        pushSnapshot();
-        copySelected();
-        setTimeout(() => {
-          useCanvasStore.getState().deleteSelected();
-        }, 0);
+        deleteSelected();
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key === "z") {
+        e.preventDefault();
+        if (e.shiftKey) {
+          redo();
+        } else {
+          undo();
+        }
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key === "y") {
+        e.preventDefault();
+        redo();
       }
       if (e.key === "Delete" || e.key === "Backspace") {
         e.preventDefault();
-        pushSnapshot();
-        useCanvasStore.getState().deleteSelected();
+        deleteSelected();
       }
     }
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [copySelected, pushSnapshot, isPageMode]);
+  }, [copySelected, deleteSelected, isPageMode, undo, redo]);
 
 
   return (
@@ -220,7 +317,7 @@ export function EditorLayout() {
           <div className="flex-1 overflow-hidden">
             {editorMode === "data-models" && <DataModelEditor />}
             {editorMode === "routing" && <RoutingEditor />}
-            {editorMode === "flows" && <FlowEditor />}
+            {editorMode === "flows" && <ProjectFlowEditor />}
             {editorMode === "api" && <ApiEndpointEditor />}
           </div>
           <RightPanel collapsed={rightPanelCollapsed} />

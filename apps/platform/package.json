@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
+    "test": "vitest run",
     "clean": "node -e \"require('fs').rmSync('.next',{recursive:true,force:true});require('fs').rmSync('.turbo',{recursive:true,force:true})\""
   },
   "dependencies": {
@@ -49,6 +50,7 @@
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.0",
     "date-fns": "^4.4.0",
+    "fflate": "^0.8.2",
     "input-otp": "^1.4.2",
     "lucide-react": "^0.400.0",
     "next": "^14.2.0",
@@ -58,6 +60,7 @@
     "react-dom": "^18.3.0",
     "react-resizable-panels": "^2.0.22",
     "recharts": "2.15.4",
+    "ws": "^8.18.0",
     "tailwind-merge": "^2.4.0",
     "tailwindcss-animate": "^1.0.7",
     "zod": "^3.23.0",
@@ -70,6 +73,7 @@
     "autoprefixer": "^10.4.0",
     "postcss": "^8.4.0",
     "tailwindcss": "^3.4.0",
-    "typescript": "^5.5.0"
+    "typescript": "^5.5.0",
+    "vitest": "^2.1.0"
   }
 }

@@ -3,6 +3,7 @@ import styled from 'styled-components';
 import logo from '../../../../assets/absolute/richText.png';
 import { Image } from 'antd';
 import { IRichTextConfig } from '@/materials/absolute-antd/base/RichText/schema';
+import { sanitizeHtml } from '@/materials/absolute-antd/utils/sanitize-html';
 
 /*begin to delete*/
 interface IProps extends IRichTextConfig {
@@ -45,7 +46,7 @@ const ARichText: FC<IProps> = (props: IProps) => {
         padding: padding + 'px',
       }}
     >
-      <div dangerouslySetInnerHTML={{ __html: content }}></div>
+      <div dangerouslySetInnerHTML={{ __html: sanitizeHtml(content) }}></div>
     </RichTextWrapper>
   );
 };

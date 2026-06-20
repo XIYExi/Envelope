@@ -13,6 +13,7 @@
  */
 import type { AuthConfig } from "@envelope/engine";
 import type { VirtualFile } from "../core/file-system";
+import { jsxText, tsStringLiteral } from "../core/tsx-escape";
 
 /**
  * 检查是否启用了邮箱登录
@@ -134,6 +135,7 @@ function generateMiddlewareClient(): string {
  */
 function generateMiddleware(auth: AuthConfig): string {
   const oauthProviders = getOAuthProviders(auth);
+  const afterLogin = auth.redirectUrls.afterLogin || "/";
 
   return [
     `import { updateSession } from "@/lib/supabase/middleware";`,
@@ -166,7 +168,7 @@ function generateMiddleware(auth: AuthConfig): string {
     ``,
     `  // 已登录用户访问登录页 → 重定向到首页`,
     `  if (user && pathname === "/login") {`,
-    `    return NextResponse.redirect(new URL("${auth.redirectUrls.afterLogin || "/"}", request.url));`,
+    `    return NextResponse.redirect(new URL(${tsStringLiteral(afterLogin)}, request.url));`,
     `  }`,
     ``,
     `  return supabaseResponse;`,
@@ -186,6 +188,7 @@ function generateMiddleware(auth: AuthConfig): string {
  */
 function generateLoginPage(auth: AuthConfig): string {
   const oauthProviders = getOAuthProviders(auth);
+  const afterLogin = auth.redirectUrls.afterLogin || "/";
 
   return [
     `"use client";`,
@@ -219,7 +222,7 @@ function generateLoginPage(auth: AuthConfig): string {
     `      return;`,
     `    }`,
     ``,
-    `    router.push("${auth.redirectUrls.afterLogin || "/"}");`,
+    `    router.push(${tsStringLiteral(afterLogin)});`,
     `    router.refresh();`,
     `  };`,
     ``,
@@ -304,10 +307,10 @@ function generateLoginPage(auth: AuthConfig): string {
         `        <div className="grid gap-2">`,
         ...oauthProviders.map(provider => [
           `          <button`,
-          `            onClick={() => handleOAuthLogin("${provider}")}`,
+          `            onClick={() => handleOAuthLogin(${tsStringLiteral(provider)})}`,
           `            className="w-full rounded-md border px-4 py-2 text-sm font-medium hover:bg-accent"`,
           `          >`,
-          `            ${capitalize(provider)}`,
+          `            ${jsxText(capitalize(provider))}`,
           `          </button>`,
         ].join("\n")),
         `        </div>`,
@@ -326,6 +329,7 @@ function generateLoginPage(auth: AuthConfig): string {
  * 生成 OAuth 回调路由
  */
 function generateAuthCallback(auth: AuthConfig): string {
+  const afterLogin = auth.redirectUrls.afterLogin || "/";
   return [
     `import { NextResponse } from "next/server";`,
     `import { createClient } from "@/lib/supabase/server";`,
@@ -333,7 +337,7 @@ function generateAuthCallback(auth: AuthConfig): string {
     `export async function GET(request: Request) {`,
     `  const { searchParams, origin } = new URL(request.url);`,
     `  const code = searchParams.get("code");`,
-    `  const next = searchParams.get("next") ?? "${auth.redirectUrls.afterLogin || "/"}";`,
+    `  const next = searchParams.get("next") ?? ${tsStringLiteral(afterLogin)};`,
     ``,
     `  if (code) {`,
     `    const supabase = await createClient();`,

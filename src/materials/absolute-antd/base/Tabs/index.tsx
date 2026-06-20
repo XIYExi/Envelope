@@ -1,4 +1,5 @@
 import { ITabsConfig } from '@/materials/absolute-antd/base/Tabs/schema';
+import { sanitizeHtml } from '@/materials/absolute-antd/utils/sanitize-html';
 import React, { FC, memo, useRef } from 'react';
 import { Image, Tabs } from 'antd';
 import logo from '../../../../assets/absolute/tabs.png';
@@ -86,9 +87,7 @@ const ATabs: FC<ITabsProConfig> = (props) => {
                               <div
                                 key={_i}
                                 dangerouslySetInnerHTML={{
-                                  __html: _item.html
-                                    ? _item.html
-                                    : '<div></div>',
+                                  __html: sanitizeHtml(_item.html ? _item.html : '<div></div>'),
                                 }}
                               />
                             )}

@@ -28,6 +28,7 @@
 import type { ProjectConfig } from "@envelope/engine";
 import type { RoutesConfig } from "@envelope/engine";
 import type { PageSchema } from "@envelope/engine";
+import type { ComponentNode } from "@envelope/engine";
 import type { DbSchema } from "@envelope/engine";
 import type { AuthConfig } from "@envelope/engine";
 import { VirtualFS, type VirtualFile } from "./core/file-system";
@@ -38,6 +39,9 @@ import {
   generateMigration,
   generateTypes,
   generatePageCode,
+  generateFlowRuntimeFiles,
+  type ProjectEndpoint,
+  type ProjectFlow,
 } from "./generators";
 
 /** 导出的项目文件信息 */
@@ -165,9 +169,32 @@ export async function generateProject(
   report("页面组件生成完成", 90);
 
   // ═══════════════════════════════════════════════════════════════
-  // 第 6 步：最终检查与封装 (90-100%)
+  // 第 6 步：流程运行时与 API 端点 (90-95%)
   // ═══════════════════════════════════════════════════════════════
-  report("最终检查与封装...", 90);
+  report("生成流程运行时与 API 端点...", 90);
+
+  const needsFlowRuntime = Boolean(
+    (config.flows && config.flows.length > 0) ||
+    (config.endpoints && config.endpoints.some((e) => e.flow_id)) ||
+    hasAnyEventBindings(config.pages ?? []),
+  );
+
+  if (needsFlowRuntime) {
+    const flowFiles = generateFlowRuntimeFiles({
+      flows: config.flows,
+      endpoints: config.endpoints,
+    });
+    for (const file of flowFiles) {
+      fs.addFile(file.path, file.content);
+    }
+  }
+
+  report("流程运行时与 API 端点生成完成", 95);
+
+  // ═══════════════════════════════════════════════════════════════
+  // 第 7 步：最终检查与封装 (95-100%)
+  // ═══════════════════════════════════════════════════════════════
+  report("最终检查与封装...", 95);
 
   // 添加 .eslintrc.json（如果项目中不存在）
   const hasEslint = projectFiles.some((f) => f.path === ".eslintrc.json");
@@ -186,6 +213,15 @@ export async function generateProject(
 
   const allFiles = fs.getAllFiles();
   const totalSize = allFiles.reduce((sum, f) => sum + Buffer.byteLength(f.content, "utf-8"), 0);
+
+  const envelopeImportFiles = allFiles
+    .filter((f) => /\b(from\s+["']@envelope\/|require\(\s*["']@envelope\/)/.test(f.content))
+    .map((f) => f.path);
+  if (envelopeImportFiles.length) {
+    throw new Error(
+      `Generated project contains forbidden @envelope/* imports: ${envelopeImportFiles.join(", ")}`,
+    );
+  }
 
   report("导出完成", 100);
 
@@ -211,4 +247,25 @@ export interface GenerateProjectInput {
   dbSchema?: DbSchema;
   /** 认证配置 */
   auth?: AuthConfig;
+  /** 业务流程列表（来源：project_flows） */
+  flows?: ProjectFlow[];
+  /** API 端点列表（用于生成 app/api/*/route.ts 并调用 flow） */
+  endpoints?: ProjectEndpoint[];
+}
+
+function hasAnyEventBindings(pages: PageSchema[]): boolean {
+  const walk = (components: ComponentNode[]): boolean => {
+    for (const comp of components) {
+      if (comp.eventBindings && Object.keys(comp.eventBindings).length > 0) return true;
+      if (comp.children && comp.children.length > 0) {
+        if (walk(comp.children)) return true;
+      }
+    }
+    return false;
+  };
+
+  for (const page of pages) {
+    if (walk(page.components ?? [])) return true;
+  }
+  return false;
 }

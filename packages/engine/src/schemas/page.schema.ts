@@ -121,6 +121,8 @@ export interface PageSchema {
   path: string;
   /** 关联的布局组件 ID（可选，如 "dashboard-layout"） */
   layout?: string;
+  /** 页面内边距（px），对应画布 padding */
+  padding?: number;
   /** SEO 元数据 */
   metadata?: {
     /** 自定义标题 */
@@ -156,6 +158,8 @@ export const pageSchema: z.ZodType<PageSchema> = z.object({
   path: z.string(),
   /** 关联的布局组件 ID */
   layout: z.string().optional(),
+  /** 页面内边距 */
+  padding: z.number().int().min(0).optional().default(16),
   /** SEO 元数据，默认空对象 */
   metadata: z
     .object({

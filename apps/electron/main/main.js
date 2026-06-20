@@ -2,8 +2,10 @@ const { app, BrowserWindow, Menu, ipcMain, dialog } = require("electron");
 const path = require("path");
 const fs = require("fs");
 const { initSQLite } = require("./db");
+const { createSecureHandle } = require("./ipc-security");
 
 const isDev = process.env.NODE_ENV === "development";
+const prodRendererPath = path.join(__dirname, "..", "platform-build", "server", "app", "index.html");
 
 let mainWindow = null;
 
@@ -31,13 +33,12 @@ function createWindow() {
     mainWindow.loadURL("http://localhost:3000");
     mainWindow.webContents.openDevTools({ mode: "detach" });
   } else {
-    const rendererPath = path.join(__dirname, "..", "platform-build", "server", "app", "index.html");
-    if (fs.existsSync(rendererPath)) {
-      mainWindow.loadFile(rendererPath);
+    if (fs.existsSync(prodRendererPath)) {
+      mainWindow.loadFile(prodRendererPath);
     } else {
       dialog.showErrorBox(
         "Render Error",
-        "Production renderer not found. Build the platform first:\n  pnpm --filter=@envelope/platform build\n\nExpected: " + rendererPath
+        "Production renderer not found. Build the platform first:\n  pnpm --filter=@envelope/platform build\n\nExpected: " + prodRendererPath
       );
       app.quit();
     }
@@ -134,26 +135,84 @@ function createMenu() {
 }
 
 function registerIPC() {
-  ipcMain.handle("app:get-version", () => app.getVersion());
+  const secureHandle = createSecureHandle(ipcMain, () => ({
+    mainWindow,
+    isDev,
+    expectedFilePath: isDev ? null : prodRendererPath,
+  }));
 
-  ipcMain.handle("app:get-path", (_event, name) => app.getPath(name));
+  const allowedAppPathNames = new Set(["userData", "temp", "documents", "downloads"]);
 
-  ipcMain.handle("dialog:open-file", async (_event, options) => {
-    const result = await dialog.showOpenDialog(mainWindow, options);
+  function sanitizeOpenDialogOptions(options) {
+    if (!options || typeof options !== "object") return {};
+    const out = {};
+    if (typeof options.title === "string") out.title = options.title;
+    if (typeof options.buttonLabel === "string") out.buttonLabel = options.buttonLabel;
+    if (typeof options.defaultPath === "string") out.defaultPath = options.defaultPath;
+    if (Array.isArray(options.filters)) {
+      out.filters = options.filters
+        .filter((f) => f && typeof f === "object")
+        .map((f) => ({
+          name: typeof f.name === "string" ? f.name : "",
+          extensions: Array.isArray(f.extensions) ? f.extensions.filter((e) => typeof e === "string") : [],
+        }))
+        .filter((f) => f.name && f.extensions.length);
+    }
+    if (Array.isArray(options.properties)) {
+      const allowed = new Set([
+        "openFile",
+        "openDirectory",
+        "multiSelections",
+        "createDirectory",
+        "showHiddenFiles",
+        "promptToCreate",
+      ]);
+      out.properties = options.properties.filter((p) => typeof p === "string" && allowed.has(p));
+    }
+    return out;
+  }
+
+  function sanitizeSaveDialogOptions(options) {
+    if (!options || typeof options !== "object") return {};
+    const out = {};
+    if (typeof options.title === "string") out.title = options.title;
+    if (typeof options.buttonLabel === "string") out.buttonLabel = options.buttonLabel;
+    if (typeof options.defaultPath === "string") out.defaultPath = options.defaultPath;
+    if (Array.isArray(options.filters)) {
+      out.filters = options.filters
+        .filter((f) => f && typeof f === "object")
+        .map((f) => ({
+          name: typeof f.name === "string" ? f.name : "",
+          extensions: Array.isArray(f.extensions) ? f.extensions.filter((e) => typeof e === "string") : [],
+        }))
+        .filter((f) => f.name && f.extensions.length);
+    }
+    return out;
+  }
+
+  secureHandle("app:get-version", () => app.getVersion());
+
+  secureHandle("app:get-path", (_event, name) => {
+    if (typeof name !== "string" || !allowedAppPathNames.has(name)) return null;
+    return app.getPath(name);
+  });
+
+  secureHandle("dialog:open-file", async (_event, options) => {
+    const result = await dialog.showOpenDialog(mainWindow, sanitizeOpenDialogOptions(options));
     return result;
   });
 
-  ipcMain.handle("dialog:save-file", async (_event, options) => {
-    const result = await dialog.showSaveDialog(mainWindow, options);
+  secureHandle("dialog:save-file", async (_event, options) => {
+    const result = await dialog.showSaveDialog(mainWindow, sanitizeSaveDialogOptions(options));
     return result;
   });
 
-  ipcMain.handle("db:getProjects", async () => {
+  secureHandle("db:getProjects", async () => {
     const db = initSQLite();
     return db.prepare("SELECT * FROM projects ORDER BY updated_at DESC").all();
   });
 
-  ipcMain.handle("db:createProject", async (_event, project) => {
+  secureHandle("db:createProject", async (_event, project) => {
     const db = initSQLite();
     const id = project.id || crypto.randomUUID();
     db.prepare(
@@ -162,7 +221,7 @@ function registerIPC() {
     return db.prepare("SELECT * FROM projects WHERE id = ?").get(id);
   });
 
-  ipcMain.handle("db:updateProject", async (_event, id, updates) => {
+  secureHandle("db:updateProject", async (_event, id, updates) => {
     const db = initSQLite();
     const fields = [];
     const values = [];
@@ -176,7 +235,7 @@ function registerIPC() {
     return db.prepare("SELECT * FROM projects WHERE id = ?").get(id);
   });
 
-  ipcMain.handle("db:deleteProject", async (_event, id) => {
+  secureHandle("db:deleteProject", async (_event, id) => {
     const db = initSQLite();
     db.prepare("DELETE FROM projects WHERE id = ?").run(id);
     return { success: true };

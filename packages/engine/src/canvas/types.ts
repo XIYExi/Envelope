@@ -48,6 +48,19 @@ export interface CanvasComponent {
   };
 }
 
+export interface CanvasSnapshot {
+  components: CanvasComponent[];
+  selectedIds: string[];
+  zoom: number;
+  viewport: CanvasState["viewport"];
+  gridCols: number;
+  gridGap: number;
+  panX: number;
+  panY: number;
+  pageBackground: string;
+  pagePadding: number;
+}
+
 /**
  * 画布状态
  *
@@ -75,6 +88,12 @@ export interface CanvasState {
   pageBackground: string;
   /** 页面内边距（px） */
   pagePadding: number;
+
+  canUndo: boolean;
+  canRedo: boolean;
+  historyPast: CanvasSnapshot[];
+  historyFuture: CanvasSnapshot[];
+  historyLimit: number;
 }
 
 /**
@@ -120,6 +139,12 @@ export interface CanvasActions {
   clearAll: () => void;
   /** 获取当前选中的组件列表 */
   getSelectedComponents: () => CanvasComponent[];
+
+  undo: () => void;
+  redo: () => void;
+  clearHistory: () => void;
+  hydrate: (partial: Partial<CanvasSnapshot>) => void;
+  batch: (fn: () => void) => void;
 }
 
 /**
