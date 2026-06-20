@@ -249,7 +249,7 @@ export interface GenerateProjectInput {
   auth?: AuthConfig;
   /** 业务流程列表（来源：project_flows） */
   flows?: ProjectFlow[];
-  /** API 端点列表（用于生成 app/api/*/route.ts 并调用 flow） */
+  /** API 端点列表（用于生成 app/api/{path}/route.ts 并调用 flow） */
   endpoints?: ProjectEndpoint[];
 }
 

@@ -213,7 +213,7 @@ export function ensureTaskWSServer(): { wsPort: number; wsPath: string } {
   });
 
   globalThis.__envelopeTaskWsServer = server;
-  return { wsPort, wsPath };
+  return { wsPort: server.wsPort, wsPath: server.wsPath };
 }
 
 export function publishTaskSnapshot(taskId: string, payload: unknown) {

@@ -17,9 +17,10 @@
 
 "use client";
 
-import { forwardRef, useCallback, useRef, useState, useEffect, type CSSProperties, type MouseEvent as RMouseEvent } from "react";
+import { forwardRef, useCallback, useRef, useState, useEffect, type CSSProperties, type MouseEvent as RMouseEvent, type PointerEvent as RPointerEvent } from "react";
 import { twMerge } from "tailwind-merge";
 import type { CanvasComponent } from "./types";
+import { calcResizeNext, snapGridDelta, type ResizeDirection } from "./resize-utils";
 
 /** 单个网格单元格的渲染高度（px），对应 CSS Grid 的隐式行高 */
 const CELL_HEIGHT = 40;
@@ -479,14 +480,6 @@ function SimulatedChildContent({ type, props }: { type: string; props?: Record<s
 // ===== 缩放手柄 =====
 
 /**
- * 缩放手柄方向
- *
- * 八个方向（四边 + 四角），命名使用小写罗盘缩写：
- * n=上, s=下, e=右, w=左, ne=右上, nw=左上, se=右下, sw=左下
- */
-type ResizeDirection = "n" | "s" | "e" | "w" | "ne" | "nw" | "se" | "sw";
-
-/**
  * 各方向缩放手柄的定位样式
  *
  * 手柄定位在组件的边缘或角落外侧 50% 处，
@@ -566,30 +559,45 @@ export const CanvasRenderer = forwardRef<HTMLDivElement, CanvasRendererProps>(
     const containerRef = useRef<HTMLDivElement>(null);
     const [isPanning, setIsPanning] = useState(false);
     const panStart = useRef({ x: 0, y: 0 });
+    /** 当前正在进行的缩放交互清理函数（用于组件卸载/下一次缩放前强制收尾） */
+    const activeResizeCleanupRef = useRef<(() => void) | null>(null);
 
     // 存储 onPan 的最新引用以避免 useCallback 依赖变化
     const onPanRef = useRef(onPan);
     onPanRef.current = onPan;
 
     const handleMouseDown = useCallback((e: RMouseEvent) => {
-      const target = e.target;
-      const isCanvasBg = target === e.currentTarget
-        || (target instanceof HTMLElement && target.dataset.canvasBg === "true");
-      if (isCanvasBg) {
-        if (e.button === 0) {
-          setIsPanning(true);
-          panStart.current = { x: e.clientX - panX, y: e.clientY - panY };
-        }
-      }
+      if (e.button !== 0) return;
+      if (!(e.target instanceof HTMLElement)) return;
+
+      // 关键：只有点在“非组件区域”的空白处才允许开始平移；组件区域交由选中/缩放等交互处理
+      if (e.target.closest('[data-canvas-comp="true"]')) return;
+
+      // 允许两种空白区开始平移：
+      // 1) 外层容器的空白（e.target === e.currentTarget）
+      // 2) 画布内部的空白（目标在 data-canvas-bg 容器内，但不在组件内）
+      const inCanvas = !!e.target.closest('[data-canvas-bg="true"]');
+      const isBlankArea = e.target === e.currentTarget || inCanvas;
+      if (!isBlankArea) return;
+
+      setIsPanning(true);
+      panStart.current = { x: e.clientX - panX, y: e.clientY - panY };
     }, [panX, panY]);
 
-    const handleMouseMove = useCallback((e: RMouseEvent) => {
-      if (isPanning) {
-        const dx = e.clientX - panStart.current.x;
-        const dy = e.clientY - panStart.current.y;
-        onPanRef.current(dx, dy);
-      }
-    }, [isPanning]);
+    /**
+     * 平移过程的 mousemove 处理函数（绑定到 window）
+     *
+     * 关键点：
+     * - 使用 window 监听，避免光标移出容器后丢失 mousemove 导致“拖拽断开/卡住”
+     * - 不依赖 React 合成事件体系，确保在全局范围内稳定收到事件
+     *
+     * @param e - 原生 MouseEvent
+     */
+    const handlePanMouseMove = useCallback((e: MouseEvent) => {
+      const dx = e.clientX - panStart.current.x;
+      const dy = e.clientY - panStart.current.y;
+      onPanRef.current(dx, dy);
+    }, []);
 
     const handleMouseUp = useCallback(() => {
       setIsPanning(false);
@@ -597,18 +605,28 @@ export const CanvasRenderer = forwardRef<HTMLDivElement, CanvasRendererProps>(
 
     useEffect(() => {
       if (!isPanning) return;
+      window.addEventListener("mousemove", handlePanMouseMove);
       window.addEventListener("mouseup", handleMouseUp);
-      return () => window.removeEventListener("mouseup", handleMouseUp);
-    }, [isPanning, handleMouseUp]);
+      return () => {
+        window.removeEventListener("mousemove", handlePanMouseMove);
+        window.removeEventListener("mouseup", handleMouseUp);
+      };
+    }, [isPanning, handleMouseUp, handlePanMouseMove]);
+
+    useEffect(() => {
+      return () => {
+        activeResizeCleanupRef.current?.();
+        activeResizeCleanupRef.current = null;
+      };
+    }, []);
 
     return (
       <div
         ref={containerRef}
+        data-testid="canvas-container"
         className="relative flex-1 overflow-hidden bg-muted/30"
         style={{ cursor: isPanning ? "grabbing" : "default" }}
         onMouseDown={handleMouseDown}
-        onMouseMove={handleMouseMove}
-        onMouseUp={handleMouseUp}
       >
         <div
           ref={ref}
@@ -624,9 +642,10 @@ export const CanvasRenderer = forwardRef<HTMLDivElement, CanvasRendererProps>(
             backgroundColor: pageBackground,
           }}
           onClick={(e) => {
-            if (e.target instanceof HTMLElement && e.target.dataset.canvasBg === "true") {
-              onClearSelection();
-            }
+            // 关键：点击空白区清选不应依赖 “target 恰好等于背景容器”，因为空白区的 target 可能是内部网格容器
+            if (!(e.target instanceof HTMLElement)) return;
+            if (e.target.closest('[data-canvas-comp="true"]')) return;
+            onClearSelection();
           }}
         >
           {/* Grid background */}
@@ -667,6 +686,9 @@ export const CanvasRenderer = forwardRef<HTMLDivElement, CanvasRendererProps>(
               return (
                 <div
                   key={comp.id}
+                  data-canvas-comp="true"
+                  data-canvas-comp-id={comp.id}
+                  data-testid={`canvas-comp-${comp.id}`}
                   className={cn(
                     "group relative rounded-md border-2 transition-all",
                     isSelected ? "border-blue-500 ring-2 ring-blue-200" : "border-transparent hover:border-blue-300",
@@ -694,50 +716,82 @@ export const CanvasRenderer = forwardRef<HTMLDivElement, CanvasRendererProps>(
                   {isSelected && allResizeDirections.map((dir) => (
                     <div
                       key={dir}
+                      data-canvas-resize-handle={dir}
+                      data-testid={`canvas-resize-handle-${comp.id}-${dir}`}
                       className="absolute z-10 rounded-full border border-blue-500 bg-white hover:bg-blue-100"
-                      style={resizeHandleStyles[dir]}
-                      onMouseDown={(e) => {
+                      style={{ ...resizeHandleStyles[dir], touchAction: "none" }}
+                      onPointerDown={(e: RPointerEvent<HTMLDivElement>) => {
                         e.stopPropagation();
                         e.preventDefault();
+                        // 同一时间只允许一个缩放会话，开始新的缩放前先把旧监听/捕获全部清理掉
+                        activeResizeCleanupRef.current?.();
+
+                        const el = e.currentTarget;
+                        const pointerId = e.pointerId;
                         const startClientX = e.clientX;
                         const startClientY = e.clientY;
-                        const startW = width;
-                        const startH = height;
-                        const startGridX = x;
-                        const startGridY = y;
 
-                        const handleMove = (ev: MouseEvent) => {
-                          const dx = (ev.clientX - startClientX) / (CELL_WIDTH * zoom);
-                          const dy = (ev.clientY - startClientY) / (CELL_HEIGHT * zoom);
+                        const startState = { x, y, width, height, gridCols };
+                        let lastSent = { x, y, width, height };
 
-                          let newW = startW;
-                          let newH = startH;
-                          let newX = startGridX;
-                          let newY = startGridY;
+                        const syncResize = (ev: PointerEvent) => {
+                          if (ev.pointerId !== pointerId) return;
 
-                          if (dir.includes("e")) newW = Math.round(Math.max(1, startW + dx));
-                          if (dir.includes("w")) {
-                            const delta = Math.round(dx);
-                            newW = Math.max(1, startW - delta);
-                            newX = startGridX + delta;
-                          }
-                          if (dir.includes("s")) newH = Math.round(Math.max(1, startH + dy));
-                          if (dir.includes("n")) {
-                            const delta = Math.round(dy);
-                            newH = Math.max(1, startH - delta);
-                            newY = startGridY + delta;
+                          const rawDx = (ev.clientX - startClientX) / (CELL_WIDTH * zoom);
+                          const rawDy = (ev.clientY - startClientY) / (CELL_HEIGHT * zoom);
+                          // 关键：对齐到整数网格并做边界钳制，避免缩放在临界值附近抖动/越界
+                          const deltaCols = snapGridDelta(rawDx);
+                          const deltaRows = snapGridDelta(rawDy);
+
+                          const next = calcResizeNext(dir, startState, deltaCols, deltaRows);
+
+                          if (
+                            next.x === lastSent.x
+                            && next.y === lastSent.y
+                            && next.width === lastSent.width
+                            && next.height === lastSent.height
+                          ) {
+                            return;
                           }
 
-                          onResize(comp.id, newW, newH, newX, newY);
+                          lastSent = next;
+                          onResize(comp.id, next.width, next.height, next.x, next.y);
                         };
 
-                        const handleUp = () => {
-                          window.removeEventListener("mousemove", handleMove);
-                          window.removeEventListener("mouseup", handleUp);
+                        const cleanup = () => {
+                          try {
+                            el.releasePointerCapture(pointerId);
+                          } catch {}
+                          el.removeEventListener("pointermove", syncResize);
+                          el.removeEventListener("pointerup", cleanup);
+                          el.removeEventListener("pointercancel", cleanup);
+                          el.removeEventListener("lostpointercapture", cleanup);
+                          window.removeEventListener("pointermove", syncResize);
+                          window.removeEventListener("pointerup", cleanup);
+                          window.removeEventListener("pointercancel", cleanup);
+                          activeResizeCleanupRef.current = null;
                         };
 
-                        window.addEventListener("mousemove", handleMove);
-                        window.addEventListener("mouseup", handleUp);
+                        // 使用 PointerEvent + pointer capture：即使指针移出手柄/组件，也能持续收到 move/up 事件
+                        el.addEventListener("pointermove", syncResize);
+                        el.addEventListener("pointerup", cleanup);
+                        el.addEventListener("pointercancel", cleanup);
+                        el.addEventListener("lostpointercapture", cleanup);
+                        // 关键：某些浏览器/边界情况下 setPointerCapture 可能抛异常，这里做兜底避免直接中断交互
+                        let captured = false;
+                        try {
+                          el.setPointerCapture(pointerId);
+                          captured = el.hasPointerCapture(pointerId);
+                        } catch {
+                          captured = false;
+                        }
+                        // 若无法 capture，则退化为 window 级监听，保证 resize 不会因为指针移出而中断
+                        if (!captured) {
+                          window.addEventListener("pointermove", syncResize);
+                          window.addEventListener("pointerup", cleanup);
+                          window.addEventListener("pointercancel", cleanup);
+                        }
+                        activeResizeCleanupRef.current = cleanup;
                       }}
                     />
                   ))}

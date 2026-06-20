@@ -1,0 +1,928 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`@envelope/generator - reference project snapshots > blog snapshot 1`] = `
+{
+  "files": [
+    ".env.example",
+    ".eslintrc.json",
+    ".gitignore",
+    "Dockerfile",
+    "README.md",
+    "app/error.tsx",
+    "app/globals.css",
+    "app/layout.tsx",
+    "app/loading.tsx",
+    "app/page.tsx",
+    "app/posts/[slug]/error.tsx",
+    "app/posts/[slug]/loading.tsx",
+    "app/posts/[slug]/page.tsx",
+    "app/posts/error.tsx",
+    "app/posts/loading.tsx",
+    "app/posts/page.tsx",
+    "components.json",
+    "lib/utils.ts",
+    "next.config.js",
+    "package.json",
+    "postcss.config.js",
+    "tailwind.config.ts",
+    "tsconfig.json",
+  ],
+  "keyFiles": {
+    "README.md": "# Envelope App
+
+Built with **Envelope V3** — low-code Next.js application scaffold.
+
+## Tech Stack
+
+- **Framework**: Next.js 14 (App Router)
+- **Database**: Supabase (PostgreSQL)
+- **Styling**: Tailwind CSS + shadcn/ui
+- **State**: Zustand
+- **Data Fetching**: TanStack React Query
+
+## Getting Started
+
+1. Clone the repository
+2. Copy \`.env.example\` to \`.env.local\` and fill in your Supabase credentials
+3. Run \`npm install\`
+4. Run \`npm run dev\`
+5. Open [http://localhost:3000](http://localhost:3000)
+
+## Project Structure
+
+\`\`\`
+app/          — Next.js App Router pages and layouts
+components/   — Reusable UI components (shadcn/ui)
+lib/          — Utility functions, Supabase clients
+types/        — TypeScript type definitions
+supabase/     — Database migrations
+public/       — Static assets
+\`\`\`
+
+## Environment Variables
+
+| Variable | Description |
+|----------|-------------|
+| \`NEXT_PUBLIC_SUPABASE_URL\` | Supabase project URL |
+| \`NEXT_PUBLIC_SUPABASE_ANON_KEY\` | Supabase anonymous key |
+",
+    "app/layout.tsx": "import type { Metadata } from "next";
+import type { ReactNode } from "react";
+import "./globals.css";
+
+export const metadata: Metadata = {
+  title: {
+    template: "%s | Envelope Blog",
+    default: "Envelope App",
+  },
+  description: "一个用于验证生成器输出稳定性的 Blog 参考项目",
+};
+
+export default function RootLayout({
+  children,
+}: {
+  children: ReactNode;
+}) {
+  return (
+    <html lang="en" suppressHydrationWarning>
+      <body
+        className="min-h-screen bg-background font-sans antialiased"
+        style={{ fontFamily: "Inter, sans-serif" }}
+      >
+        {children}
+      </body>
+    </html>
+  );
+}
+",
+    "app/page.tsx": "import Link from "next/link";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+
+export const metadata = {
+  title: "Envelope Blog",
+  description: "欢迎来到示例 Blog，用于验证生成器快照输出。",
+};
+
+export default function Page() {
+  return (
+    <div className={"min-h-screen mx-auto"}>
+      {/* 页面根容器 */}
+      <div className={"container mx-auto p-6 space-y-6"}>
+        {/* 站点介绍卡片 */}
+        <Card>
+          <CardHeader>
+            <CardTitle>{"Envelope Blog"}</CardTitle>
+            <CardDescription>{"用于测试 generateProject 的参考项目（blog）"}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Link href={"/posts"} className={"inline-block text-primary underline"}>{"进入文章列表 →"}</Link>          </CardContent>        </Card>      </div>
+    </div>
+  );
+}",
+    "app/posts/[slug]/page.tsx": "import Link from "next/link";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+
+export const metadata = {
+  title: "文章详情",
+  description: "单篇文章详情页（动态路由示例）",
+};
+
+export default function Page() {
+  return (
+    <div className={"min-h-screen mx-auto"}>
+      <div className={"container mx-auto p-6 space-y-6"}>
+        <Card>
+          <CardHeader>
+            <CardTitle>{"文章详情页"}</CardTitle>
+            <CardDescription>{"此页面由动态路由 /posts/[slug] 映射"}</CardDescription>
+          </CardHeader>
+          <CardFooter>
+            <Link href={"/posts"} className={"text-muted-foreground hover:underline"}>{"← 返回列表"}</Link>          </CardFooter>        </Card>      </div>
+    </div>
+  );
+}",
+    "app/posts/page.tsx": "import Link from "next/link";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+
+export const metadata = {
+  title: "文章列表",
+  description: "包含文章条目的列表页（静态示例）",
+};
+
+export default function Page() {
+  return (
+    <div className={"min-h-screen mx-auto"}>
+      <div className={"container mx-auto p-6 space-y-4"}>
+        <Card>
+          <CardHeader>
+            <CardTitle>{"文章列表"}</CardTitle>
+            <CardDescription>{"这里展示文章条目（示例内容）"}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Link href={"/posts/hello-world"} className={"text-primary underline"}>{"Hello World（示例文章）"}</Link>          </CardContent>        </Card>      </div>
+    </div>
+  );
+}",
+    "package.json": "{
+  "name": "envelope-app",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "next": "^14.2.0",
+    "react": "^18.3.0",
+    "react-dom": "^18.3.0",
+    "@supabase/supabase-js": "^2.45.0",
+    "@supabase/ssr": "^0.5.0",
+    "@tanstack/react-query": "^5.59.0",
+    "zustand": "^5.0.0",
+    "lucide-react": "^0.447.0",
+    "@radix-ui/react-slot": "^1.1.0",
+    "class-variance-authority": "^0.7.0",
+    "clsx": "^2.1.0",
+    "tailwind-merge": "^2.5.0",
+    "@radix-ui/react-dialog": "^1.1.0",
+    "@radix-ui/react-dropdown-menu": "^2.1.0",
+    "@radix-ui/react-label": "^2.1.0",
+    "@radix-ui/react-select": "^2.1.0",
+    "@radix-ui/react-separator": "^1.1.0",
+    "@radix-ui/react-tabs": "^1.1.0",
+    "@radix-ui/react-toast": "^1.2.0",
+    "@radix-ui/react-tooltip": "^1.1.0",
+    "@radix-ui/react-avatar": "^1.1.0",
+    "@radix-ui/react-checkbox": "^1.1.0",
+    "@radix-ui/react-switch": "^1.1.0",
+    "@radix-ui/react-popover": "^1.1.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.0",
+    "@types/node": "^22.0.0",
+    "@types/react": "^18.3.0",
+    "@types/react-dom": "^18.3.0",
+    "tailwindcss": "^3.4.0",
+    "postcss": "^8.4.0",
+    "autoprefixer": "^10.4.0",
+    "eslint": "^8.57.0",
+    "eslint-config-next": "^14.2.0"
+  }
+}
+",
+  },
+}
+`;
+
+exports[`@envelope/generator - reference project snapshots > dashboard snapshot 1`] = `
+{
+  "files": [
+    ".env.example",
+    ".eslintrc.json",
+    ".gitignore",
+    "Dockerfile",
+    "README.md",
+    "app/api/flows/[flowId]/route.ts",
+    "app/auth/callback/route.ts",
+    "app/dashboard/error.tsx",
+    "app/dashboard/loading.tsx",
+    "app/dashboard/page.tsx",
+    "app/dashboard/users/error.tsx",
+    "app/dashboard/users/loading.tsx",
+    "app/dashboard/users/page.tsx",
+    "app/error.tsx",
+    "app/globals.css",
+    "app/layout.tsx",
+    "app/loading.tsx",
+    "app/login/page.tsx",
+    "app/page.tsx",
+    "app/settings/error.tsx",
+    "app/settings/loading.tsx",
+    "app/settings/page.tsx",
+    "components.json",
+    "lib/flows/client.ts",
+    "lib/flows/registry.ts",
+    "lib/flows/runtime.ts",
+    "lib/supabase/client.ts",
+    "lib/supabase/middleware.ts",
+    "lib/supabase/server.ts",
+    "lib/utils.ts",
+    "middleware.ts",
+    "next.config.js",
+    "package.json",
+    "postcss.config.js",
+    "tailwind.config.ts",
+    "tsconfig.json",
+    "types/auth.ts",
+  ],
+  "keyFiles": {
+    "app/api/flows/[flowId]/route.ts": "import { NextResponse } from "next/server";
+import { runFlow } from "@/lib/flows/runtime";
+
+export async function POST(
+  request: Request,
+  { params }: { params: { flowId: string } },
+) {
+  const body = await request.json().catch(() => ({}));
+  const result = await runFlow(params.flowId, (body as { input?: unknown }).input ?? body);
+  return NextResponse.json(result);
+}
+
+export async function GET(
+  request: Request,
+  { params }: { params: { flowId: string } },
+) {
+  const url = new URL(request.url);
+  const query = Object.fromEntries(url.searchParams.entries());
+  const result = await runFlow(params.flowId, { query });
+  return NextResponse.json(result);
+}
+",
+    "app/dashboard/page.tsx": ""use client";
+
+import { useEffect, useCallback } from "react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { callFlow } from "@/lib/flows/client";
+
+export default function Page() {
+  // SEO — dynamic title for client component
+  useEffect(() => {
+    document.title = "仪表盘";
+    const meta = document.querySelector('meta[name="description"]');
+    if (meta) meta.setAttribute("content", "包含事件绑定的页面，用于触发 use client 代码路径");
+  }, []);
+
+  const handle_dash_refresh_button_onClick = useCallback(async (...args: unknown[]) => {
+    return callFlow("flow-refresh-users", {
+      componentId: "dash-refresh-button",
+      event: "onClick",
+      args,
+    });
+  }, []);
+
+  return (
+    <div className={"min-h-screen mx-auto"}>
+      <div className={"container mx-auto p-6 space-y-4"}>
+        <Card>
+          <CardHeader>
+            <CardTitle>{"仪表盘"}</CardTitle>
+            <CardDescription>{"包含按钮事件绑定（onClick → flow）"}</CardDescription>
+          </CardHeader>
+          <CardFooter>
+            <Button variant={"default"} size={"default"} onClick={handle_dash_refresh_button_onClick}>{"刷新用户数据"}</Button>          </CardFooter>        </Card>      </div>
+    </div>
+  );
+}",
+    "app/login/page.tsx": ""use client";
+
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
+import { Provider } from "@supabase/supabase-js";
+
+export default function LoginPage() {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
+
+  const handleEmailLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
+
+    const supabase = createClient();
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (error) {
+      setError(error.message);
+      setLoading(false);
+      return;
+    }
+
+    router.push("/dashboard");
+    router.refresh();
+  };
+
+  const handleOAuthLogin = async (provider: Provider) => {
+    const supabase = createClient();
+    await supabase.auth.signInWithOAuth({
+      provider,
+      options: {
+        redirectTo: \`\${location.origin}/auth/callback\`,
+      },
+    });
+  };
+
+  return (
+    <div className="flex min-h-screen items-center justify-center">
+      <div className="w-full max-w-md space-y-6 rounded-lg border p-8 shadow-sm">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold">Sign In</h1>
+          <p className="text-muted-foreground mt-2">
+            Welcome back
+          </p>
+        </div>
+
+        <form onSubmit={handleEmailLogin} className="space-y-4">
+          <div className="space-y-2">
+            <label htmlFor="email" className="text-sm font-medium">
+              Email
+            </label>
+            <input
+              id="email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              className="w-full rounded-md border px-3 py-2 text-sm"
+              placeholder="you@example.com"
+            />
+          </div>
+          <div className="space-y-2">
+            <label htmlFor="password" className="text-sm font-medium">
+              Password
+            </label>
+            <input
+              id="password"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              className="w-full rounded-md border px-3 py-2 text-sm"
+              placeholder="••••••••"
+            />
+          </div>
+
+          {error && (
+            <p className="text-sm text-destructive">{error}</p>
+          )}
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+          >
+            {loading ? "Signing in..." : "Sign In"}
+          </button>
+        </form>
+
+        <div className="relative">
+          <div className="absolute inset-0 flex items-center">
+            <span className="w-full border-t" />
+          </div>
+          <div className="relative flex justify-center text-xs uppercase">
+            <span className="bg-background px-2 text-muted-foreground">
+              Or continue with
+            </span>
+          </div>
+        </div>
+
+        <div className="grid gap-2">
+          <button
+            onClick={() => handleOAuthLogin("github")}
+            className="w-full rounded-md border px-4 py-2 text-sm font-medium hover:bg-accent"
+          >
+            {"Github"}
+          </button>
+        </div>
+
+      </div>
+    </div>
+  );
+}
+",
+    "lib/flows/registry.ts": "export type FlowNodeType = string;
+
+export type FlowPortDataType = "string" | "number" | "boolean" | "object" | "array" | "any";
+
+export interface FlowPosition {
+  x: number;
+  y: number;
+}
+
+export interface FlowNode {
+  id: string;
+  type: FlowNodeType;
+  position: FlowPosition;
+  label?: string;
+  config: Record<string, unknown>;
+}
+
+export interface FlowEdge {
+  id: string;
+  source: string;
+  sourceHandle: string;
+  target: string;
+  targetHandle: string;
+  label?: string;
+}
+
+export interface FlowDefinition {
+  thing: string;
+  version: string;
+  description?: string;
+  nodes: FlowNode[];
+  edges: FlowEdge[];
+}
+
+export const flowRegistry: Record<string, FlowDefinition> = {
+  "flow-refresh-users": {
+    "thing": "empty-flow",
+    "version": "1.0.0",
+    "nodes": [
+      {
+        "id": "start",
+        "type": "event.start",
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "config": {}
+      },
+      {
+        "id": "end",
+        "type": "event.end",
+        "position": {
+          "x": 200,
+          "y": 0
+        },
+        "config": {}
+      }
+    ],
+    "edges": [
+      {
+        "id": "e1",
+        "source": "start",
+        "sourceHandle": "out",
+        "target": "end",
+        "targetHandle": "in"
+      }
+    ]
+  }
+} as Record<string, FlowDefinition>;
+
+export function getFlow(flowId: string): FlowDefinition | undefined {
+  return flowRegistry[flowId];
+}
+",
+    "middleware.ts": "import { updateSession } from "@/lib/supabase/middleware";
+import { NextResponse, type NextRequest } from "next/server";
+
+export async function middleware(request: NextRequest) {
+  const { supabaseResponse, user } = await updateSession(request);
+
+  const { pathname } = request.nextUrl;
+
+  // 公开路由 — 无需认证即可访问
+  const publicPaths = ["/login", "/auth", "/api/auth"];
+  const isPublicPath = publicPaths.some(path => pathname.startsWith(path));
+
+  // 静态资源不拦截
+  if (
+    pathname.startsWith("/_next") ||
+    pathname.startsWith("/favicon") ||
+    pathname.match(/\\.(svg|png|jpg|jpeg|gif|ico|css|js)$/)
+  ) {
+    return supabaseResponse;
+  }
+
+  // 未登录用户访问受保护页面 → 重定向到登录页
+  if (!user && !isPublicPath) {
+    const loginUrl = new URL("/login", request.url);
+    loginUrl.searchParams.set("redirect", pathname);
+    return NextResponse.redirect(loginUrl);
+  }
+
+  // 已登录用户访问登录页 → 重定向到首页
+  if (user && pathname === "/login") {
+    return NextResponse.redirect(new URL("/dashboard", request.url));
+  }
+
+  return supabaseResponse;
+}
+
+export const config = {
+  matcher: [
+    "/((?!_next/static|_next/image|favicon.ico).*)",
+  ],
+};
+",
+    "package.json": "{
+  "name": "envelope-app",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "next": "^14.2.0",
+    "react": "^18.3.0",
+    "react-dom": "^18.3.0",
+    "@supabase/supabase-js": "^2.45.0",
+    "@supabase/ssr": "^0.5.0",
+    "@tanstack/react-query": "^5.59.0",
+    "zustand": "^5.0.0",
+    "lucide-react": "^0.447.0",
+    "@radix-ui/react-slot": "^1.1.0",
+    "class-variance-authority": "^0.7.0",
+    "clsx": "^2.1.0",
+    "tailwind-merge": "^2.5.0",
+    "@radix-ui/react-dialog": "^1.1.0",
+    "@radix-ui/react-dropdown-menu": "^2.1.0",
+    "@radix-ui/react-label": "^2.1.0",
+    "@radix-ui/react-select": "^2.1.0",
+    "@radix-ui/react-separator": "^1.1.0",
+    "@radix-ui/react-tabs": "^1.1.0",
+    "@radix-ui/react-toast": "^1.2.0",
+    "@radix-ui/react-tooltip": "^1.1.0",
+    "@radix-ui/react-avatar": "^1.1.0",
+    "@radix-ui/react-checkbox": "^1.1.0",
+    "@radix-ui/react-switch": "^1.1.0",
+    "@radix-ui/react-popover": "^1.1.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.0",
+    "@types/node": "^22.0.0",
+    "@types/react": "^18.3.0",
+    "@types/react-dom": "^18.3.0",
+    "tailwindcss": "^3.4.0",
+    "postcss": "^8.4.0",
+    "autoprefixer": "^10.4.0",
+    "eslint": "^8.57.0",
+    "eslint-config-next": "^14.2.0"
+  }
+}
+",
+  },
+}
+`;
+
+exports[`@envelope/generator - reference project snapshots > e-commerce snapshot 1`] = `
+{
+  "files": [
+    ".env.example",
+    ".eslintrc.json",
+    ".gitignore",
+    "Dockerfile",
+    "README.md",
+    "app/api/checkout/route.ts",
+    "app/api/flows/[flowId]/route.ts",
+    "app/cart/error.tsx",
+    "app/cart/loading.tsx",
+    "app/cart/page.tsx",
+    "app/checkout/error.tsx",
+    "app/checkout/loading.tsx",
+    "app/checkout/page.tsx",
+    "app/error.tsx",
+    "app/globals.css",
+    "app/layout.tsx",
+    "app/loading.tsx",
+    "app/page.tsx",
+    "app/products/error.tsx",
+    "app/products/loading.tsx",
+    "app/products/page.tsx",
+    "components.json",
+    "lib/flows/client.ts",
+    "lib/flows/registry.ts",
+    "lib/flows/runtime.ts",
+    "lib/utils.ts",
+    "next.config.js",
+    "package.json",
+    "postcss.config.js",
+    "supabase/migrations/001_initial_schema.sql",
+    "tailwind.config.ts",
+    "tsconfig.json",
+    "types/database.ts",
+  ],
+  "keyFiles": {
+    "app/api/checkout/route.ts": "import { NextResponse } from "next/server";
+import { runFlow } from "@/lib/flows/runtime";
+
+export async function POST(request: Request, ctx?: { params?: Record<string, string> }) {
+  const body = await request.json().catch(() => ({}));
+  const result = await runFlow("flow-checkout", { body, params: ctx?.params ?? {} });
+  return NextResponse.json(result);
+}
+",
+    "app/checkout/page.tsx": ""use client";
+
+import { useEffect, useCallback } from "react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { callFlow } from "@/lib/flows/client";
+
+export default function Page() {
+  // SEO — dynamic title for client component
+  useEffect(() => {
+    document.title = "结算";
+    const meta = document.querySelector('meta[name="description"]');
+    if (meta) meta.setAttribute("content", "结算页（示例）");
+  }, []);
+
+  const handle_checkout_btn_onClick = useCallback(async (...args: unknown[]) => {
+    return callFlow("flow-checkout", {
+      componentId: "checkout-btn",
+      event: "onClick",
+      args,
+    });
+  }, []);
+
+  return (
+    <div className={"min-h-screen mx-auto"}>
+      <div className={"container mx-auto p-6 space-y-4"}>
+        <Card>
+          <CardHeader>
+            <CardTitle>{"结算"}</CardTitle>
+            <CardDescription>{"示例结算页（配合 /api/checkout endpoint）"}</CardDescription>
+          </CardHeader>
+          <CardFooter>
+            <Button variant={"default"} size={"default"} onClick={handle_checkout_btn_onClick}>{"提交订单"}</Button>          </CardFooter>        </Card>      </div>
+    </div>
+  );
+}",
+    "app/products/page.tsx": "import Link from "next/link";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+
+export const metadata = {
+  title: "商品列表",
+  description: "商品列表页（示例）",
+};
+
+export default function Page() {
+  return (
+    <div className={"min-h-screen mx-auto"}>
+      <div className={"container mx-auto p-6 space-y-4"}>
+        <Card>
+          <CardHeader>
+            <CardTitle>{"商品"}</CardTitle>
+            <CardDescription>{"此处展示商品列表（示例数据）"}</CardDescription>
+          </CardHeader>
+          <CardFooter>
+            <Link href={"/cart"} className={"text-primary underline"}>{"查看购物车 →"}</Link>          </CardFooter>        </Card>      </div>
+    </div>
+  );
+}",
+    "lib/flows/runtime.ts": "import { getFlow, type FlowDefinition } from "./registry";
+
+export interface RunFlowResult {
+  flowId: string;
+  version: string;
+  output: unknown;
+}
+
+import { createClient } from "@supabase/supabase-js";
+
+type SupabaseClient = ReturnType<typeof createClient>;
+
+function getSupabaseClient(): SupabaseClient {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+  );
+}
+
+function getByPath(obj: unknown, path: string): unknown {
+  const p = path.replace(/^\\$\\./, "").replace(/^\\./, "");
+  if (!p) return obj;
+  const parts = p.split(".").filter(Boolean);
+  let cur: any = obj;
+  for (const part of parts) {
+    if (cur == null) return undefined;
+    cur = cur[part];
+  }
+  return cur;
+}
+
+export async function runFlow(flowId: string, input: unknown): Promise<RunFlowResult> {
+  const def = getFlow(flowId);
+  if (!def) {
+    throw new Error(\`Flow not found: \${flowId}\`);
+  }
+  const actionable = def.nodes.filter((n) => !n.type.startsWith("event."));
+  if (actionable.length !== 1) {
+    return { flowId, version: def.version, output: { input } };
+  }
+  const node = actionable[0];
+  const cfg = (node.config ?? {}) as Record<string, unknown>;
+  const supabase = getSupabaseClient();
+
+  if (node.type === "db.query") {
+    const table = String(cfg.table || "");
+    if (!table) return { flowId, version: def.version, output: { input } };
+    let q: any = supabase.from(table).select((cfg.columns as any)?.length ? (cfg.columns as any).join(",") : "*");
+    if (cfg.where && typeof cfg.where === "object") {
+      for (const [k, v] of Object.entries(cfg.where as Record<string, unknown>)) {
+        q = q.eq(k, v as any);
+      }
+    }
+    if (typeof cfg.limit === "number") q = q.limit(cfg.limit);
+    const { data, error } = await q;
+    if (error) throw new Error(error.message);
+    return { flowId, version: def.version, output: data };
+  }
+
+  if (node.type === "api.request") {
+    const url = String(cfg.url || "");
+    const method = String(cfg.method || "GET");
+    const headers = (cfg.headers && typeof cfg.headers === "object") ? (cfg.headers as Record<string, string>) : undefined;
+    const body = cfg.body === undefined ? undefined : cfg.body;
+    const res = await fetch(url, { method, headers, body: body === undefined ? undefined : JSON.stringify(body) });
+    const text = await res.text();
+    let json: unknown = text;
+    try { json = JSON.parse(text); } catch {}
+    return { flowId, version: def.version, output: { status: res.status, data: json } };
+  }
+
+  if (node.type === "transform.data") {
+    const expr = typeof cfg.expression === "string" ? cfg.expression : "";
+    const source = cfg.input !== undefined ? cfg.input : input;
+    if (!expr) return { flowId, version: def.version, output: source };
+    return { flowId, version: def.version, output: getByPath(source, expr) };
+  }
+
+  return { flowId, version: def.version, output: { input } };
+}
+
+export function getFlowDefinition(flowId: string): FlowDefinition {
+  const def = getFlow(flowId);
+  if (!def) {
+    throw new Error(\`Flow not found: \${flowId}\`);
+  }
+  return def;
+}
+",
+    "package.json": "{
+  "name": "envelope-app",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "next": "^14.2.0",
+    "react": "^18.3.0",
+    "react-dom": "^18.3.0",
+    "@supabase/supabase-js": "^2.45.0",
+    "@supabase/ssr": "^0.5.0",
+    "@tanstack/react-query": "^5.59.0",
+    "zustand": "^5.0.0",
+    "lucide-react": "^0.447.0",
+    "@radix-ui/react-slot": "^1.1.0",
+    "class-variance-authority": "^0.7.0",
+    "clsx": "^2.1.0",
+    "tailwind-merge": "^2.5.0",
+    "@radix-ui/react-dialog": "^1.1.0",
+    "@radix-ui/react-dropdown-menu": "^2.1.0",
+    "@radix-ui/react-label": "^2.1.0",
+    "@radix-ui/react-select": "^2.1.0",
+    "@radix-ui/react-separator": "^1.1.0",
+    "@radix-ui/react-tabs": "^1.1.0",
+    "@radix-ui/react-toast": "^1.2.0",
+    "@radix-ui/react-tooltip": "^1.1.0",
+    "@radix-ui/react-avatar": "^1.1.0",
+    "@radix-ui/react-checkbox": "^1.1.0",
+    "@radix-ui/react-switch": "^1.1.0",
+    "@radix-ui/react-popover": "^1.1.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.0",
+    "@types/node": "^22.0.0",
+    "@types/react": "^18.3.0",
+    "@types/react-dom": "^18.3.0",
+    "tailwindcss": "^3.4.0",
+    "postcss": "^8.4.0",
+    "autoprefixer": "^10.4.0",
+    "eslint": "^8.57.0",
+    "eslint-config-next": "^14.2.0"
+  }
+}
+",
+    "supabase/migrations/001_initial_schema.sql": "-- ============================================================
+-- Envelope V3 — Database Migration
+-- Schema Version: 3.0.0
+-- Generated by @envelope/generator
+-- ============================================================
+
+CREATE TYPE "order_status" AS ENUM ('pending', 'paid', 'cancelled');
+
+-- 商品表（示例）
+CREATE TABLE "products" (
+  "id" UUID DEFAULT gen_random_uuid() NOT NULL PRIMARY KEY, -- 主键
+  "title" TEXT NOT NULL, -- 商品标题
+  "price" NUMERIC NOT NULL DEFAULT 0, -- 价格（示例）
+  "created_at" TIMESTAMPTZ NOT NULL DEFAULT now() -- 创建时间
+);
+
+CREATE INDEX "idx_products_title" ON "products" USING btree ("title");
+
+ALTER TABLE "products" ENABLE ROW LEVEL SECURITY;
+
+-- 订单表（示例）
+CREATE TABLE "orders" (
+  "id" UUID DEFAULT gen_random_uuid() NOT NULL PRIMARY KEY,
+  "status" TEXT NOT NULL DEFAULT 'pending'::text,
+  "created_at" TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+ALTER TABLE "orders" ENABLE ROW LEVEL SECURITY;
+",
+    "types/database.ts": "// Auto-generated by @envelope/generator
+// Schema Version: 3.0.0
+// DO NOT EDIT MANUALLY — changes will be overwritten
+
+export interface Database {
+  public: {
+    Tables: {
+      products: {
+        Row: ProductsRow;
+        Insert: Partial<ProductsRow>;
+        Update: Partial<ProductsRow>;
+      };
+      orders: {
+        Row: OrdersRow;
+        Insert: Partial<OrdersRow>;
+        Update: Partial<OrdersRow>;
+      };
+    };
+    Views: {};
+    Functions: {};
+    Enums: {};
+  };
+}
+
+/** 商品表（示例） */
+export interface ProductsRow {
+  /** 主键 */
+  id: string;
+  /** 商品标题 */
+  title: string;
+  /** 价格（示例） */
+  price: number;
+  /** 创建时间 */
+  created_at: string;
+}
+
+/** 订单表（示例） */
+export interface OrdersRow {
+  id: string;
+  status: string;
+  created_at: string;
+}
+",
+  },
+}
+`;

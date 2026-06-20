@@ -31,6 +31,51 @@ function generateId(): string {
   return crypto.randomUUID();
 }
 
+/**
+ * 数值钳制（闭区间）
+ *
+ * @param value - 原始值
+ * @param min - 最小值
+ * @param max - 最大值
+ * @returns 钳制后的值
+ */
+function clamp(value: number, min: number, max: number): number {
+  return Math.max(min, Math.min(max, value));
+}
+
+/**
+ * 规范化网格列数
+ *
+ * 关键点：
+ * - gridCols 必须为正整数（至少 1）
+ * - UI/外部调用可能传入小数/非法值，这里统一做兜底
+ *
+ * @param cols - 输入列数
+ * @returns 规范化后的列数（>= 1 的整数）
+ */
+function normalizeGridCols(cols: number): number {
+  if (!Number.isFinite(cols)) return 1;
+  return Math.max(1, Math.floor(cols));
+}
+
+/**
+ * 根据组件宽度对 x 做右边界钳制
+ *
+ * 设计目标：
+ * - 始终保证组件落在有效网格范围内（1 <= x <= gridCols - width + 1）
+ * - 在 gridCols 变小时，优先保持 width（若 width > gridCols 则会被上层逻辑先钳制）
+ *
+ * @param x - 目标起始列（可能越界）
+ * @param width - 组件列跨度（>= 1）
+ * @param gridCols - 当前网格列数（>= 1）
+ * @returns 钳制后的起始列
+ */
+function clampXByWidth(x: number, width: number, gridCols: number): number {
+  const w = Math.max(1, width);
+  const rightMostX = Math.max(1, gridCols - w + 1);
+  return clamp(Math.round(x), 1, rightMostX);
+}
+
 function takeSnapshot(state: CanvasState): CanvasSnapshot {
   return {
     components: structuredClone(state.components),
@@ -173,13 +218,25 @@ export const useCanvasStore = create<CanvasState & CanvasActions>((set, get) => 
     });
   },
 
+  /**
+   * 移动组件（拖拽/对齐操作使用）
+   *
+   * 关键点：
+   * - x 必须同时考虑组件 width，保证右边界不越界（否则会出现“store 数据非法但渲染层被动裁剪”的隐性问题）
+   * - y 只要求 >= 1（当前网格未限制最大行数）
+   *
+   * @param id - 目标组件 ID
+   * @param x - 目标起始列（网格单位，1 为基准）
+   * @param y - 目标起始行（网格单位，1 为基准）
+   */
   moveComponent: (id, x, y) => {
     set((state) => {
       const partial = {
         components: state.components.map((c) => {
           if (c.id !== id) return c;
-          const clampedX = Math.max(1, Math.min(state.gridCols, x));
-          const clampedY = Math.max(1, y);
+          // 关键：移动时需要同时考虑 “组件宽度” 与 “网格总列数”，避免 x 越界导致渲染侧被动裁剪
+          const clampedX = clampXByWidth(x, c.position.width, state.gridCols);
+          const clampedY = Math.max(1, Math.round(y));
           return { ...c, position: { ...c.position, x: clampedX, y: clampedY } };
         }),
       };
@@ -200,19 +257,36 @@ export const useCanvasStore = create<CanvasState & CanvasActions>((set, get) => 
     });
   },
 
+  /**
+   * 缩放组件（由画布缩放手柄驱动）
+   *
+   * 约束规则：
+   * - width/height 最小为 1
+   * - x/y 最小为 1
+   * - x 需要考虑 width：优先保持 width，在必要时再对 x 做钳制
+   *
+   * @param id - 目标组件 ID
+   * @param width - 目标宽度（列跨度）
+   * @param height - 目标高度（行跨度）
+   * @param x - 目标起始列（可选；西向/西北/西南手柄会传入）
+   * @param y - 目标起始行（可选；北向/西北/东北手柄会传入）
+   */
   resizeComponent: (id, width, height, x, y) => {
     set((state) => {
       const partial = {
         components: state.components.map((c) => {
           if (c.id !== id) return c;
-          const newX = x !== undefined ? Math.max(1, Math.min(state.gridCols, x)) : c.position.x;
-          const maxWidth = state.gridCols - newX + 1;
-          const clampedWidth = Math.max(1, Math.min(maxWidth, width));
-          const clampedHeight = Math.max(1, height);
-          const newY = y !== undefined ? Math.max(1, y) : c.position.y;
+          const nextHeight = Math.max(1, Math.round(height));
+          const nextXInput = x !== undefined ? x : c.position.x;
+          const nextXPre = clamp(Math.round(nextXInput), 1, state.gridCols);
+          const maxWidthByX = Math.max(1, state.gridCols - nextXPre + 1);
+          const nextWidthRaw = Math.max(1, Math.round(width));
+          const nextWidth = clamp(nextWidthRaw, 1, maxWidthByX);
+          const nextX = clampXByWidth(nextXPre, nextWidth, state.gridCols);
+          const nextY = y !== undefined ? Math.max(1, Math.round(y)) : c.position.y;
           return {
             ...c,
-            position: { ...c.position, x: newX, y: newY, width: clampedWidth, height: clampedHeight },
+            position: { ...c.position, x: nextX, y: nextY, width: nextWidth, height: nextHeight },
           };
         }),
       };
@@ -265,10 +339,29 @@ export const useCanvasStore = create<CanvasState & CanvasActions>((set, get) => 
       return { ...partial, historyPast: limitedPast, historyFuture: [], canUndo: limitedPast.length > 0, canRedo: false };
     });
   },
+  /**
+   * 设置网格列数
+   *
+   * 关键点：
+   * - gridCols 会影响所有组件的 x/width 合法范围
+   * - 这里必须同步“回收”已有组件位置，否则历史数据会出现越界
+   *
+   * @param gridCols - 新的网格列数（允许输入小数/非法值，内部会 normalize）
+   */
   setGridCols: (gridCols) => {
     set((state) => {
-      const partial = { gridCols };
-      if (batching) return partial;
+      const nextCols = normalizeGridCols(gridCols);
+      const partial = {
+        gridCols: nextCols,
+        // 关键：gridCols 改变时同步钳制所有组件的位置/宽度，避免出现不可达或负跨度的布局状态
+        components: state.components.map((c) => {
+          const nextW = clamp(Math.round(c.position.width), 1, nextCols);
+          const nextX = clampXByWidth(c.position.x, nextW, nextCols);
+          const nextY = Math.max(1, Math.round(c.position.y));
+          const nextH = Math.max(1, Math.round(c.position.height));
+          return { ...c, position: { ...c.position, x: nextX, y: nextY, width: nextW, height: nextH } };
+        }),
+      };
       const prev = takeSnapshot(state);
       const next = takeSnapshot({ ...(state as CanvasState), ...partial });
       if (snapshotEquals(prev, next)) return partial;
@@ -337,6 +430,14 @@ export const useCanvasStore = create<CanvasState & CanvasActions>((set, get) => 
     });
   },
 
+  /**
+   * 复制当前选中的组件
+   *
+   * 规则：
+   * - 复制后的组件会在原位置基础上做轻微偏移，避免完全重叠
+   * - 必须保证 CanvasComponent.id 与 node.id 一致（否则后续基于 id 的映射会出现歧义）
+   * - 偏移后的 x 仍要做边界钳制，避免复制到画布外
+   */
   copySelected: () => {
     set((state) => {
       const componentMap = new Map(state.components.map((c) => [c.id, c]));
@@ -345,12 +446,17 @@ export const useCanvasStore = create<CanvasState & CanvasActions>((set, get) => 
         .filter((c): c is CanvasComponent => c !== undefined);
 
       const newComps: CanvasComponent[] = copies.map((c) => {
+        // 关键：CanvasComponent.id 与 node.id 必须保持一致，避免后续基于 id 的映射出现歧义
+        const newId = generateId();
         const clonedNode = structuredClone(c.node);
-        clonedNode.id = generateId();
+        clonedNode.id = newId;
+        clonedNode.name = `${clonedNode.type}-${newId}`;
+        const nextX = clampXByWidth(c.position.x + 2, c.position.width, state.gridCols);
+        const nextY = Math.max(1, Math.round(c.position.y + 1));
         return {
-          id: generateId(),
+          id: newId,
           node: clonedNode,
-          position: { ...c.position, x: c.position.x + 2, y: c.position.y + 1 },
+          position: { ...c.position, x: nextX, y: nextY },
         };
       });
 

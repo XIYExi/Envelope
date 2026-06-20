@@ -9,6 +9,8 @@
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
+    "e2e": "playwright test",
+    "e2e:ui": "playwright test --ui",
     "clean": "node -e \"require('fs').rmSync('.next',{recursive:true,force:true});require('fs').rmSync('.turbo',{recursive:true,force:true})\""
   },
   "dependencies": {
@@ -61,6 +63,7 @@
     "react-dom": "^18.3.0",
     "react-resizable-panels": "^2.0.22",
     "recharts": "2.15.4",
+    "sonner": "^1.7.0",
     "tailwind-merge": "^2.4.0",
     "tailwindcss-animate": "^1.0.7",
     "ws": "^8.18.0",
@@ -68,6 +71,7 @@
     "zustand": "^4.5.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.41.2",
     "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^20.14.0",
     "@types/react": "^18.3.0",

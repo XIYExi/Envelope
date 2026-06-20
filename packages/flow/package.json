@@ -8,6 +8,8 @@
   "scripts": {
     "build": "tsc --noEmit",
     "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "lint": "eslint src/",
     "clean": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\""
   },
@@ -18,8 +20,10 @@
     "zustand": "^4.5.7"
   },
   "devDependencies": {
+    "@types/node": "^20.14.0",
     "@types/react": "^18.3.0",
-    "typescript": "^5.5.0"
+    "typescript": "^5.5.0",
+    "vitest": "^2.1.0"
   },
   "peerDependencies": {
     "react": "^18.3.0",
