@@ -251,6 +251,14 @@ export async function duplicateProject(id: string, newName: string): Promise<Pro
     }
 
     createdProject = data;
+    if (!createdProject) {
+      throw new ApiError({
+        status: 500,
+        code: "PROJECT.DUPLICATE_FAILED",
+        message: "Failed to duplicate project",
+      });
+    }
+    const createdProjectId = createdProject.id;
 
     const { data: pages, error: pagesError } = await supabase
       .from("project_pages")
@@ -272,7 +280,7 @@ export async function duplicateProject(id: string, newName: string): Promise<Pro
     const pageIdMap = new Map<string, string>();
     if (pages && pages.length > 0) {
       const pageInserts: ProjectPageInsert[] = pages.map((p) => ({
-        project_id: createdProject.id,
+        project_id: createdProjectId,
         path: p.path,
         title: p.title,
         description: p.description,
@@ -325,7 +333,7 @@ export async function duplicateProject(id: string, newName: string): Promise<Pro
     const routeIdMap = new Map<string, string>();
     if (routes && routes.length > 0) {
       const routeInserts: ProjectRouteInsert[] = routes.map((r) => ({
-        project_id: createdProject.id,
+        project_id: createdProjectId,
         path: r.path,
         page_id: r.page_id ? pageIdMap.get(r.page_id) ?? null : null,
         layout_id: r.layout_id,
@@ -403,7 +411,7 @@ export async function duplicateProject(id: string, newName: string): Promise<Pro
 
     for (const f of flows ?? []) {
       const insertFlow: ProjectFlowInsert = {
-        project_id: createdProject.id,
+        project_id: createdProjectId,
         name: f.name,
         description: f.description,
         flow_type: f.flow_type,
@@ -448,7 +456,7 @@ export async function duplicateProject(id: string, newName: string): Promise<Pro
 
     if (models && models.length > 0) {
       const modelInserts: ProjectModelInsert[] = models.map((m) => ({
-        project_id: createdProject.id,
+        project_id: createdProjectId,
         table_name: m.table_name,
         schema: m.schema,
         rls_policies: m.rls_policies,
@@ -486,7 +494,7 @@ export async function duplicateProject(id: string, newName: string): Promise<Pro
 
     if (endpoints && endpoints.length > 0) {
       const endpointInserts: ProjectEndpointInsert[] = endpoints.map((e) => ({
-        project_id: createdProject.id,
+        project_id: createdProjectId,
         method: e.method,
         path: e.path,
         description: e.description,
@@ -529,7 +537,7 @@ export async function duplicateProject(id: string, newName: string): Promise<Pro
 
     if (auth) {
       const insertAuth: ProjectAuthInsert = {
-        project_id: createdProject.id,
+        project_id: createdProjectId,
         providers: auth.providers,
         redirect_urls: auth.redirect_urls,
         session_config: auth.session_config,

@@ -12,17 +12,7 @@
  */
 import * as fs from "node:fs";
 import * as path from "node:path";
-
-/**
- * 虚拟文件描述
- * 对应生成的单个代码文件
- */
-export interface VirtualFile {
-  /** 文件相对路径（如 "app/page.tsx"、"lib/utils.ts"） */
-  path: string;
-  /** 文件内容（字符串） */
-  content: string;
-}
+import type { VirtualFile } from "./file-system.types";
 
 /**
  * 虚拟文件系统

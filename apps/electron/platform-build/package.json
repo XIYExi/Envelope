@@ -1,1 +1,40 @@
-{"type": "commonjs"}
+{
+  "name": "envelope",
+  "description": "Full-stack lowcode project generation platform — design complete Next.js applications visually and export clean, production-ready source code.",
+  "version": "3.0.0",
+  "private": true,
+  "author": "xiye",
+  "license": "MIT",
+  "scripts": {
+    "dev": "turbo dev --filter=!@envelope/electron",
+    "build": "turbo build --filter=!@envelope/electron",
+    "lint": "turbo lint",
+    "typecheck": "turbo typecheck",
+    "test": "turbo test",
+    "clean": "turbo clean",
+    "clean:all": "node -e \"var f=require('fs');['node_modules','.turbo','.next','dist','release'].forEach(d=>{try{f.rmSync(d,{recursive:true,force:true})}catch(e){}})\"",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md,css}\"",
+    "electron:dev": "turbo dev --filter=@envelope/electron",
+    "electron:build": "turbo build --filter=@envelope/electron"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "pnpm": ">=9.0.0"
+  },
+  "packageManager": "pnpm@10.27.0",
+  "pnpm": {
+    "onlyBuiltDependencies": ["better-sqlite3", "electron", "unrs-resolver"]
+  },
+  "devDependencies": {
+    "turbo": "^2.1.0",
+    "prettier": "^3.3.0",
+    "typescript": "^5.5.0",
+    "@typescript-eslint/eslint-plugin": "^7.0.0",
+    "@typescript-eslint/parser": "^7.0.0",
+    "eslint": "^8.57.0",
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-plugin-import": "^2.29.0",
+    "eslint-import-resolver-typescript": "^3.6.0",
+    "eslint-config-next": "^14.2.0"
+  }
+}

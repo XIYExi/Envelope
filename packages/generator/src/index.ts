@@ -18,7 +18,8 @@ export const VERSION = "3.0.0";
 // 核心
 // ═══════════════════════════════════════════════════════════════
 
-export { VirtualFS, type VirtualFile } from "./core/file-system";
+export { VirtualFS } from "./core/file-system";
+export type { VirtualFile } from "./core/file-system.types";
 
 // ═══════════════════════════════════════════════════════════════
 // 编排器
@@ -26,10 +27,8 @@ export { VirtualFS, type VirtualFile } from "./core/file-system";
 
 export {
   generateProject,
-  type ProjectExport,
-  type ProgressCallback,
-  type GenerateProjectInput,
 } from "./generate";
+export type { ProjectExport, ProgressCallback, GenerateProjectInput } from "./generate.types";
 
 // ═══════════════════════════════════════════════════════════════
 // 子生成器

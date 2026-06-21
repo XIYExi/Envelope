@@ -39,6 +39,6 @@ export const apiErrors = {
   conflict: (message = "Conflict", code = "RESOURCE.CONFLICT") => new ApiError({ status: 409, code, message }),
   db: (message = "Database error", details?: unknown) =>
     new ApiError({ status: 500, code: "DB.ERROR", message, details }),
-  internal: (message = "Internal server error") =>
-    new ApiError({ status: 500, code: "INTERNAL.ERROR", message }),
+  internal: (message = "Internal server error", code = "INTERNAL.ERROR") =>
+    new ApiError({ status: 500, code, message }),
 };

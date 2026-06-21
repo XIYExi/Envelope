@@ -51,6 +51,9 @@ importers:
       '@envelope/platform':
         specifier: workspace:*
         version: link:../platform
+      '@types/node':
+        specifier: ^20.19.43
+        version: 20.19.43
       concurrently:
         specifier: ^9.0.0
         version: 9.2.1
@@ -241,6 +244,9 @@ importers:
       '@types/react-dom':
         specifier: ^18.3.0
         version: 18.3.7(@types/react@18.3.31)
+      '@types/ws':
+        specifier: ^8.18.1
+        version: 8.18.1
       autoprefixer:
         specifier: ^10.4.0
         version: 10.5.0(postcss@8.5.15)
@@ -1691,6 +1697,9 @@ packages:
 
   '@types/verror@1.10.11':
     resolution: {integrity: sha512-RlDm9K7+o5stv0Co8i8ZRGxDbrTxhJtgjqjFyVh/tXQyl/rYtTKlnTvZ88oSTeYREWurwx20Js4kTuKCsFkUtg==}
+
+  '@types/ws@8.18.1':
+    resolution: {integrity: sha512-ThVF6DCVhA8kUGy+aazFQ4kXQ7E1Ty7A3ypFOe0IcJV8O/M511G99AW24irKrW56Wt44yG9+ij8FaqoBGkuBXg==}
 
   '@types/yauzl@2.10.3':
     resolution: {integrity: sha512-oJoftv0LSuaDZE3Le4DbKX+KS9G36NzOeSap90UIK0yMA/NhKJhqlSGtNDORNRaIbQfzjXDrQa0ytJ6mNRGz/Q==}
@@ -5678,7 +5687,7 @@ snapshots:
     dependencies:
       '@types/http-cache-semantics': 4.2.0
       '@types/keyv': 3.1.4
-      '@types/node': 22.19.21
+      '@types/node': 20.19.43
       '@types/responselike': 1.0.3
 
   '@types/d3-array@3.2.2': {}
@@ -5728,7 +5737,7 @@ snapshots:
 
   '@types/fs-extra@9.0.13':
     dependencies:
-      '@types/node': 22.19.21
+      '@types/node': 20.19.43
 
   '@types/http-cache-semantics@4.2.0': {}
 
@@ -5736,7 +5745,7 @@ snapshots:
 
   '@types/keyv@3.1.4':
     dependencies:
-      '@types/node': 22.19.21
+      '@types/node': 20.19.43
 
   '@types/ms@2.1.0': {}
 
@@ -5750,7 +5759,7 @@ snapshots:
 
   '@types/plist@3.0.5':
     dependencies:
-      '@types/node': 22.19.21
+      '@types/node': 20.19.43
       xmlbuilder: 15.1.1
     optional: true
 
@@ -5767,14 +5776,18 @@ snapshots:
 
   '@types/responselike@1.0.3':
     dependencies:
-      '@types/node': 22.19.21
+      '@types/node': 20.19.43
 
   '@types/verror@1.10.11':
     optional: true
 
+  '@types/ws@8.18.1':
+    dependencies:
+      '@types/node': 20.19.43
+
   '@types/yauzl@2.10.3':
     dependencies:
-      '@types/node': 22.19.21
+      '@types/node': 20.19.43
     optional: true
 
   '@typescript-eslint/eslint-plugin@7.18.0(@typescript-eslint/parser@7.18.0(eslint@8.57.1)(typescript@5.9.3))(eslint@8.57.1)(typescript@5.9.3)':

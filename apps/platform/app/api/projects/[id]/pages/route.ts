@@ -73,8 +73,8 @@ export async function PUT(request: Request, { params }: { params: { id: string }
       path: p.path,
       title: p.title,
       description: p.description ?? "",
-      schema: p.schema,
-      metadata: p.metadata ?? {},
+      schema: p.schema as unknown as Record<string, unknown>,
+      metadata: (p.metadata ?? {}) as Record<string, unknown>,
       sort_order: p.sort_order ?? 0,
       is_published: p.is_published ?? false,
     })));

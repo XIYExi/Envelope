@@ -17,7 +17,7 @@ export async function GET(_request: Request, { params }: { params: { taskId: str
     const zip = await getArchiveExportZipForUser(params.taskId, userId);
     if (!zip) throw apiErrors.conflict("Export not ready", "ARCHIVE_EXPORT_TASK.NOT_READY");
 
-    return new NextResponse(zip.bytes, {
+    return new NextResponse(Buffer.from(zip.bytes), {
       headers: {
         "content-type": "application/zip",
         "content-disposition": `attachment; filename="${zip.fileName}"`,

@@ -22,6 +22,7 @@ import type {
   ProjectModelInsert,
   ProjectPage,
   ProjectPageInsert,
+  ProjectInsert,
   ProjectRoute,
   ProjectRouteInsert,
 } from "@/lib/supabase/types";
@@ -59,16 +60,17 @@ export function createSupabaseArchiveImportRepository(context: ArchiveImportRepo
 
   return {
     async createProject(input): Promise<Project> {
+      const projectInsert: ProjectInsert = {
+        ...(input.id ? { id: input.id } : {}),
+        user_id: context.ownerUserId,
+        name: input.name,
+        description: input.description ?? "",
+        schema_version: input.schema_version ?? "3.0.0",
+        config: input.config ?? {},
+      };
       const { data, error } = await supabase
         .from("projects")
-        .insert({
-          ...(input.id ? { id: input.id } : {}),
-          user_id: context.ownerUserId,
-          name: input.name,
-          description: input.description ?? "",
-          schema_version: input.schema_version ?? "3.0.0",
-          config: input.config ?? {},
-        })
+        .insert(projectInsert as never)
         .select("*")
         .single<Project>();
       if (error) throw error;
@@ -98,7 +100,7 @@ export function createSupabaseArchiveImportRepository(context: ArchiveImportRepo
         sort_order: page.sort_order ?? 0,
         is_published: page.is_published ?? false,
       }));
-      const { error } = await supabase.from("project_pages").upsert(inserts, { onConflict: "project_id,path" });
+      const { error } = await supabase.from("project_pages").upsert(inserts as never, { onConflict: "project_id,path" });
       if (error) throw error;
       return this.listPages(projectId);
     },
@@ -128,7 +130,7 @@ export function createSupabaseArchiveImportRepository(context: ArchiveImportRepo
         parent_route_id: route.parent_route_id ?? null,
         sort_order: route.sort_order ?? 0,
       }));
-      const { error } = await supabase.from("project_routes").upsert(inserts, { onConflict: "project_id,path" });
+      const { error } = await supabase.from("project_routes").upsert(inserts as never, { onConflict: "project_id,path" });
       if (error) throw error;
       return this.listRoutes(projectId);
     },
@@ -155,7 +157,7 @@ export function createSupabaseArchiveImportRepository(context: ArchiveImportRepo
         trigger_event: flow.trigger_event ?? null,
         is_active: flow.is_active ?? true,
       }));
-      const { error } = await supabase.from("project_flows").upsert(inserts, { onConflict: "id" });
+      const { error } = await supabase.from("project_flows").upsert(inserts as never, { onConflict: "id" });
       if (error) throw error;
       return this.listFlows(projectId);
     },
@@ -179,7 +181,7 @@ export function createSupabaseArchiveImportRepository(context: ArchiveImportRepo
         schema: model.schema ?? {},
         rls_policies: model.rls_policies ?? [],
       }));
-      const { error } = await supabase.from("project_models").upsert(inserts, { onConflict: "project_id,table_name" });
+      const { error } = await supabase.from("project_models").upsert(inserts as never, { onConflict: "project_id,table_name" });
       if (error) throw error;
       return this.listModels(projectId);
     },
@@ -208,7 +210,7 @@ export function createSupabaseArchiveImportRepository(context: ArchiveImportRepo
         flow_id: endpoint.flow_id ?? null,
         is_active: endpoint.is_active ?? true,
       }));
-      const { error } = await supabase.from("project_endpoints").upsert(inserts, { onConflict: "id" });
+      const { error } = await supabase.from("project_endpoints").upsert(inserts as never, { onConflict: "id" });
       if (error) throw error;
       return this.listEndpoints(projectId);
     },
@@ -233,7 +235,7 @@ export function createSupabaseArchiveImportRepository(context: ArchiveImportRepo
       };
       const { data, error } = await supabase
         .from("project_auth")
-        .upsert(insert, { onConflict: "project_id" })
+        .upsert(insert as never, { onConflict: "project_id" })
         .select("*")
         .single<ProjectAuth>();
       if (error) throw error;

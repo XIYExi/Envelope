@@ -501,20 +501,20 @@ function endpointDefToRow(ep: APIEndpointDef): Omit<ProjectEndpoint, "project_id
       requestBodyType: ep.requestBodyType,
       requestBodySchema: ep.requestBodySchema,
       headers: ep.headers,
-    } as unknown,
+    } as unknown as Record<string, unknown>,
     response_schema: {
       successStatus: ep.successStatus,
       successExample: ep.successExample,
       errorResponses: ep.errorResponses,
-    } as unknown,
-    middleware: {
+    } as unknown as Record<string, unknown>,
+    middleware: [{
       authRequired: ep.authRequired,
       requiredRole: ep.requiredRole,
       rateLimitEnabled: ep.rateLimitEnabled,
       rateLimitRPM: ep.rateLimitRPM,
       corsEnabled: ep.corsEnabled,
       loggingEnabled: ep.loggingEnabled,
-    } as unknown,
+    }] as Record<string, unknown>[],
     flow_id: ep.boundFlow ? ep.boundFlow : null,
     is_active: true,
   };
@@ -523,7 +523,7 @@ function endpointDefToRow(ep: APIEndpointDef): Omit<ProjectEndpoint, "project_id
 function rowToEndpointDef(row: ProjectEndpoint): APIEndpointDef {
   const req = (row.request_schema ?? {}) as any;
   const res = (row.response_schema ?? {}) as any;
-  const mid = (row.middleware ?? {}) as any;
+  const mid = (Array.isArray(row.middleware) ? row.middleware[0] : row.middleware) ?? {};
   return createDefaultEndpoint({
     id: row.id,
     method: row.method,

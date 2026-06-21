@@ -12,7 +12,7 @@
  * @date 2026-06-14
  */
 import type { AuthConfig } from "@envelope/engine";
-import type { VirtualFile } from "../core/file-system";
+import type { VirtualFile } from "../core/file-system.types";
 import { jsxText, tsStringLiteral } from "../core/tsx-escape";
 
 /**

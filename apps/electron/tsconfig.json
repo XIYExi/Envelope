@@ -7,6 +7,6 @@
     "types": ["node"],
     "noEmit": true
   },
-  "include": ["main/**/*.js", "preload/**/*.js"],
+  "include": ["main/**/*.js", "preload/**/*.js", "scripts/**/*.js", "test/**/*.js"],
   "exclude": ["node_modules"]
 }

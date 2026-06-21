@@ -1,4 +1,4 @@
-import { WebSocketServer, type WebSocket } from "ws";
+import { WebSocketServer, type RawData, type WebSocket } from "ws";
 import { randomUUID } from "crypto";
 
 /**
@@ -152,14 +152,14 @@ export function ensureTaskWSServer(): { wsPort: number; wsPath: string } {
   } catch {
   }
 
-  wss.on("connection", (ws) => {
+  wss.on("connection", (ws: WebSocket) => {
     const meta = ensureMeta(server, ws);
     ws.send(JSON.stringify({ type: "registered", clientId: meta.clientId } satisfies TaskWsEnvelope));
     ws.on("pong", () => {
       meta.isAlive = true;
     });
 
-    ws.on("message", (raw) => {
+    ws.on("message", (raw: RawData) => {
       let parsed: unknown;
       try {
         parsed = JSON.parse(String(raw));

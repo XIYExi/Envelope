@@ -17,7 +17,7 @@ export async function GET(_request: Request, { params }: { params: { id: string 
     const supabase = backendConfig.mode === "local" ? null : await createServerSupabase();
     const { zipped, fileName } = await generateProjectZip(supabase, params.id);
 
-    return new NextResponse(zipped, {
+    return new NextResponse(Buffer.from(zipped), {
       headers: {
         "content-type": "application/zip",
         "content-disposition": `attachment; filename="${fileName}"`,

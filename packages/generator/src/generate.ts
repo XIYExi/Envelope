@@ -31,7 +31,13 @@ import type { PageSchema } from "@envelope/engine";
 import type { ComponentNode } from "@envelope/engine";
 import type { DbSchema } from "@envelope/engine";
 import type { AuthConfig } from "@envelope/engine";
-import { VirtualFS, type VirtualFile } from "./core/file-system";
+import { VirtualFS } from "./core/file-system";
+import type { VirtualFile } from "./core/file-system.types";
+import type {
+  GenerateProjectInput,
+  ProgressCallback,
+  ProjectExport,
+} from "./generate.types";
 import {
   generateProjectFiles,
   generateRouteFiles,
@@ -40,24 +46,7 @@ import {
   generateTypes,
   generatePageCode,
   generateFlowRuntimeFiles,
-  type ProjectEndpoint,
-  type ProjectFlow,
 } from "./generators";
-
-/** 导出的项目文件信息 */
-export interface ProjectExport {
-  /** 文件列表 */
-  files: VirtualFile[];
-  /** 项目名称 */
-  projectName: string;
-  /** 文件总数 */
-  fileCount: number;
-  /** 总大小（字节） */
-  totalSize: number;
-}
-
-/** 生成进度回调 */
-export type ProgressCallback = (stage: string, percent: number) => void;
 
 /**
  * 生成完整的 Next.js 项目
@@ -231,26 +220,6 @@ export async function generateProject(
     fileCount: allFiles.length,
     totalSize,
   };
-}
-
-/** generateProject 的输入参数 */
-export interface GenerateProjectInput {
-  /** 项目名称 */
-  projectName?: string;
-  /** 项目配置 */
-  project: ProjectConfig;
-  /** 路由配置 */
-  routes?: RoutesConfig;
-  /** 页面定义列表 */
-  pages?: PageSchema[];
-  /** 数据库 Schema */
-  dbSchema?: DbSchema;
-  /** 认证配置 */
-  auth?: AuthConfig;
-  /** 业务流程列表（来源：project_flows） */
-  flows?: ProjectFlow[];
-  /** API 端点列表（用于生成 app/api/*/route.ts 并调用 flow） */
-  endpoints?: ProjectEndpoint[];
 }
 
 function hasAnyEventBindings(pages: PageSchema[]): boolean {

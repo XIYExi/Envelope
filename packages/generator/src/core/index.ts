@@ -4,4 +4,5 @@
  * @author xiye
  * @date 2026-06-14
  */
-export { VirtualFS, type VirtualFile } from "./file-system";
+export { VirtualFS } from "./file-system";
+export type { VirtualFile } from "./file-system.types";

@@ -78,7 +78,7 @@ function hashValue(value: unknown): string {
 function buildSummary(resources: Record<ProjectSyncResourceKind, Record<string, string>>): ProjectSyncSnapshotSummary {
   const resourceCounts = Object.fromEntries(
     Object.entries(resources)
-      .map(([kind, entries]) => [kind, Object.keys(entries).length])
+      .map(([kind, entries]) => [kind, Object.keys(entries).length] as [ProjectSyncResourceKind, number])
       .filter(([, count]) => count > 0),
   ) as Partial<Record<ProjectSyncResourceKind, number>>;
   const totalResources = Object.values(resourceCounts).reduce((sum, count) => sum + count, 0);

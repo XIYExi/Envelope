@@ -13,4 +13,5 @@ export { generateAuthFiles } from "./auth-generator";
 export { generateProjectFiles } from "./project-generator";
 export { COMPONENT_MAP, SHADCN_IMPORT_MAP, generateComponentJSX } from "./component-map";
 export { generatePageCode } from "./page-generator";
-export { generateFlowRuntimeFiles, type ProjectEndpoint, type ProjectFlow } from "./flow-runtime-generator";
+export { generateFlowRuntimeFiles } from "./flow-runtime-generator";
+export type { ProjectEndpoint, ProjectFlow, GenerateFlowRuntimeOptions } from "./flow-runtime-types";

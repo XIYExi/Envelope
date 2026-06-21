@@ -2,7 +2,7 @@ module.exports = {
   productName: "Envelope",
   appId: "com.envelope.platform",
   copyright: "Copyright © Envelope",
-  npmRebuild: false,
+  npmRebuild: false, // 原生模块统一在 build:renderer 阶段先做 ABI 重建，避免打包阶段再次隐式改写依赖树。
   directories: {
     output: "release",
   },

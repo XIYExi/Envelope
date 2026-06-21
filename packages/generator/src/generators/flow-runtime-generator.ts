@@ -1,25 +1,11 @@
-import type { VirtualFile } from "../core/file-system";
+import type { VirtualFile } from "../core/file-system.types";
+import type {
+  GenerateFlowRuntimeOptions,
+  ProjectEndpoint,
+  ProjectFlow,
+} from "./flow-runtime-types";
 import { yamlToJson, type FlowDefinition } from "@envelope/flow";
 import { tsStringLiteral } from "../core/tsx-escape";
-
-export interface ProjectEndpoint {
-  id: string;
-  method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
-  path: string;
-  flow_id: string | null;
-}
-
-export interface ProjectFlow {
-  id: string;
-  name: string;
-  yaml_content: string;
-  description?: string;
-}
-
-export interface GenerateFlowRuntimeOptions {
-  flows?: ProjectFlow[];
-  endpoints?: ProjectEndpoint[];
-}
 
 export function generateFlowRuntimeFiles(options: GenerateFlowRuntimeOptions): VirtualFile[] {
   const files: VirtualFile[] = [];

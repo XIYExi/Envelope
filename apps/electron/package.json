@@ -6,17 +6,21 @@
   "scripts": {
     "dev": "electron .",
     "dev:full": "concurrently \"pnpm --filter=@envelope/platform dev\" \"wait-on http://localhost:3000 && electron .\"",
-    "build": "node -e \"var f=require('fs'),p=require('path'),s='platform-build';if(f.existsSync(s))f.rmSync(s,{recursive:true,force:true});f.cpSync(p.join('..','platform','.next'),s,{recursive:true})\" && electron-builder --config electron-builder.config.js",
-    "lint": "eslint main/ preload/",
+    "rebuild:native": "node ./scripts/rebuild-electron-native-deps.js",
+    "build:renderer": "pnpm --filter=@envelope/platform build && pnpm run rebuild:native && node ./scripts/prepare-platform-renderer.js",
+    "build": "pnpm run build:renderer && electron-builder --config electron-builder.config.js",
+    "lint": "eslint main/ preload/ scripts/ test/",
+    "test": "node --test test/*.test.js",
     "typecheck": "tsc --noEmit",
     "clean": "node -e \"require('fs').rmSync('release',{recursive:true,force:true});require('fs').rmSync('dist',{recursive:true,force:true})\""
   },
   "dependencies": {
-    "electron-updater": "^6.3.0",
-    "better-sqlite3": "^11.0.0"
+    "better-sqlite3": "^11.0.0",
+    "electron-updater": "^6.3.0"
   },
   "devDependencies": {
     "@envelope/platform": "workspace:*",
+    "@types/node": "^20.19.43",
     "concurrently": "^9.0.0",
     "electron": "^31.0.0",
     "electron-builder": "^24.13.0",

@@ -32,6 +32,16 @@ import { redactProjectConfig } from "./redaction";
 
 export type ArchiveProgressCallback = (stage: string, percent: number) => void;
 
+type NormalizedArchiveSelection = {
+  project: true;
+  pages: "all" | string[];
+  routes: "all" | string[];
+  models: "all" | string[];
+  flows: "all" | string[];
+  endpoints: "all" | string[];
+  auth: "all" | "none";
+};
+
 /**
  * 配置归档导出（ISC-20/98-101）
  *
@@ -39,7 +49,7 @@ export type ArchiveProgressCallback = (stage: string, percent: number) => void;
  * - 输出：ProjectArchive（内存对象）+ ZIP bytes
  * - selection：支持部分导出；并按引用关系做最小依赖闭包（例如 endpoints 引用的 flows）
  */
-function normalizeSelection(options?: ArchiveExportOptions): NonNullable<ProjectArchive["manifest"]["selection"]> {
+function normalizeSelection(options?: ArchiveExportOptions): NormalizedArchiveSelection {
   const selection = options?.selection ?? {};
   return {
     project: true,

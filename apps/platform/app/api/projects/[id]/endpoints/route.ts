@@ -51,7 +51,7 @@ export async function PUT(request: Request, { params }: { params: { id: string }
       description: e.description ?? "",
       request_schema: e.request_schema ?? {},
       response_schema: e.response_schema ?? {},
-      middleware: e.middleware ?? {},
+      middleware: Array.isArray(e.middleware) ? e.middleware : [],
       flow_id: e.flow_id ?? null,
       is_active: e.is_active ?? true,
     })));

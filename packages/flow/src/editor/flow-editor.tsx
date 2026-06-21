@@ -16,7 +16,7 @@
  */
 "use client";
 
-import { useState, useCallback, useMemo, useRef } from "react";
+import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import {
   ReactFlow,
   Controls,
