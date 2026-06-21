@@ -43,38 +43,41 @@ afterEach(() => {
 describe("local project repository", () => {
   it("supports create/update/list/duplicate/delete", async () => {
     const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "envelope-platform-"));
-    const repo = createLocalProjectRepository(createLocalConfig(tempRoot));
+    try {
+      const repo = createLocalProjectRepository(createLocalConfig(tempRoot));
 
-    const created = await repo.create({
-      name: "Local Demo",
-      description: "desc",
-      config: { theme: "dark" },
-    });
+      const created = await repo.create({
+        name: "Local Demo",
+        description: "desc",
+        config: { theme: "dark" },
+      });
 
-    expect(created.name).toBe("Local Demo");
-    expect(created.user_id).toBe("local-user");
-    expect(created.config).toEqual({ theme: "dark" });
+      expect(created.name).toBe("Local Demo");
+      expect(created.user_id).toBe("local-user");
+      expect(created.config).toEqual({ theme: "dark" });
 
-    const updated = await repo.update(created.id, {
-      name: "Local Demo 2",
-      config: { theme: "light" },
-    });
+      const updated = await repo.update(created.id, {
+        name: "Local Demo 2",
+        config: { theme: "light" },
+      });
 
-    expect(updated.name).toBe("Local Demo 2");
-    expect(updated.config).toEqual({ theme: "light" });
+      expect(updated.name).toBe("Local Demo 2");
+      expect(updated.config).toEqual({ theme: "light" });
 
-    const duplicated = await repo.duplicate(created.id, "Copy");
-    expect(duplicated.name).toBe("Copy");
-    expect(duplicated.description).toBe("desc");
+      const duplicated = await repo.duplicate(created.id, "Copy");
+      expect(duplicated.name).toBe("Copy");
+      expect(duplicated.description).toBe("desc");
 
-    const projects = await repo.list();
-    expect(projects).toHaveLength(2);
+      const projects = await repo.list();
+      expect(projects).toHaveLength(2);
 
-    await repo.delete(created.id);
-    await repo.delete(duplicated.id);
+      await repo.delete(created.id);
+      await repo.delete(duplicated.id);
 
-    expect(await repo.list()).toHaveLength(0);
-
-    fs.rmSync(tempRoot, { recursive: true, force: true });
+      expect(await repo.list()).toHaveLength(0);
+    } finally {
+      closeLocalSQLiteConnections();
+      fs.rmSync(tempRoot, { recursive: true, force: true });
+    }
   });
 });

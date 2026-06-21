@@ -111,7 +111,7 @@ export function ensureTaskWSServer(): { wsPort: number; wsPath: string } {
   if (existing) return { wsPort: existing.wsPort, wsPath: existing.wsPath };
 
   const { wsPort, wsPath } = getWsConfig();
-  const wss = new WebSocketServer({ port: wsPort, path: wsPath });
+  const wss = new WebSocketServer({ port: wsPort, host: "127.0.0.1", path: wsPath });
 
   const server: TaskWsServer = {
     wsPort,

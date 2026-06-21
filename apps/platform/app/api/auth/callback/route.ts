@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { getPlatformBackendConfig } from "@/lib/backend/config";
 import { createServerSupabase } from "@/lib/supabase/server";
 
 const ALLOWED_NEXT_PATHS = ["/inner", "/"];
@@ -14,12 +15,17 @@ export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get("code");
   const next = searchParams.get("next");
+  const safeNext = validateNextPath(next);
+
+  const backendConfig = getPlatformBackendConfig();
+  if (backendConfig.mode === "local") {
+    return NextResponse.redirect(`${origin}${safeNext}`);
+  }
 
   if (code) {
     const supabase = await createServerSupabase();
     const { error } = await supabase.auth.exchangeCodeForSession(code);
     if (!error) {
-      const safeNext = validateNextPath(next);
       return NextResponse.redirect(`${origin}${safeNext}`);
     }
     console.error("[auth/callback] Code exchange failed:", error.message);

@@ -13,7 +13,11 @@
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { ApiError } from "@/lib/api/errors";
-import { resetPlatformBackendConfigForTests, resolvePlatformBackendConfig } from "@/lib/backend/config";
+import {
+  resetPlatformBackendConfigForTests,
+  resolveDefaultLocalBackendRoot,
+  resolvePlatformBackendConfig,
+} from "@/lib/backend/config";
 
 afterEach(() => {
   resetPlatformBackendConfigForTests();
@@ -34,15 +38,35 @@ describe("platform backend config", () => {
     });
   });
 
-  it("builds default local paths", () => {
+  it("defaults to local backend and builds local paths under user home", () => {
     const config = resolvePlatformBackendConfig({
-      ENVELOPE_PLATFORM_BACKEND: "local",
+      HOME: "/mock-home",
     });
 
     expect(config.mode).toBe("local");
     expect(config.storageMode).toBe("local");
-    expect(config.sqlitePath).toBe(path.join(process.cwd(), ".envelope", "local", "envelope.db"));
-    expect(config.mediaRoot).toBe(path.join(process.cwd(), ".envelope", "local", "media"));
+    expect(config.localRoot).toBe(path.join("/mock-home", ".envelope", "local"));
+    expect(config.sqlitePath).toBe(path.join("/mock-home", ".envelope", "local", "envelope.db"));
+    expect(config.mediaRoot).toBe(path.join("/mock-home", ".envelope", "local", "media"));
+  });
+
+  it("prefers ENVELOPE_LOCAL_ROOT when provided", () => {
+    const config = resolvePlatformBackendConfig({
+      ENVELOPE_PLATFORM_BACKEND: "local",
+      ENVELOPE_LOCAL_ROOT: path.join("/custom", "envelope-data"),
+    });
+
+    expect(config.localRoot).toBe(path.join("/custom", "envelope-data"));
+    expect(config.sqlitePath).toBe(path.join("/custom", "envelope-data", "envelope.db"));
+    expect(config.mediaRoot).toBe(path.join("/custom", "envelope-data", "media"));
+  });
+
+  it("resolveDefaultLocalBackendRoot reads HOME style env first", () => {
+    expect(
+      resolveDefaultLocalBackendRoot({
+        HOME: "/demo-home",
+      }),
+    ).toBe(path.join("/demo-home", ".envelope", "local"));
   });
 
   it("rejects incomplete custom config", () => {

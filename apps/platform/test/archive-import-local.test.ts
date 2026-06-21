@@ -126,6 +126,7 @@ describe("archive import local", () => {
       expect(routeByPath.get("/settings")?.parent_route_id).toBe(routeByPath.get("/")?.id);
       expect(endpoints[0]?.flow_id).toBe(flows[0]?.id);
     } finally {
+      closeLocalSQLiteConnections();
       fs.rmSync(tempRoot, { recursive: true, force: true });
     }
   });

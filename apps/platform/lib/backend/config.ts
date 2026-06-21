@@ -10,6 +10,7 @@
  * @date 2026-06-20
  * @since 第一阶段后端门面重构
  */
+import os from "node:os";
 import path from "node:path";
 import { z } from "zod";
 import { ApiError } from "@/lib/api/errors";
@@ -21,6 +22,7 @@ export type BackendMode = z.infer<typeof backendModeSchema>;
 export type StorageMode = z.infer<typeof storageModeSchema>;
 
 type EnvLike = Record<string, string | undefined>;
+const DEFAULT_LOCAL_BACKEND_ROOT_SEGMENTS = [".envelope", "local"];
 
 const supabaseConfigSchema = z.object({
   /** 当前后端模式：Supabase 云端模式。 */
@@ -38,6 +40,8 @@ const localConfigSchema = z.object({
   mode: z.literal("local"),
   /** 当前媒体存储模式：本地文件系统。 */
   storageMode: z.literal("local"),
+  /** 本地后端根目录。 */
+  localRoot: z.string().min(1),
   /** 本地 SQLite 数据库文件路径。 */
   sqlitePath: z.string().min(1),
   /** 本地图片/媒体文件根目录。 */
@@ -78,7 +82,7 @@ const runtimeBackendConfigSchema = z.discriminatedUnion("mode", [
 export type RuntimeBackendConfig = z.infer<typeof runtimeBackendConfigSchema>;
 
 function normalizeBackendMode(value: string | undefined): BackendMode {
-  const parsed = backendModeSchema.safeParse(value?.trim().toLowerCase() || "supabase");
+  const parsed = backendModeSchema.safeParse(value?.trim().toLowerCase() || "local");
   if (!parsed.success) {
     throw new ApiError({
       status: 500,
@@ -88,6 +92,40 @@ function normalizeBackendMode(value: string | undefined): BackendMode {
     });
   }
   return parsed.data;
+}
+
+/**
+ * 解析本机用户主目录。
+ *
+ * 优先读取测试可覆盖的环境变量，再回退到 Node 的 `os.homedir()`，
+ * 这样既能兼容 Electron/Next 运行时，也便于单元测试稳定断言默认路径。
+ *
+ * @param env 运行时环境变量集合
+ * @returns 当前用户主目录绝对路径
+ * @author xiye
+ * @date 2026-06-21
+ */
+function resolveUserHomeDir(env: EnvLike = process.env): string {
+  const fromEnv =
+    env.HOME?.trim() ||
+    env.USERPROFILE?.trim() ||
+    (env.HOMEDRIVE && env.HOMEPATH ? `${env.HOMEDRIVE}${env.HOMEPATH}` : "").trim();
+  return fromEnv || os.homedir();
+}
+
+/**
+ * 解析 local 模式的默认根目录。
+ *
+ * 统一收敛为用户 home 下的 `.envelope/local`，避免桌面环境仍把数据库、
+ * 媒体文件写入工作区目录，导致升级、移动安装目录或只读工作区时行为不稳定。
+ *
+ * @param env 运行时环境变量集合
+ * @returns local 模式默认根目录
+ * @author xiye
+ * @date 2026-06-21
+ */
+export function resolveDefaultLocalBackendRoot(env: EnvLike = process.env): string {
+  return path.join(resolveUserHomeDir(env), ...DEFAULT_LOCAL_BACKEND_ROOT_SEGMENTS);
 }
 
 /**
@@ -125,11 +163,13 @@ export function resolvePlatformBackendConfig(env: EnvLike = process.env): Runtim
   }
 
   if (mode === "local") {
-    const sqlitePath = env.ENVELOPE_LOCAL_SQLITE_PATH || path.join(process.cwd(), ".envelope", "local", "envelope.db");
-    const mediaRoot = env.ENVELOPE_LOCAL_MEDIA_ROOT || path.join(process.cwd(), ".envelope", "local", "media");
+    const localRoot = env.ENVELOPE_LOCAL_ROOT || resolveDefaultLocalBackendRoot(env);
+    const sqlitePath = env.ENVELOPE_LOCAL_SQLITE_PATH || path.join(localRoot, "envelope.db");
+    const mediaRoot = env.ENVELOPE_LOCAL_MEDIA_ROOT || path.join(localRoot, "media");
     const parsed = localConfigSchema.safeParse({
       mode,
       storageMode: "local",
+      localRoot,
       sqlitePath,
       mediaRoot,
       localUserId: env.ENVELOPE_LOCAL_USER_ID || "local-user",

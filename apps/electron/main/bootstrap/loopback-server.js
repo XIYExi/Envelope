@@ -122,7 +122,7 @@ function createLoopbackServerManager() {
   let pendingStart = null;
 
   return {
-    async ensureStarted({ serverEntryPath, cwd }) {
+    async ensureStarted({ serverEntryPath, cwd, env: runtimeEnv = {} }) {
       if (activeServer && activeServer.childProcess.exitCode === null) {
         return {
           origin: activeServer.origin,
@@ -142,6 +142,7 @@ function createLoopbackServerManager() {
           cwd,
           env: {
             ...process.env,
+            ...runtimeEnv,
             ELECTRON_RUN_AS_NODE: "1",
             HOSTNAME: LOOPBACK_HOST,
             PORT: String(port),

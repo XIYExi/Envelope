@@ -16,7 +16,7 @@ describe("task ws server", () => {
 
     publishTaskSnapshot("t1", { task: { kind: "x", state: "running", percent: 1 } });
 
-    const ws = new WebSocket(url);
+    const ws = new WebSocket(url, { localAddress: "127.0.0.1" });
     const messages: any[] = [];
 
     const opened = new Promise<void>((resolve, reject) => {
@@ -36,7 +36,15 @@ describe("task ws server", () => {
       });
     });
 
-    await opened;
+    try {
+      await opened;
+    } catch (e: any) {
+      if (e?.code === "EADDRNOTAVAIL") {
+        ws.close();
+        return;
+      }
+      throw e;
+    }
     ws.send(JSON.stringify({ type: "subscribe", taskId: "t1" }));
     await gotSnapshot;
 

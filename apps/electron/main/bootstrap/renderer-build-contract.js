@@ -9,16 +9,44 @@ const PRODUCTION_RENDERER_SERVER_ENTRY_RELATIVE_PATH = "server.js";
 const PRODUCTION_RENDERER_STATIC_DIR_RELATIVE_PATH = path.join(".next", "static");
 const PRODUCTION_RENDERER_PUBLIC_DIR_RELATIVE_PATH = "public";
 
-function resolveProductionRendererRoot(appRootDir) {
-  return path.join(appRootDir, PRODUCTION_RENDERER_ROOT_DIRNAME);
+/**
+ * 解析生产态 traced runtime 的根目录。
+ * 开发/构建阶段使用工作区内的 Electron 应用根目录；
+ * 打包运行阶段则改为使用 `process.resourcesPath` 指向的真实资源目录。
+ * 这样可以避免把需要 `spawn` 的运行时入口留在 `app.asar` 内部。
+ * @param {string} appRootDir 工作区内 Electron 应用根目录。
+ * @param {{ resourcesPath?: string }} [options] 可选的打包资源根目录。
+ * @returns {string} traced runtime 根目录绝对路径。
+ */
+function resolveProductionRendererRoot(appRootDir, options = {}) {
+  const baseDir = options.resourcesPath || appRootDir;
+  return path.join(baseDir, PRODUCTION_RENDERER_ROOT_DIRNAME);
 }
 
-function resolveProductionRendererManifestPath(appRootDir) {
-  return path.join(resolveProductionRendererRoot(appRootDir), PRODUCTION_RENDERER_MANIFEST_FILE_NAME);
+/**
+ * 解析生产渲染契约清单路径。
+ * @param {string} appRootDir 工作区内 Electron 应用根目录。
+ * @param {{ resourcesPath?: string }} [options] 可选的打包资源根目录。
+ * @returns {string} 契约清单绝对路径。
+ */
+function resolveProductionRendererManifestPath(appRootDir, options = {}) {
+  return path.join(
+    resolveProductionRendererRoot(appRootDir, options),
+    PRODUCTION_RENDERER_MANIFEST_FILE_NAME
+  );
 }
 
-function resolveProductionRendererServerEntryPath(appRootDir) {
-  return path.join(resolveProductionRendererRoot(appRootDir), PRODUCTION_RENDERER_SERVER_ENTRY_RELATIVE_PATH);
+/**
+ * 解析生产 traced runtime 固定入口路径。
+ * @param {string} appRootDir 工作区内 Electron 应用根目录。
+ * @param {{ resourcesPath?: string }} [options] 可选的打包资源根目录。
+ * @returns {string} `server.js` 绝对路径。
+ */
+function resolveProductionRendererServerEntryPath(appRootDir, options = {}) {
+  return path.join(
+    resolveProductionRendererRoot(appRootDir, options),
+    PRODUCTION_RENDERER_SERVER_ENTRY_RELATIVE_PATH
+  );
 }
 
 module.exports = {

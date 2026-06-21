@@ -1,6 +1,6 @@
 const { contextBridge, ipcRenderer } = require("electron");
 
-const allowedAppPathNames = new Set(["userData", "temp", "documents", "downloads"]);
+const allowedAppPathNames = new Set(["home", "userData", "temp", "documents", "downloads"]);
 
 function sanitizeOpenDialogOptions(options) {
   if (!options || typeof options !== "object") return {};
@@ -58,6 +58,9 @@ contextBridge.exposeInMainWorld("electronAPI", {
 
   openFile: (options) => ipcRenderer.invoke("dialog:open-file", sanitizeOpenDialogOptions(options)),
   saveFile: (options) => ipcRenderer.invoke("dialog:save-file", sanitizeSaveDialogOptions(options)),
+  getLocalBackendState: () => ipcRenderer.invoke("local-backend:get-state"),
+  setLocalBackendRootDir: (rootDir) => ipcRenderer.invoke("local-backend:set-root-dir", rootDir),
+  chooseLocalBackendRootDir: () => ipcRenderer.invoke("local-backend:choose-root-dir"),
 
   getProjects: () => ipcRenderer.invoke("db:getProjects"),
   createProject: (project) => ipcRenderer.invoke("db:createProject", project),

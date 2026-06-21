@@ -15,6 +15,25 @@ function normalizeFilePath(filePath) {
   return path.resolve(filePath).toLowerCase();
 }
 
+/**
+ * 解析当前运行态应该从哪里读取生产渲染产物。
+ * 未打包或显式传入 `appRootDir` 的测试场景，仍按工作区路径处理；
+ * 只有真正的打包运行态才切换到 `process.resourcesPath`。
+ * @param {{
+ *   app?: { isPackaged?: boolean },
+ *   appRootDir?: string,
+ *   resourcesPath?: string
+ * }} [options] 路径依赖。
+ * @returns {string} 生产 traced runtime 的根基准目录。
+ */
+function resolveProductionAppRootDir({ app, appRootDir, resourcesPath } = {}) {
+  if (app?.isPackaged && !appRootDir && resourcesPath) {
+    return resourcesPath;
+  }
+
+  return appRootDir || path.join(__dirname, "..", "..");
+}
+
 function isExistingFile(filePath, fsModule) {
   if (!filePath) return false;
 
@@ -63,10 +82,18 @@ function createLoopbackLaunchTarget(mode, metadata) {
       if (!runtime.loopbackServerManager) {
         throw new Error("缺少 loopback server 管理器，无法启动生产渲染服务");
       }
+      if (!runtime.localBackendStorage) {
+        throw new Error("缺少桌面本地后端存储门面，无法为 Next runtime 注入 local 环境变量");
+      }
+
+      // 生产态桌面运行时始终以 Electron 侧持久化的 local 根目录启动，
+      // 这样 Next server 与主进程直接访问 SQLite/媒体目录时能共享同一套路径。
+      const runtimeEnv = runtime.localBackendStorage.getRuntimeEnv();
 
       const { origin } = await runtime.loopbackServerManager.ensureStarted({
         serverEntryPath: metadata.serverEntryPath,
         cwd: metadata.rendererRoot,
+        env: runtimeEnv,
       });
 
       plan.entry = `${origin}/`;
@@ -169,6 +196,11 @@ function resolveRendererLaunchPlan(options = {}) {
   const env = options.env || process.env;
   const fsModule = options.fsModule || fs;
   const appRootDir = options.appRootDir || path.join(__dirname, "..", "..");
+  const productionAppRootDir = resolveProductionAppRootDir({
+    app,
+    appRootDir: options.appRootDir,
+    resourcesPath: options.resourcesPath || process.resourcesPath,
+  });
   const mode = detectRuntimeMode(app, env);
 
   if (mode === "development") {
@@ -184,7 +216,7 @@ function resolveRendererLaunchPlan(options = {}) {
   }
 
   // 生产态只允许打包后的 Next traced runtime 在本地 loopback 地址提供服务。
-  const metadata = resolveProductionRendererMetadata(appRootDir, fsModule);
+  const metadata = resolveProductionRendererMetadata(productionAppRootDir, fsModule);
   if (!metadata.validationError) {
     return {
       ...createLoopbackLaunchTarget(mode, metadata),
@@ -224,6 +256,7 @@ module.exports = {
   DEFAULT_DEV_RENDERER_URL,
   detectRuntimeMode,
   normalizeFilePath,
+  resolveProductionAppRootDir,
   resolveRendererLaunchPlan,
   resolveProductionRendererMetadata,
 };

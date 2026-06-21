@@ -260,7 +260,7 @@ test("copyResolvedModuleClosure 会补齐生成期直连模块的 sibling nft �
   }
 });
 
-test("preparePlatformRenderer 生成的根 server.js 按镜像 app 目录解析 next 依赖并通过生产烟测", () => {
+test("preparePlatformRenderer 会根据 next-minimal-server 等真实 trace 镜像 Next 外部运行时依赖", () => {
   const workspaceRoot = createTempDir();
   const electronAppRoot = path.join(workspaceRoot, "apps", "electron");
   const platformAppRoot = path.join(workspaceRoot, "apps", "platform");
@@ -289,13 +289,242 @@ test("preparePlatformRenderer 生成的根 server.js 按镜像 app 目录解析 
     "lib",
     "start-server.js"
   );
+  const styledJsxPackageJsonPath = path.join(
+    platformAppRoot,
+    "node_modules",
+    "styled-jsx",
+    "package.json"
+  );
+  const styledJsxEntryPath = path.join(
+    platformAppRoot,
+    "node_modules",
+    "styled-jsx",
+    "index.js"
+  );
+  const nextMinimalServerTracePath = path.join(nextDistDir, "next-minimal-server.js.nft.json");
   const nextServerTracePath = path.join(nextDistDir, "next-server.js.nft.json");
   const requiredServerFilesPath = path.join(nextDistDir, "required-server-files.json");
 
   writeFile(platformPackageJsonPath, '{"name":"@envelope/platform"}');
   writeFile(nextPackageJsonPath, '{"name":"next","main":"./dist/server/next.js"}');
   writeFile(nextEntryPath, "module.exports = function next() { return null; };");
-  writeFile(nextRuntimePath, "module.exports = { startServer() { return Promise.resolve(); } };");
+  writeFile(
+    nextRuntimePath,
+    'module.exports = { startServer() { return Promise.resolve("ok"); } };'
+  );
+  writeFile(styledJsxPackageJsonPath, '{"name":"styled-jsx","main":"./index.js"}');
+  writeFile(styledJsxEntryPath, "module.exports = function styledJsx() { return null; };");
+  writeTraceManifest(nextMinimalServerTracePath, [styledJsxPackageJsonPath, styledJsxEntryPath]);
+  writeTraceManifest(nextServerTracePath, [
+    nextRuntimePath,
+    nextEntryPath,
+    nextPackageJsonPath,
+    platformPackageJsonPath,
+  ]);
+  writeFile(
+    requiredServerFilesPath,
+    JSON.stringify(
+      {
+        version: 1,
+        appDir: platformAppRoot,
+        relativeAppDir: "apps/platform",
+        config: {
+          distDir: ".next",
+          experimental: {
+            outputFileTracingRoot: workspaceRoot,
+          },
+        },
+        files: [],
+        ignore: [],
+      },
+      null,
+      2
+    )
+  );
+  writeFile(path.join(nextDistDir, "static", "chunks", "main.js"), "chunk");
+
+  try {
+    preparePlatformRenderer({
+      electronAppRoot,
+      platformAppRoot,
+    });
+
+    const rendererRoot = resolveProductionRendererRoot(electronAppRoot);
+    assert.equal(
+      fs.existsSync(path.join(rendererRoot, "node_modules", "styled-jsx", "package.json")),
+      true
+    );
+    assert.equal(
+      fs.existsSync(path.join(rendererRoot, "node_modules", "styled-jsx", "index.js")),
+      true
+    );
+  } finally {
+    removeTempDir(workspaceRoot);
+  }
+});
+
+test("preparePlatformRenderer 优先消费 next-minimal-server trace 补齐 @next/env 运行时闭包", () => {
+  const workspaceRoot = createTempDir();
+  const electronAppRoot = path.join(workspaceRoot, "apps", "electron");
+  const platformAppRoot = path.join(workspaceRoot, "apps", "platform");
+  const nextDistDir = path.join(platformAppRoot, ".next");
+  const platformPackageJsonPath = path.join(platformAppRoot, "package.json");
+  const nextPackageJsonPath = path.join(
+    platformAppRoot,
+    "node_modules",
+    "next",
+    "package.json"
+  );
+  const nextEntryPath = path.join(
+    platformAppRoot,
+    "node_modules",
+    "next",
+    "dist",
+    "server",
+    "next.js"
+  );
+  const nextRuntimePath = path.join(
+    platformAppRoot,
+    "node_modules",
+    "next",
+    "dist",
+    "server",
+    "lib",
+    "start-server.js"
+  );
+  const nextEnvPackageJsonPath = path.join(
+    platformAppRoot,
+    "node_modules",
+    "@next",
+    "env",
+    "package.json"
+  );
+  const nextEnvEntryPath = path.join(
+    platformAppRoot,
+    "node_modules",
+    "@next",
+    "env",
+    "dist",
+    "index.js"
+  );
+  const nextMinimalServerTracePath = path.join(nextDistDir, "next-minimal-server.js.nft.json");
+  const nextServerTracePath = path.join(nextDistDir, "next-server.js.nft.json");
+  const requiredServerFilesPath = path.join(nextDistDir, "required-server-files.json");
+
+  writeFile(platformPackageJsonPath, '{"name":"@envelope/platform"}');
+  writeFile(nextPackageJsonPath, '{"name":"next","main":"./dist/server/next.js"}');
+  writeFile(nextEntryPath, "module.exports = function next() { return null; };");
+  writeFile(
+    nextRuntimePath,
+    'module.exports = { startServer() { return Promise.resolve("ok"); } };'
+  );
+  writeFile(
+    nextEnvPackageJsonPath,
+    JSON.stringify(
+      {
+        name: "@next/env",
+        exports: {
+          ".": "./dist/index.js",
+        },
+      },
+      null,
+      2
+    )
+  );
+  writeFile(nextEnvEntryPath, "module.exports = { loadEnvConfig() { return null; } };");
+  writeTraceManifest(nextMinimalServerTracePath, [nextEnvPackageJsonPath, nextEnvEntryPath]);
+  writeTraceManifest(nextServerTracePath, [
+    nextRuntimePath,
+    nextEntryPath,
+    nextPackageJsonPath,
+    platformPackageJsonPath,
+  ]);
+  writeFile(
+    requiredServerFilesPath,
+    JSON.stringify(
+      {
+        version: 1,
+        appDir: platformAppRoot,
+        relativeAppDir: "apps/platform",
+        config: {
+          distDir: ".next",
+          experimental: {
+            outputFileTracingRoot: workspaceRoot,
+          },
+        },
+        files: [],
+        ignore: [],
+      },
+      null,
+      2
+    )
+  );
+  writeFile(path.join(nextDistDir, "static", "chunks", "main.js"), "chunk");
+
+  try {
+    preparePlatformRenderer({
+      electronAppRoot,
+      platformAppRoot,
+    });
+
+    const rendererRoot = resolveProductionRendererRoot(electronAppRoot);
+    assert.equal(
+      fs.existsSync(path.join(rendererRoot, "node_modules", "@next", "env", "package.json")),
+      true
+    );
+    assert.equal(
+      fs.existsSync(path.join(rendererRoot, "node_modules", "@next", "env", "dist", "index.js")),
+      true
+    );
+  } finally {
+    removeTempDir(workspaceRoot);
+  }
+});
+
+test("preparePlatformRenderer 生成的根 server.js 按镜像 app 目录解析 next 依赖并通过生产烟测", () => {
+  const workspaceRoot = createTempDir();
+  const electronAppRoot = path.join(workspaceRoot, "apps", "electron");
+  const platformAppRoot = path.join(workspaceRoot, "apps", "platform");
+  const nextDistDir = path.join(platformAppRoot, ".next");
+  const platformPackageJsonPath = path.join(platformAppRoot, "package.json");
+  const reactPackageJsonPath = path.join(platformAppRoot, "node_modules", "react", "package.json");
+  const reactEntryPath = path.join(platformAppRoot, "node_modules", "react", "index.js");
+  const nextPackageJsonPath = path.join(
+    platformAppRoot,
+    "node_modules",
+    "next",
+    "package.json"
+  );
+  const nextEntryPath = path.join(
+    platformAppRoot,
+    "node_modules",
+    "next",
+    "dist",
+    "server",
+    "next.js"
+  );
+  const nextRuntimePath = path.join(
+    platformAppRoot,
+    "node_modules",
+    "next",
+    "dist",
+    "server",
+    "lib",
+    "start-server.js"
+  );
+  const nextServerTracePath = path.join(nextDistDir, "next-server.js.nft.json");
+  const requiredServerFilesPath = path.join(nextDistDir, "required-server-files.json");
+
+  writeFile(platformPackageJsonPath, '{"name":"@envelope/platform"}');
+  writeFile(reactPackageJsonPath, '{"name":"react","main":"./index.js"}');
+  writeFile(reactEntryPath, "module.exports = { version: '18.3.0' };");
+  writeFile(nextPackageJsonPath, '{"name":"next","main":"./dist/server/next.js"}');
+  writeFile(nextEntryPath, "module.exports = function next() { return null; };");
+  writeFile(
+    nextRuntimePath,
+    'const React = require("react"); module.exports = { startServer() { return Promise.resolve(React.version); } };'
+  );
+  writeTraceManifest(`${nextRuntimePath}.nft.json`, [reactPackageJsonPath, reactEntryPath]);
   writeFile(path.join(nextDistDir, "BUILD_ID"), "build-id");
   writeFile(path.join(nextDistDir, "routes-manifest.json"), "{}");
   writeTraceManifest(nextServerTracePath, [
@@ -345,6 +574,7 @@ test("preparePlatformRenderer 生成的根 server.js 按镜像 app 目录解析 
       ),
       true
     );
+    assert.equal(fs.existsSync(path.join(rendererRoot, "node_modules", "react", "package.json")), true);
     assert.match(serverEntryContent, /createRequire/);
     assert.match(serverEntryContent, /requireFromApp\("next"\)/);
     assert.match(serverEntryContent, /requireFromApp\("next\/dist\/server\/lib\/start-server"\)/);

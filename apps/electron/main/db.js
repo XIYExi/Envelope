@@ -1,12 +1,12 @@
 const Database = require("better-sqlite3");
-const path = require("path");
 const { app } = require("electron");
+const { createLocalBackendStorage } = require("./local-backend-storage");
 
 let db = null;
+const localBackendStorage = createLocalBackendStorage({ app });
 
 function getDBPath() {
-  const userDataPath = app.getPath("userData");
-  return path.join(userDataPath, "envelope.db");
+  return localBackendStorage.getRuntimeEnv().ENVELOPE_LOCAL_SQLITE_PATH;
 }
 
 function initSQLite() {

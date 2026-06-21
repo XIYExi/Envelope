@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { createServerSupabase } from "@/lib/supabase/server";
+import { isSupabaseAuthEnabled } from "@/lib/supabase/runtime";
 
 const publicPaths = ["/login", "/signup", "/api/auth/callback"];
 
@@ -15,6 +16,10 @@ export async function middleware(request: NextRequest) {
   }
 
   if (pathname.startsWith("/_next") || pathname.startsWith("/favicon") || pathname === "/") {
+    return NextResponse.next();
+  }
+
+  if (!isSupabaseAuthEnabled()) {
     return NextResponse.next();
   }
 

@@ -172,6 +172,113 @@ test("生产模式通过固定 server.js 启动受控的本地 traced runtime lo
   }
 });
 
+test("生产模式启动 loopback runtime 时注入 Electron 持久化的 local env", async () => {
+  const appRootDir = createTempDir();
+  writeProductionRendererContract(appRootDir);
+  const runtimeEnv = {
+    ENVELOPE_PLATFORM_BACKEND: "local",
+    ENVELOPE_LOCAL_ROOT: "/mock-home/.envelope/local",
+    ENVELOPE_LOCAL_SQLITE_PATH: "/mock-home/.envelope/local/envelope.db",
+    ENVELOPE_LOCAL_MEDIA_ROOT: "/mock-home/.envelope/local/media",
+  };
+  const captured = {
+    args: null,
+    url: null,
+  };
+
+  try {
+    const plan = resolveRendererLaunchPlan({
+      app: { isPackaged: true },
+      env: {},
+      appRootDir,
+    });
+
+    await plan.load(
+      {
+        loadURL(url) {
+          captured.url = url;
+          return Promise.resolve();
+        },
+      },
+      {
+        localBackendStorage: {
+          getRuntimeEnv() {
+            return runtimeEnv;
+          },
+        },
+        loopbackServerManager: {
+          ensureStarted(args) {
+            captured.args = args;
+            return Promise.resolve({ origin: "http://127.0.0.1:4319" });
+          },
+        },
+      }
+    );
+
+    assert.equal(captured.url, "http://127.0.0.1:4319/");
+    assert.deepEqual(plan.trust.allowedOrigins, ["http://127.0.0.1:4319"]);
+    assert.equal(captured.args.cwd, resolveProductionRendererRoot(appRootDir));
+    assert.deepEqual(captured.args.env, runtimeEnv);
+  } finally {
+    removeTempDir(appRootDir);
+  }
+});
+
+test("生产模式缺少本地后端存储门面时拒绝启动 loopback runtime", async () => {
+  const appRootDir = createTempDir();
+  writeProductionRendererContract(appRootDir);
+
+  try {
+    const plan = resolveRendererLaunchPlan({
+      app: { isPackaged: true },
+      env: {},
+      appRootDir,
+    });
+
+    await assert.rejects(
+      () =>
+        plan.load(
+          {
+            loadURL() {
+              return Promise.resolve();
+            },
+          },
+          {
+            loopbackServerManager: {
+              ensureStarted() {
+                return Promise.resolve({ origin: "http://127.0.0.1:4319" });
+              },
+            },
+          }
+        ),
+      /缺少桌面本地后端存储门面/
+    );
+  } finally {
+    removeTempDir(appRootDir);
+  }
+});
+
+test("生产模式在打包环境下优先从 resourcesPath 读取 traced runtime 契约", () => {
+  const resourcesPath = createTempDir();
+  const { entryPath, manifestPath } = writeProductionRendererContract(resourcesPath);
+
+  try {
+    const plan = resolveRendererLaunchPlan({
+      app: { isPackaged: true },
+      env: {},
+      appRootDir: undefined,
+      resourcesPath,
+    });
+
+    assert.equal(plan.kind, "loopback");
+    assert.equal(plan.entry, entryPath);
+    assert.equal(plan.contractManifestPath, manifestPath);
+    assert.equal(plan.rendererRoot, resolveProductionRendererRoot(resourcesPath));
+  } finally {
+    removeTempDir(resourcesPath);
+  }
+});
+
 test("生产模式不再依赖递归发现静态 html 入口", () => {
   const appRootDir = createTempDir();
 

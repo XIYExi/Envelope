@@ -14,6 +14,7 @@ const {
 
 const NEXT_DIST_DIR_NAME = ".next";
 const REQUIRED_SERVER_FILES_MANIFEST_NAME = "required-server-files.json";
+const NEXT_MINIMAL_SERVER_TRACE_MANIFEST_NAME = "next-minimal-server.js.nft.json";
 const NEXT_SERVER_TRACE_MANIFEST_NAME = "next-server.js.nft.json";
 const NFT_MANIFEST_SUFFIX = ".nft.json";
 const GENERATED_SERVER_RUNTIME_DEPENDENCIES = [
@@ -32,6 +33,25 @@ const GENERATED_SERVER_RUNTIME_DEPENDENCIES = [
     includeTraceClosure: true,
   },
 ];
+
+function tryResolveModuleFromApp(request, platformAppRoot) {
+  try {
+    return require.resolve(request, {
+      paths: [platformAppRoot],
+    });
+  } catch (error) {
+    return null;
+  }
+}
+
+function resolveModuleFromApp(request, platformAppRoot, label) {
+  const resolvedPath = tryResolveModuleFromApp(request, platformAppRoot);
+  if (resolvedPath) {
+    return resolvedPath;
+  }
+
+  throw new Error(`无法解析 ${label}：${request}`);
+}
 
 function ensureDirectoryReady(dirPath) {
   fs.rmSync(dirPath, { recursive: true, force: true });
@@ -107,6 +127,22 @@ function copyPathIntoRenderer(sourcePath, options) {
   return targetRelativePath;
 }
 
+function readTraceManifestFiles(traceManifestPath) {
+  const traceData = readJsonFile(traceManifestPath, "nft trace 清单");
+  if (!Array.isArray(traceData.files)) {
+    throw new Error(`nft trace 清单格式非法，缺少 files 数组：${traceManifestPath}`);
+  }
+
+  const traceManifestDir = path.dirname(traceManifestPath);
+  return traceData.files.map((relativeFile) => {
+    const tracedPath = path.resolve(traceManifestDir, relativeFile);
+    if (!fs.existsSync(tracedPath)) {
+      throw new Error(`nft trace 引用的文件不存在：${tracedPath}`);
+    }
+    return tracedPath;
+  });
+}
+
 function collectTraceManifestPaths(rootDir) {
   const collectedPaths = [];
 
@@ -129,19 +165,10 @@ function collectTraceManifestPaths(rootDir) {
 }
 
 function copyTraceManifest(traceManifestPath, options) {
-  const traceData = readJsonFile(traceManifestPath, "nft trace 清单");
-  if (!Array.isArray(traceData.files)) {
-    throw new Error(`nft trace 清单格式非法，缺少 files 数组：${traceManifestPath}`);
-  }
-
-  const traceManifestDir = path.dirname(traceManifestPath);
+  const tracedPaths = readTraceManifestFiles(traceManifestPath);
   copyPathIntoRenderer(traceManifestPath, options);
 
-  for (const relativeFile of traceData.files) {
-    const tracedPath = path.resolve(traceManifestDir, relativeFile);
-    if (!fs.existsSync(tracedPath)) {
-      throw new Error(`nft trace 引用的文件不存在：${tracedPath}`);
-    }
+  for (const tracedPath of tracedPaths) {
     copyPathIntoRenderer(tracedPath, options);
   }
 
@@ -169,29 +196,110 @@ function copyResolvedModuleClosure(resolvedPath, options) {
   copyTraceManifest(siblingTraceManifestPath, options);
 }
 
+function resolveNodeModulesPackage(sourcePath, tracingRoot) {
+  const relativePath = path.relative(tracingRoot, sourcePath);
+  if (relativePath.startsWith("..") || path.isAbsolute(relativePath)) {
+    return null;
+  }
+
+  const segments = relativePath.split(path.sep).filter(Boolean);
+  let lastNodeModulesIndex = -1;
+  for (let index = 0; index < segments.length; index += 1) {
+    if (segments[index] === "node_modules") {
+      lastNodeModulesIndex = index;
+    }
+  }
+
+  if (lastNodeModulesIndex < 0 || lastNodeModulesIndex >= segments.length - 1) {
+    return null;
+  }
+
+  const packageSegments = [segments[lastNodeModulesIndex + 1]];
+  if (packageSegments[0].startsWith("@")) {
+    const scopedPackageName = segments[lastNodeModulesIndex + 2];
+    if (!scopedPackageName) {
+      return null;
+    }
+    packageSegments.push(scopedPackageName);
+  }
+
+  return {
+    packageRoot: path.join(
+      tracingRoot,
+      ...segments.slice(0, lastNodeModulesIndex + 1 + packageSegments.length)
+    ),
+    packageRelativePath: packageSegments.join("/"),
+  };
+}
+
+function copyPackageClosureToRendererRuntime(sourcePath, options) {
+  const resolvedPackage = resolveNodeModulesPackage(sourcePath, options.tracingRoot);
+  if (!resolvedPackage || resolvedPackage.packageRelativePath === "next") {
+    return;
+  }
+
+  const { copiedPackageRelativePaths, rendererRoot } = options;
+  if (copiedPackageRelativePaths.has(resolvedPackage.packageRelativePath)) {
+    return;
+  }
+
+  copiedPackageRelativePaths.add(resolvedPackage.packageRelativePath);
+  const targetPackageRoot = path.join(
+    rendererRoot,
+    "node_modules",
+    ...resolvedPackage.packageRelativePath.split("/")
+  );
+  // 根 server.js 可能从 apps/platform/node_modules/next 或 platform-build/node_modules/next 启动，
+  // 统一把外部包根镜像到 platform-build/node_modules，确保两条解析路径都能闭合。
+  copyPathDereferenced(resolvedPackage.packageRoot, targetPackageRoot);
+}
+
+function copyRuntimePackageClosureFromTrace(traceManifestPath, options) {
+  for (const tracedPath of readTraceManifestFiles(traceManifestPath)) {
+    copyPackageClosureToRendererRuntime(tracedPath, options);
+  }
+}
+
 function copyGeneratedServerRuntimeDependencies(options) {
   const { platformAppRoot, tracingRoot } = options;
 
   for (const dependency of GENERATED_SERVER_RUNTIME_DEPENDENCIES) {
     let resolvedPath;
 
-    try {
-      resolvedPath = require.resolve(dependency.request, {
-        paths: [platformAppRoot],
-      });
-    } catch (error) {
-      throw new Error(
-        `无法解析 ${dependency.label}：${dependency.request}\n${error.message}`
-      );
-    }
+    resolvedPath = resolveModuleFromApp(dependency.request, platformAppRoot, dependency.label);
 
     // 生成出来的 server.js 不会再经过 nft 追踪，这里把它的直接依赖显式补齐，确保运行时闭包成立。
     ensurePathInside(tracingRoot, resolvedPath, dependency.label);
     if (dependency.includeTraceClosure) {
       copyResolvedModuleClosure(resolvedPath, options);
+      const traceManifestPath = `${resolvedPath}${NFT_MANIFEST_SUFFIX}`;
+      if (fs.existsSync(traceManifestPath)) {
+        copyRuntimePackageClosureFromTrace(traceManifestPath, options);
+      }
       continue;
     }
     copyPathIntoRenderer(resolvedPath, options);
+  }
+}
+
+function collectRuntimePackageClosureTraceManifestPaths(nextDistDir) {
+  const candidatePaths = [
+    path.join(nextDistDir, NEXT_MINIMAL_SERVER_TRACE_MANIFEST_NAME),
+    path.join(nextDistDir, NEXT_SERVER_TRACE_MANIFEST_NAME),
+  ];
+
+  return candidatePaths.filter((traceManifestPath, index) => {
+    return (
+      fs.existsSync(traceManifestPath) && candidatePaths.indexOf(traceManifestPath) === index
+    );
+  });
+}
+
+function copyRuntimePackageClosuresFromTraceManifests(nextDistDir, options) {
+  for (const traceManifestPath of collectRuntimePackageClosureTraceManifestPaths(nextDistDir)) {
+    // 运行时包闭包优先以 Next 实际产出的 trace 为准，避免再靠 next/package.json 反推依赖。
+    // 这样像 @next/env 这类受 exports 约束的包，也能直接按 trace 命中的真实文件补齐。
+    copyRuntimePackageClosureFromTrace(traceManifestPath, options);
   }
 }
 
@@ -298,10 +406,12 @@ function preparePlatformRenderer(options = {}) {
   const relativeAppDir = path.relative(tracingRoot, platformAppRoot);
   const mirroredAppRoot = path.join(rendererRoot, relativeAppDir);
   const copiedRelativePaths = new Set();
+  const copiedPackageRelativePaths = new Set();
   const copyOptions = {
     rendererRoot,
     tracingRoot,
     copiedRelativePaths,
+    copiedPackageRelativePaths,
   };
 
   ensureDirectoryReady(rendererRoot);
@@ -326,6 +436,12 @@ function preparePlatformRenderer(options = {}) {
     tracingRoot,
     rendererRoot,
     copiedRelativePaths,
+    copiedPackageRelativePaths,
+  });
+  copyRuntimePackageClosuresFromTraceManifests(nextDistDir, {
+    tracingRoot,
+    rendererRoot,
+    copiedPackageRelativePaths,
   });
 
   copyDirectoryContents(

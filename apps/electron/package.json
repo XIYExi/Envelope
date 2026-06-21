@@ -9,6 +9,7 @@
     "rebuild:native": "node ./scripts/rebuild-electron-native-deps.js",
     "build:renderer": "pnpm --filter=@envelope/platform build && pnpm run rebuild:native && node ./scripts/prepare-platform-renderer.js",
     "build": "pnpm run build:renderer && electron-builder --config electron-builder.config.js",
+    "smoke:update": "node ./scripts/run-update-smoke.js",
     "lint": "eslint main/ preload/ scripts/ test/",
     "test": "node --test test/*.test.js",
     "typecheck": "tsc --noEmit",

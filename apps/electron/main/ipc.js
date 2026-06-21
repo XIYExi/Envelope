@@ -1,9 +1,21 @@
+/**
+ * @file Electron IPC 注册入口。
+ * @description 负责把窗口、文件对话框、本地后端目录设置与主进程数据库能力
+ * 通过受控 IPC 暴露给渲染层，统一收口桌面壳层可调用能力。
+ * @author xiye
+ * @date 2026-06-21
+ * @since 3.0.0
+ */
+
 const crypto = require("crypto");
 const { app, dialog, ipcMain } = require("electron");
 const { initSQLite } = require("./db");
 const { createSecureHandle } = require("./ipc-security");
+const { createLocalBackendStorage } = require("./local-backend-storage");
+const { applyLocalBackendRootDirChange } = require("./local-backend-runtime");
 
-const allowedAppPathNames = new Set(["userData", "temp", "documents", "downloads"]);
+const allowedAppPathNames = new Set(["home", "userData", "temp", "documents", "downloads"]);
+const localBackendStorage = createLocalBackendStorage({ app });
 
 function sanitizeDialogFilters(filters) {
   if (!Array.isArray(filters)) {
@@ -61,7 +73,24 @@ function sanitizeSaveDialogOptions(options) {
   return out;
 }
 
-function registerIPCHandlers({ getMainWindow, getRendererTrust }) {
+/**
+ * 注册 Electron 主进程 IPC 处理器。
+ * @param {{
+ *   getMainWindow: () => import("electron").BrowserWindow | null,
+ *   getRendererTrust: () => { allowedOrigins?: string[], allowedFilePaths?: string[] },
+ *   localBackendStorage?: ReturnType<typeof createLocalBackendStorage>,
+ *   onLocalBackendRootChanged?: (snapshot: { rootDir: string, source: string }) => Promise<void> | void
+ * }} options IPC 依赖。
+ * @author xiye
+ * @date 2026-06-21
+ * @since 3.0.0
+ */
+function registerIPCHandlers({
+  getMainWindow,
+  getRendererTrust,
+  localBackendStorage: localBackendStorageFacade = localBackendStorage,
+  onLocalBackendRootChanged,
+}) {
   const secureHandle = createSecureHandle(ipcMain, () => ({
     mainWindow: getMainWindow(),
     trust: getRendererTrust(),
@@ -88,6 +117,43 @@ function registerIPCHandlers({ getMainWindow, getRendererTrust }) {
       sanitizeSaveDialogOptions(options)
     );
     return result;
+  });
+
+  // 桌面本地后端设置统一从这里暴露，前端不需要直接了解 userData 配置文件细节。
+  secureHandle("local-backend:get-state", async () => {
+    return localBackendStorageFacade.getSnapshot();
+  });
+
+  secureHandle("local-backend:set-root-dir", async (_event, rootDir) => {
+    return applyLocalBackendRootDirChange({
+      localBackendStorage: localBackendStorageFacade,
+      rootDir,
+      onLocalBackendRootChanged,
+    });
+  });
+
+  secureHandle("local-backend:choose-root-dir", async () => {
+    const result = await dialog.showOpenDialog(getMainWindow(), {
+      title: "选择本地后端根目录",
+      defaultPath: localBackendStorageFacade.getCurrentRootDir(),
+      properties: ["openDirectory", "createDirectory", "promptToCreate"],
+    });
+
+    if (result.canceled || !result.filePaths[0]) {
+      return {
+        canceled: true,
+        ...localBackendStorageFacade.getSnapshot(),
+      };
+    }
+
+    return {
+      canceled: false,
+      ...(await applyLocalBackendRootDirChange({
+        localBackendStorage: localBackendStorageFacade,
+        rootDir: result.filePaths[0],
+        onLocalBackendRootChanged,
+      })),
+    };
   });
 
   secureHandle("db:getProjects", async () => {
@@ -136,4 +202,6 @@ function registerIPCHandlers({ getMainWindow, getRendererTrust }) {
   });
 }
 
-module.exports = { registerIPCHandlers };
+module.exports = {
+  registerIPCHandlers,
+};

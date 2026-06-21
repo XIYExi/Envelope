@@ -43,3 +43,7 @@ coverage/
 .idea/
 .mimocode/
 
+
+**/release
+
+**/release**
