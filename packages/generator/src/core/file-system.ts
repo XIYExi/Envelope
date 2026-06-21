@@ -83,7 +83,10 @@ export class VirtualFS {
     for (const [filePath, content] of this.files) {
       result.push({ path: filePath, content });
     }
-    result.sort((a, b) => a.path.localeCompare(b.path));
+    // 注意：不要使用 localeCompare。
+    // localeCompare 会依赖运行时的 locale/ICU 数据，在某些环境下可能导致排序差异，
+    // 从而让快照测试出现“同内容不同序”的噪音。
+    result.sort((a, b) => (a.path < b.path ? -1 : a.path > b.path ? 1 : 0));
     return result;
   }
 

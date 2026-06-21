@@ -25,12 +25,8 @@
  * @date 2026-06-14
  */
 
-import type { ProjectConfig } from "@envelope/engine";
-import type { RoutesConfig } from "@envelope/engine";
 import type { PageSchema } from "@envelope/engine";
 import type { ComponentNode } from "@envelope/engine";
-import type { DbSchema } from "@envelope/engine";
-import type { AuthConfig } from "@envelope/engine";
 import { VirtualFS } from "./core/file-system";
 import type { VirtualFile } from "./core/file-system.types";
 import type {
