@@ -192,10 +192,11 @@ export function MaterialPanel({ collapsed, onAddMaterial }: MaterialPanelProps) 
               </div>
             </ScrollArea>
           ) : (
-            /* 分类浏览模式：保持现有分类 Tabs 结构 */
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-1 flex-col">
-              <ScrollArea className="flex-1">
-                <TabsList className="flex h-auto w-full flex-wrap justify-start gap-0.5 rounded-none border-b bg-transparent p-1">
+            /* 分类浏览模式：分类 Tab 固定在顶部不滚动，仅内容区可滚动 */
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-1 flex-col min-h-0">
+              {/* 分类 Tab 列表 — 固定在搜索框下方，不随内容滚动 */}
+              <div className="flex-shrink-0 border-b px-1">
+                <TabsList className="flex h-auto w-full flex-wrap justify-start gap-0.5 rounded-none bg-transparent p-1">
                   {CATEGORIES.map((cat) => {
                     const count = getVisibleByCategory(cat.key).length;
                     return (
@@ -215,7 +216,10 @@ export function MaterialPanel({ collapsed, onAddMaterial }: MaterialPanelProps) 
                     );
                   })}
                 </TabsList>
+              </div>
 
+              {/* 内容区 — 仅内容可在 ScrollArea 内滚动 */}
+              <ScrollArea className="flex-1">
                 {CATEGORIES.map((cat) => {
                   const materials = getVisibleByCategory(cat.key);
                   return (
