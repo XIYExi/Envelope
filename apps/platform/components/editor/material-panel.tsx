@@ -19,6 +19,7 @@ import * as LucideIcons from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Input } from "@/components/ui/input";
 import { ComponentTreePanel } from "./component-tree-panel";
 
 /** 分类配置 */
@@ -109,6 +110,20 @@ export function MaterialPanel({ collapsed, onAddMaterial }: MaterialPanelProps) 
 
   const registry = useMemo(() => createDefaultRegistry(), []);
 
+  const [searchQuery, setSearchQuery] = useState("");
+  const allMaterials = useMemo(() => registry.getAll(), [registry]);
+  const filteredMaterials = useMemo(() => {
+    if (!searchQuery.trim()) return null;
+    const q = searchQuery.trim().toLowerCase();
+    return allMaterials.filter(
+      (m) =>
+        m.showInPalette !== false &&
+        (m.displayName.toLowerCase().includes(q) ||
+          m.name.toLowerCase().includes(q) ||
+          (m.description && m.description.toLowerCase().includes(q))),
+    );
+  }, [searchQuery, allMaterials]);
+
   const getVisibleByCategory = useCallback(
     (cat: ComponentCategory) => registry.getByCategory(cat).filter((m) => m.showInPalette !== false),
     [registry],
@@ -133,54 +148,100 @@ export function MaterialPanel({ collapsed, onAddMaterial }: MaterialPanelProps) 
         </TabsList>
 
         <TabsContent value="palette" className="flex min-h-0 flex-1 flex-col p-0">
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-1 flex-col">
+          {/* 搜索输入框 — 按名称、显示名、描述过滤所有分类的物料 */}
+          <div className="flex-shrink-0 border-b px-2 py-1.5">
+            <Input
+              placeholder="搜索物料..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="h-8 text-xs"
+            />
+            {searchQuery && (
+              <div className="mt-1 text-[10px] text-muted-foreground">
+                匹配 {filteredMaterials?.length ?? 0} 个物料
+                <button
+                  className="ml-2 underline hover:text-foreground"
+                  onClick={() => setSearchQuery("")}
+                >
+                  清除
+                </button>
+              </div>
+            )}
+          </div>
+
+          {filteredMaterials !== null ? (
+            /* 搜索结果模式：平铺列表，不显示分类 */
             <ScrollArea className="flex-1">
-              <TabsList className="flex h-auto w-full flex-wrap justify-start gap-0.5 rounded-none border-b bg-transparent p-1">
+              <div className="space-y-1 p-2">
+                {filteredMaterials.length === 0 ? (
+                  <p className="px-2 py-8 text-center text-xs text-muted-foreground">
+                    未找到匹配的物料
+                  </p>
+                ) : (
+                  filteredMaterials.map((mat) => (
+                    <MaterialItem
+                      key={mat.name}
+                      name={mat.name}
+                      displayName={mat.displayName}
+                      description={mat.description}
+                      icon={mat.icon}
+                      onAdd={onAddMaterial}
+                    />
+                  ))
+                )}
+              </div>
+            </ScrollArea>
+          ) : (
+            /* 分类浏览模式：保持现有分类 Tabs 结构 */
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-1 flex-col">
+              <ScrollArea className="flex-1">
+                <TabsList className="flex h-auto w-full flex-wrap justify-start gap-0.5 rounded-none border-b bg-transparent p-1">
+                  {CATEGORIES.map((cat) => {
+                    const count = getVisibleByCategory(cat.key).length;
+                    return (
+                      <TabsTrigger
+                        key={cat.key}
+                        value={cat.key}
+                        className={cn(
+                          "h-7 rounded-sm px-2 text-xs data-[state=active]:bg-muted",
+                          count === 0 && "opacity-40",
+                        )}
+                      >
+                        {cat.label}
+                        {count > 0 && (
+                          <span className="ml-1 text-[10px] text-muted-foreground">{count}</span>
+                        )}
+                      </TabsTrigger>
+                    );
+                  })}
+                </TabsList>
+
                 {CATEGORIES.map((cat) => {
-                  const count = getVisibleByCategory(cat.key).length;
+                  const materials = getVisibleByCategory(cat.key);
                   return (
-                    <TabsTrigger
-                      key={cat.key}
-                      value={cat.key}
-                      className={cn(
-                        "h-7 rounded-sm px-2 text-xs data-[state=active]:bg-muted",
-                        count === 0 && "opacity-40",
+                    <TabsContent key={cat.key} value={cat.key} className="space-y-1 p-2">
+                      {materials.length === 0 ? (
+                        <p className="px-2 py-4 text-center text-xs text-muted-foreground">
+                          Coming soon
+                        </p>
+                      ) : (
+                        materials.map((mat) => (
+                          <MaterialItem
+                            key={mat.name}
+                            name={mat.name}
+                            displayName={mat.displayName}
+                            description={mat.description}
+                            icon={mat.icon}
+                            onAdd={onAddMaterial}
+                          />
+                        ))
                       )}
-                    >
-                      {cat.label}
-                      {count > 0 && (
-                        <span className="ml-1 text-[10px] text-muted-foreground">{count}</span>
-                      )}
-                    </TabsTrigger>
+                    </TabsContent>
                   );
                 })}
-              </TabsList>
-
-              {CATEGORIES.map((cat) => {
-                const materials = getVisibleByCategory(cat.key);
-                return (
-                  <TabsContent key={cat.key} value={cat.key} className="space-y-1 p-2">
-                    {materials.length === 0 ? (
-                      <p className="px-2 py-4 text-center text-xs text-muted-foreground">
-                        Coming soon
-                      </p>
-                    ) : (
-                      materials.map((mat) => (
-                        <MaterialItem
-                          key={mat.name}
-                          name={mat.name}
-                          displayName={mat.displayName}
-                          description={mat.description}
-                          icon={mat.icon}
-                          onAdd={onAddMaterial}
-                        />
-                      ))
-                    )}
-                  </TabsContent>
-                );
-              })}
-            </ScrollArea>
-          </Tabs>
+              </ScrollArea>
+            </Tabs>
+          )}
         </TabsContent>
 
         <TabsContent value="tree" className="flex min-h-0 flex-1 flex-col p-0">
