@@ -125,7 +125,7 @@ describe("CanvasRenderer（React）", () => {
       />,
     );
 
-    expect(screen.getByText("Drop components here")).toBeInTheDocument();
+    expect(screen.getByText("拖拽组件到此处")).toBeInTheDocument();
   });
 
   it("点击组件触发选中回调；点击空白触发清选回调（关键交互）", () => {

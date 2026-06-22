@@ -106,7 +106,54 @@ function findNodeLocation(components: CanvasComponent[], nodeId: string): NodeLo
   return null;
 }
 
-function reflowRootComponentsByOrder(components: CanvasComponent[]): CanvasComponent[] {
+export const COMPONENT_TYPES_THAT_SUPPORT_CHILDREN = new Set([
+  "Box", "Flex", "Container", "Grid",
+  "Card", "CardHeader", "CardContent", "CardFooter",
+  "Tabs", "TabsContent", "Accordion", "AccordionItem", "AccordionContent",
+  "Table", "TableHeader", "TableBody", "TableRow",
+  "Alert", "DialogContent", "SheetContent", "AlertDialogContent",
+  "ScrollArea", "AspectRatio", "ResizablePanelGroup", "ResizablePanel",
+  "Breadcrumb", "TabsList", "Pagination", "DrawerContent",
+  "PopoverContent", "HoverCardContent", "CollapsibleContent",
+  "DropdownMenuContent", "ContextMenuContent",
+]);
+
+function canNodeHaveChildren(type: string): boolean {
+  return COMPONENT_TYPES_THAT_SUPPORT_CHILDREN.has(type);
+}
+
+function findNodeInComponents(components: CanvasComponent[], nodeId: string): ComponentNode | null {
+  for (const comp of components) {
+    const search = (n: ComponentNode): ComponentNode | null => {
+      if (n.id === nodeId) return n;
+      for (const child of n.children ?? []) {
+        const found = search(child);
+        if (found) return found;
+      }
+      return null;
+    };
+    const found = search(comp.node);
+    if (found) return found;
+  }
+  return null;
+}
+
+function reflowRootComponentsByOrder(
+  components: CanvasComponent[],
+  onlyForIds?: Set<string>,
+): CanvasComponent[] {
+  if (onlyForIds) {
+    const maxY = components
+      .filter((c) => !onlyForIds.has(c.id))
+      .reduce((max, c) => Math.max(max, c.position.y + c.position.height), 0);
+    let y = Math.max(1, maxY + 1);
+    return components.map((c) => {
+      if (!onlyForIds.has(c.id)) return c;
+      const nextY = y;
+      y += Math.max(1, Math.round(c.position.height));
+      return { ...c, position: { ...c.position, y: nextY } };
+    });
+  }
   let y = 1;
   return components.map((c) => {
     const nextY = y;
@@ -163,6 +210,9 @@ function insertNodeIntoTree(
   child: ComponentNode,
 ): { nextNode: ComponentNode; inserted: boolean } {
   if (node.id === parentId) {
+    if (!canNodeHaveChildren(node.type)) {
+      return { nextNode: node, inserted: false };
+    }
     const children = node.children ?? [];
     const nextChildren = children.slice();
     const safeIndex = Math.max(0, Math.min(nextChildren.length, index));
@@ -826,7 +876,8 @@ export const useCanvasStore = create<CanvasState & CanvasActions>((set, get) => 
           position: { x: 1, y: 1, width: 3, height: 2 },
         }));
         nextComponents.splice(safeIndex, 0, ...newComps);
-        nextComponents = reflowRootComponentsByOrder(nextComponents);
+        const pastedIds = new Set(newComps.map((nc) => nc.id));
+        nextComponents = reflowRootComponentsByOrder(nextComponents, pastedIds);
         const firstId = newComps[0]?.id ?? null;
         const partial: Partial<CanvasState> = {
           components: nextComponents,
@@ -886,13 +937,15 @@ export const useCanvasStore = create<CanvasState & CanvasActions>((set, get) => 
       if (parentId === null) {
         const nextComponents = state.components.slice();
         const safeIndex = Math.max(0, Math.min(nextComponents.length, index));
+        const maxY = nextComponents.length > 0
+          ? Math.max(...nextComponents.map((c) => c.position.y + c.position.height))
+          : 0;
         nextComponents.splice(safeIndex, 0, {
           id: node.id,
           node,
-          position: { x: 1, y: 1, width: 3, height: 2 },
+          position: { x: 1, y: Math.max(1, maxY + 1), width: 3, height: 2 },
         });
-        const reflowed = reflowRootComponentsByOrder(nextComponents);
-        const partial = { components: reflowed, selectedIds: [node.id], activeNodeId: node.id };
+        const partial = { components: nextComponents, selectedIds: [node.id], activeNodeId: node.id };
         if (batching) return partial;
         const next = takeSnapshot({ ...(state as CanvasState), ...partial });
         if (snapshotEquals(prev, next)) return partial;
@@ -970,17 +1023,22 @@ export const useCanvasStore = create<CanvasState & CanvasActions>((set, get) => 
 
       if (targetParentId === null) {
         const safeIndex = Math.max(0, Math.min(nextComponents.length, adjustedIndex));
+        const maxY = nextComponents.length > 0
+          ? Math.max(...nextComponents.map((c) => c.position.y + c.position.height))
+          : 0;
+        const newY = Math.max(1, maxY + 1);
         const compsToInsert: CanvasComponent[] = [];
         if (removedKind === "canvas-component" && removedComponent) {
-          compsToInsert.push(removedComponent);
+          compsToInsert.push({ ...removedComponent, position: { ...removedComponent.position, y: newY } });
         } else if (removedKind === "component-node" && removedNode) {
-          compsToInsert.push({ id: removedNode.id, node: removedNode, position: { x: 1, y: 1, width: 3, height: 2 } });
+          compsToInsert.push({ id: removedNode.id, node: removedNode, position: { x: 1, y: newY, width: 3, height: 2 } });
         } else {
           return {};
         }
         nextComponents.splice(safeIndex, 0, ...compsToInsert);
-        nextComponents = reflowRootComponentsByOrder(nextComponents);
       } else {
+        const targetNode = findNodeInComponents(nextComponents, targetParentId);
+        if (targetNode && !canNodeHaveChildren(targetNode.type)) return {};
         const nodeToInsert = removedKind === "canvas-component" ? removedComponent?.node : removedNode;
         if (!nodeToInsert) return {};
         let inserted = false;
@@ -1196,17 +1254,17 @@ export const useCanvasStore = create<CanvasState & CanvasActions>((set, get) => 
       fn();
     } finally {
       batching = false;
-      const before = batchStartSnapshot;
-      batchStartSnapshot = null;
-      if (!before) return;
-      const after = takeSnapshot(get());
-      if (snapshotEquals(before, after)) return;
-      set((state) => {
-        const past = [...state.historyPast, before];
-        const limitedPast = past.length > state.historyLimit ? past.slice(past.length - state.historyLimit) : past;
-        return { historyPast: limitedPast, historyFuture: [], canUndo: limitedPast.length > 0, canRedo: false };
-      });
     }
+    const before2 = batchStartSnapshot;
+    batchStartSnapshot = null;
+    if (!before2) return;
+    const after2 = takeSnapshot(get());
+    if (snapshotEquals(before2, after2)) return;
+    set((state) => {
+      const past = [...state.historyPast, before2];
+      const limitedPast = past.length > state.historyLimit ? past.slice(past.length - state.historyLimit) : past;
+      return { historyPast: limitedPast, historyFuture: [], canUndo: limitedPast.length > 0, canRedo: false };
+    });
   },
 }));
 

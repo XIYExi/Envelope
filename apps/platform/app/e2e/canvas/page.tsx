@@ -111,6 +111,7 @@ export default function E2ECanvasPage() {
 
   const [components, setComponents] = useState<CanvasComponent[]>(initialComponents);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [zoom, setZoom] = useState<number>(1);
   const [panX, setPanX] = useState<number>(0);
   const [panY, setPanY] = useState<number>(0);
@@ -118,6 +119,13 @@ export default function E2ECanvasPage() {
   const [pageMaxWidth, setPageMaxWidth] = useState<number>(960);
 
   const rendererRef = useRef<HTMLDivElement>(null);
+
+  const zoomRef = useRef(zoom);
+  zoomRef.current = zoom;
+  const panXRef = useRef(panX);
+  panXRef.current = panX;
+  const panYRef = useRef(panY);
+  panYRef.current = panY;
 
   const gridCols = 12;
   const gridGap = 4;
@@ -198,10 +206,6 @@ export default function E2ECanvasPage() {
   const handleWheel = useCallback((e: RWheelEvent) => {
     if (!e.ctrlKey) return;
     e.preventDefault();
-
-    const direction = e.deltaY < 0 ? 1 : -1;
-    const factor = direction > 0 ? 1.1 : 1 / 1.1;
-    setZoom((z) => clamp(z * factor, 0.25, 2));
   }, []);
 
   useEffect(() => {
@@ -216,9 +220,24 @@ export default function E2ECanvasPage() {
       if (!ev.ctrlKey) return;
       ev.preventDefault();
 
+      const oldZoom = zoomRef.current;
       const direction = ev.deltaY < 0 ? 1 : -1;
       const factor = direction > 0 ? 1.1 : 1 / 1.1;
-      setZoom((z) => clamp(z * factor, 0.25, 2));
+      const newZoom = clamp(oldZoom * factor, 0.25, 2);
+
+      if (newZoom !== oldZoom) {
+        const rect = el.getBoundingClientRect();
+        const mouseX = ev.clientX - rect.left;
+        const mouseY = ev.clientY - rect.top;
+        const ratio = newZoom / oldZoom;
+        const newPanX = mouseX - (mouseX - (panXRef.current + 16)) * ratio - 16;
+        const newPanY = mouseY - (mouseY - (panYRef.current + 16)) * ratio - 16;
+        setZoom(newZoom);
+        setPanX(newPanX);
+        setPanY(newPanY);
+      } else {
+        setZoom(newZoom);
+      }
     };
 
     el.addEventListener("wheel", listener, { passive: false });
@@ -342,9 +361,11 @@ export default function E2ECanvasPage() {
             ref={rendererRef}
             components={components}
             selectedIds={selectedIds}
+            hoveredId={hoveredId}
             onSelect={handleSelect}
             onClearSelection={handleClearSelection}
             onResize={handleResize}
+            onHover={setHoveredId}
             zoom={zoom}
             viewportWidth={viewportWidth}
             panX={panX}

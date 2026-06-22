@@ -12,11 +12,11 @@
  */
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, memo } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, memo } from "react";
 import { useSearchParams } from "next/navigation";
-import { DndContext, useDroppable, pointerWithin, type DragEndEvent, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
+import { DndContext, useDroppable, pointerWithin, DragOverlay, type DragEndEvent, type DragStartEvent, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
 import { createDefaultRegistry } from "@envelope/materials";
-import { useCanvasStore, createComponentNode, CanvasRenderer, VIEWPORT_WIDTHS, type CanvasSnapshot } from "@envelope/engine";
+import { useCanvasStore, createComponentNode, CanvasRenderer, VIEWPORT_WIDTHS, CANVAS_CELL_SIZE, CANVAS_CELL_HEIGHT, COMPONENT_TYPES_THAT_SUPPORT_CHILDREN, type CanvasSnapshot } from "@envelope/engine";
 import { useEditorStore } from "@/stores/editor";
 import { useProjectPagesStore, componentNodesToCanvasComponents } from "@/stores/project-pages";
 import { useProjectFlowsStore } from "@/stores/project-flows";
@@ -44,6 +44,8 @@ const CanvasDropZone = memo(function CanvasDropZone() {
     resizeComponent, setZoom, setPan,
   } = useCanvasStore();
 
+  const [hoveredId, setHoveredId] = useState<string | null>(null);
+
   const viewportWidth = VIEWPORT_WIDTHS[viewport];
   const dropZoneRef = useRef<HTMLDivElement | null>(null);
 
@@ -54,6 +56,11 @@ const CanvasDropZone = memo(function CanvasDropZone() {
   // 用 ref 保持 zoom 的最新值，避免 wheel 事件监听器因 zoom 变化而反复注销/注册
   const zoomRef = useRef(zoom);
   zoomRef.current = zoom;
+
+  const panXRef = useRef(panX);
+  panXRef.current = panX;
+  const panYRef = useRef(panY);
+  panYRef.current = panY;
 
   /** 合并 Droppable 的 ref 与本地 dropZoneRef */
   const combinedRef = useCallback(
@@ -69,9 +76,25 @@ const CanvasDropZone = memo(function CanvasDropZone() {
     const handleWheel = (e: WheelEvent) => {
       if (e.ctrlKey || e.metaKey) {
         e.preventDefault();
+        const oldZoom = zoomRef.current;
         const delta = e.deltaY > 0 ? -0.05 : 0.05;
-        const newZoom = Math.min(2.0, Math.max(0.25, zoomRef.current + delta));
-        setZoom(newZoom);
+        const newZoom = Math.min(2.0, Math.max(0.25, oldZoom + delta));
+
+        if (newZoom !== oldZoom) {
+          const el = dropZoneRef.current;
+          if (el) {
+            const rect = el.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            const mouseY = e.clientY - rect.top;
+            const ratio = newZoom / oldZoom;
+            const newPanX = mouseX - (mouseX - (panXRef.current + 16)) * ratio - 16;
+            const newPanY = mouseY - (mouseY - (panYRef.current + 16)) * ratio - 16;
+            setZoom(newZoom);
+            setPan(newPanX, newPanY);
+          }
+        } else {
+          setZoom(newZoom);
+        }
       }
     };
     const el = dropZoneRef.current;
@@ -79,7 +102,7 @@ const CanvasDropZone = memo(function CanvasDropZone() {
       el.addEventListener("wheel", handleWheel, { passive: false });
       return () => el.removeEventListener("wheel", handleWheel);
     }
-  }, [setZoom]);
+  }, [setZoom, setPan]);
 
   return (
     <div
@@ -89,9 +112,11 @@ const CanvasDropZone = memo(function CanvasDropZone() {
       <CanvasRenderer
         components={components}
         selectedIds={selectedIds}
+        hoveredId={hoveredId}
         onSelect={selectComponent}
         onClearSelection={clearSelection}
         onResize={resizeComponent}
+        onHover={setHoveredId}
         zoom={zoom}
         viewportWidth={viewportWidth}
         panX={panX}
@@ -124,6 +149,7 @@ export function EditorLayout() {
   } = useEditorStore();
   const {
     components,
+    moveComponent,
     setViewport,
     deleteSelected,
     undo,
@@ -136,6 +162,10 @@ export function EditorLayout() {
     pageBackground,
     pagePadding,
     pageMaxWidth,
+    clearSelection,
+    zoom,
+    panX,
+    panY,
   } = useCanvasStore();
   const isPageMode = editorMode === "pages";
 
@@ -158,6 +188,15 @@ export function EditorLayout() {
   const appliedPageKeyRef = useRef<string | null>(null);
   const hydratingRef = useRef(false);
   const skipNextSyncRef = useRef(false);
+
+  const componentsRef = useRef(components);
+  componentsRef.current = components;
+  const panXRef = useRef(panX);
+  panXRef.current = panX;
+  const panYRef = useRef(panY);
+  panYRef.current = panY;
+  const zoomRef2 = useRef(zoom);
+  zoomRef2.current = zoom;
 
   const registry = useMemo(() => createDefaultRegistry(), []);
 
@@ -197,13 +236,19 @@ export function EditorLayout() {
     return null;
   }, []);
 
+  function canComponentAcceptChildren(type: string): boolean {
+    return COMPONENT_TYPES_THAT_SUPPORT_CHILDREN.has(type);
+  }
+
   /**
    * 拖拽结束处理
    *
-   * 从素材面板拖拽组件到画布放置区时触发。
-   * 注意：当前版本不计算精确的放置坐标，
-   * 新组件会被添加到画布的下一行默认位置（x=1, y=下一行）。
-   * 后续版本将基于 DragEndEvent.delta 计算缩放后的精确坐标。
+   * 处理三种拖拽场景：
+   * 1. 从画布拖拽组件到画布另一位置（canvas-component → canvas-drop-zone）
+   * 2. 从画布拖拽组件到容器组件（canvas-component → canvas-container:*）
+   * 3. 从素材面板拖拽新组件到画布（material → canvas-drop-zone）
+   *
+   * 均使用 event.delta 计算精确的网格坐标，缩放校正基于当前 zoom。
    */
   const handleDragEnd = useCallback(
     (event: DragEndEvent) => {
@@ -233,14 +278,47 @@ export function EditorLayout() {
       }
 
       if (overId !== "canvas-drop-zone" && !overId.startsWith("canvas")) return;
-      if (dragType !== "material" || !materialName) return;
-      const material = registry.get(materialName);
-      const category = materialMap.get(materialName)?.category ?? material?.category ?? "layout";
-      const defaultProps = material?.defaultProps ?? {};
-      const node = createComponentNode(materialName, category, { ...defaultProps });
-      insertNode(node, { parentId: null, index: components.length });
+      const { delta } = event;
+
+      const curComponents = componentsRef.current;
+      const curZoom = zoomRef2.current;
+
+      if (dragType === "canvas-component" && draggedNodeId) {
+        if (overId === "canvas-drop-zone") {
+          const comp = curComponents.find((c) => c.id === draggedNodeId);
+          if (comp) {
+            const newX = comp.position.x + delta.x / (CANVAS_CELL_SIZE * curZoom);
+            const newY = comp.position.y + delta.y / (CANVAS_CELL_HEIGHT * curZoom);
+            moveComponent(draggedNodeId, newX, newY);
+          }
+          return;
+        }
+        if (overId.startsWith("canvas-container:")) {
+          const containerId = overId.replace(/^canvas-container:/, "");
+          if (containerId) {
+            const container = curComponents.find((c) => c.id === containerId);
+            if (container && canComponentAcceptChildren(container.node.type)) {
+              moveNode(draggedNodeId, { parentId: containerId });
+            }
+          }
+          return;
+        }
+        return;
+      }
+
+      if (dragType === "material" && materialName && overId === "canvas-drop-zone") {
+        const material = registry.get(materialName);
+        const category = materialMap.get(materialName)?.category ?? material?.category ?? "layout";
+        const defaultProps = material?.defaultProps ?? {};
+        const node = createComponentNode(materialName, category, { ...defaultProps });
+        insertNode(node, { parentId: null, index: curComponents.length });
+        const x = Math.max(1, Math.round(delta.x / (CANVAS_CELL_SIZE * curZoom)));
+        const y = Math.max(1, Math.round(delta.y / (CANVAS_CELL_HEIGHT * curZoom)));
+        moveComponent(node.id, x, y);
+        return;
+      }
     },
-    [components.length, insertNode, materialMap, moveNode, parseTreeDropTarget, registry],
+    [insertNode, materialMap, moveComponent, moveNode, parseTreeDropTarget, registry],
   );
 
   const handleAddMaterial = useCallback(
@@ -338,6 +416,38 @@ export function EditorLayout() {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
       if (e.target instanceof HTMLElement && e.target.isContentEditable) return;
 
+      // Ctrl+S（或 Cmd+S）立即保存当前页面
+      if ((e.ctrlKey || e.metaKey) && e.key === "s") {
+        e.preventDefault();
+        useProjectPagesStore.getState().flushAutosave();
+        return;
+      }
+      // 按下 Escape 清除当前选中
+      if (e.key === "Escape") {
+        e.preventDefault();
+        clearSelection();
+        return;
+      }
+      // 方向键微调选中组件在网格中的位置
+      if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.key)) {
+        e.preventDefault();
+        const step = e.shiftKey ? 10 : 1;
+        const deltas: Record<string, [number, number]> = {
+          ArrowLeft: [-step, 0],
+          ArrowRight: [step, 0],
+          ArrowUp: [0, -step],
+          ArrowDown: [0, step],
+        };
+        const [dx, dy] = deltas[e.key];
+        const curComponents = useCanvasStore.getState().components;
+        const curSelectedIds = useCanvasStore.getState().selectedIds;
+        for (const id of curSelectedIds) {
+          const comp = curComponents.find((c) => c.id === id);
+          if (!comp) continue;
+          moveComponent(id, comp.position.x + dx, comp.position.y + dy);
+        }
+        return;
+      }
       if ((e.ctrlKey || e.metaKey) && e.key === "c") {
         e.preventDefault();
         copySelected();
@@ -370,15 +480,27 @@ export function EditorLayout() {
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [copySelected, cutSelected, deleteSelected, isPageMode, pasteClipboard, undo, redo]);
+  }, [clearSelection, copySelected, cutSelected, deleteSelected, isPageMode, pasteClipboard, undo, redo]);
 
+
+  const [activeDragId, setActiveDragId] = useState<string | null>(null);
+  const handleDragStart = useCallback((event: DragStartEvent) => {
+    const name = event.active.data.current?.materialName as string | undefined
+      ?? event.active.data.current?.componentId as string | undefined;
+    setActiveDragId(name ?? null);
+  }, []);
+  const handleDragEndWrapper = useCallback((event: DragEndEvent) => {
+    setActiveDragId(null);
+    handleDragEnd(event);
+  }, [handleDragEnd]);
 
   return (
     <div className="flex h-screen flex-col">
       <EditorToolbar />
       {isPageMode ? (
         <DndContext
-          onDragEnd={handleDragEnd}
+          onDragStart={handleDragStart}
+          onDragEnd={handleDragEndWrapper}
           collisionDetection={pointerWithin}
           autoScroll={false}
           sensors={sensors}
@@ -389,6 +511,14 @@ export function EditorLayout() {
             <CanvasDropZone />
             <RightPanel collapsed={rightPanelCollapsed} />
           </div>
+          <DragOverlay dropAnimation={null}>
+            {activeDragId && (
+              <div className="flex items-center gap-2 rounded-md border border-blue-400 bg-blue-50 px-3 py-2 text-sm font-medium text-blue-700 shadow-lg">
+                <span>⊕</span>
+                <span>{activeDragId}</span>
+              </div>
+            )}
+          </DragOverlay>
         </DndContext>
       ) : (
         <div className="flex flex-1 overflow-hidden">

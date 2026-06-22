@@ -17,18 +17,58 @@
 
 "use client";
 
-import { forwardRef, useCallback, useRef, useState, useEffect, type CSSProperties, type MouseEvent as RMouseEvent, type PointerEvent as RPointerEvent } from "react";
+import { forwardRef, useCallback, useMemo, useRef, useState, useEffect, type CSSProperties, type MouseEvent as RMouseEvent, type PointerEvent as RPointerEvent } from "react";
+import { useDraggable, useDroppable } from "@dnd-kit/core";
 import { twMerge } from "tailwind-merge";
 import type { CanvasComponent } from "./types";
 import { calcResizeNext, snapGridDelta, type ResizeDirection } from "./resize-utils";
+import { createComponentDragItem } from "./dnd";
 import type { ComponentNode } from "../schemas/page.schema";
+
+/** Ctrl 键全局状态（DOM 级实时更新 + React 级状态同步） */
+let _globalCtrlDown = false;
+const _ctrlListeners = new Set<() => void>();
+if (typeof window !== "undefined") {
+  window.addEventListener("keydown", (e: KeyboardEvent) => {
+    if (e.key === "Control" || e.key === "Meta") {
+      if (!_globalCtrlDown) { _globalCtrlDown = true; _ctrlListeners.forEach((fn) => fn()); }
+    }
+  });
+  window.addEventListener("keyup", (e: KeyboardEvent) => {
+    if (e.key === "Control" || e.key === "Meta") {
+      if (_globalCtrlDown) { _globalCtrlDown = false; _ctrlListeners.forEach((fn) => fn()); }
+    }
+  });
+}
+function isCtrlDown(): boolean { return _globalCtrlDown; }
+function useCtrlDown(): boolean {
+  const [ctrl, setCtrl] = useState(_globalCtrlDown);
+  useEffect(() => {
+    const update = () => setCtrl(_globalCtrlDown);
+    _ctrlListeners.add(update);
+    return () => { _ctrlListeners.delete(update); };
+  }, []);
+  return ctrl;
+}
 
 /** 单个网格单元格的渲染高度（px），对应 CSS Grid 的隐式行高 */
 const CELL_HEIGHT = 40;
 /** 单个网格单元格的渲染宽度（px），对应 CSS Grid 的列宽 */
 const CELL_WIDTH = 80;
 /** 缩放手柄的视觉尺寸（px） */
-const RESIZE_HANDLE_SIZE = 8;
+const RESIZE_HANDLE_SIZE = 12;
+
+/** 可接收子组件的容器组件类型集合 */
+const CONTAINER_TYPES = new Set([
+  "Box", "Flex", "Container", "Grid",
+  "Card", "CardHeader", "CardContent", "CardFooter", "Tabs", "TabsContent",
+  "Accordion", "AccordionItem", "AccordionContent", "Table", "TableHeader",
+  "TableBody", "TableRow", "Alert", "DialogContent", "SheetContent",
+  "AlertDialogContent", "ScrollArea", "AspectRatio", "ResizablePanelGroup",
+  "ResizablePanel", "Breadcrumb", "TabsList", "Pagination", "DrawerContent",
+  "PopoverContent", "HoverCardContent", "CollapsibleContent",
+  "DropdownMenuContent", "ContextMenuContent",
+]);
 
 /**
  * 条件类名合并工具函数
@@ -507,6 +547,72 @@ function SimulatedContent({ comp }: { comp: CanvasComponent }) {
     }
 
     // ===== Layout components =====
+    case "Box":
+      return (
+        <div className="flex h-full min-h-[60px] items-center justify-center rounded border-2 border-dashed border-muted-foreground/30 bg-muted/10 text-[10px] text-muted-foreground">
+          {comp.node.children && comp.node.children.length > 0 ? (
+            <div className="w-full p-2"><ChildrenSlot components={comp.node.children} /></div>
+          ) : (
+            <span>Box (empty div)</span>
+          )}
+        </div>
+      );
+    case "Flex":
+      return (
+        <div className={cn(
+          "flex h-full min-h-[60px] gap-2 rounded border-2 border-dashed border-muted-foreground/30 bg-muted/10 p-2",
+          pstr(props, "direction", "row") === "column" ? "flex-col" : "flex-row",
+          (props?.wrap === true || pstr(props, "wrap", "") === "wrap") ? "flex-wrap" : "",
+          pstr(props, "justify", "start") === "center" ? "justify-center" : pstr(props, "justify", "start") === "end" ? "justify-end" : pstr(props, "justify", "start") === "between" ? "justify-between" : "justify-start",
+          pstr(props, "align", "start") === "center" ? "items-center" : pstr(props, "align", "start") === "end" ? "items-end" : pstr(props, "align", "start") === "stretch" ? "items-stretch" : "items-start",
+        )}>
+          {comp.node.children && comp.node.children.length > 0 ? (
+            <ChildrenSlot components={comp.node.children} />
+          ) : (
+            <span className="mx-auto self-center text-[10px] text-muted-foreground">Flex Container</span>
+          )}
+        </div>
+      );
+    case "Container":
+      return (
+        <div className="flex h-full min-h-[60px] flex-col rounded border-2 border-dashed border-muted-foreground/20 bg-background">
+          <div className="border-b border-dashed px-2 py-1 text-[9px] font-medium text-muted-foreground/60">Container</div>
+          <div className="flex-1" style={{ maxWidth: pnum(props, "maxWidth", 1200) > 0 ? `${pnum(props, "maxWidth", 1200)}px` : undefined, margin: "0 auto", width: "100%" }}>
+            {comp.node.children && comp.node.children.length > 0 ? (
+              <div className="p-2"><ChildrenSlot components={comp.node.children} /></div>
+            ) : (
+              <div className="flex h-full items-center justify-center p-4 text-[10px] text-muted-foreground">
+                Centered Container ({pstr(props, "maxWidthText", "1200px")})
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    case "Grid":
+      return (
+        <div className={cn(
+          "h-full min-h-[60px] rounded border-2 border-dashed border-muted-foreground/30 bg-muted/10 p-2",
+        )}>
+          <div className="mb-1 text-[9px] font-medium text-muted-foreground/60">
+            Grid ({pstr(props, "columns", "3")} cols)
+          </div>
+          <div
+            className="grid gap-2"
+            style={{ gridTemplateColumns: `repeat(${pnum(props, "columns", 3)}, 1fr)` }}
+          >
+            {comp.node.children && comp.node.children.length > 0 ? (
+              <div className="col-span-full"><ChildrenSlot components={comp.node.children} /></div>
+            ) : (
+              Array.from({ length: pnum(props, "columns", 3) }).map((_, i) => (
+                <div key={i} className="flex h-10 items-center justify-center rounded bg-muted/20 text-[9px] text-muted-foreground">
+                  {i + 1}
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      );
+
     case "Separator":
       return <hr className="border-muted" />;
     case "ScrollArea":
@@ -878,6 +984,114 @@ function SimulatedChildContent({ node }: { node: ComponentNode }) {
       );
     case "Text":
       return <span className="text-[10px] text-foreground">{(props?.text as string) || ""}</span>;
+    case "Box":
+      return (
+        <div className="rounded border-2 border-dashed border-muted-foreground/20 bg-muted/5 p-1 text-[10px] text-muted-foreground">
+          {children.length > 0 ? <ChildrenSlot components={children} /> : "Box"}
+        </div>
+      );
+    case "Flex":
+      return (
+        <div className="flex items-center gap-1 rounded border-2 border-dashed border-muted-foreground/20 bg-muted/5 p-1 text-[10px] text-muted-foreground">
+          {children.length > 0 ? <ChildrenSlot components={children} /> : "Flex"}
+        </div>
+      );
+    case "Container":
+      return (
+        <div className="rounded border-2 border-dashed border-muted-foreground/20 bg-muted/5 p-1 text-[10px] text-muted-foreground">
+          {children.length > 0 ? <ChildrenSlot components={children} /> : "Container"}
+        </div>
+      );
+    case "Grid":
+      return (
+        <div className="rounded border-2 border-dashed border-muted-foreground/20 bg-muted/5 p-1 text-[10px] text-muted-foreground">
+          {children.length > 0 ? <ChildrenSlot components={children} /> : "Grid"}
+        </div>
+      );
+    case "AlertTitle":
+      return <span className="text-[10px] font-semibold">{(props?.text as string) || "Alert Title"}</span>;
+    case "AlertDescription":
+      return <span className="text-[10px] text-muted-foreground">{(props?.text as string) || "Alert description"}</span>;
+    case "DialogTitle":
+      return <span className="text-[10px] font-semibold">{(props?.text as string) || "Dialog Title"}</span>;
+    case "DialogDescription":
+      return <span className="text-[10px] text-muted-foreground">{(props?.text as string) || "Dialog description"}</span>;
+    case "DialogHeader":
+    case "SheetHeader":
+    case "AlertDialogHeader":
+    case "DrawerHeader":
+      return (
+        <div className="rounded bg-muted/20 p-1 text-[10px] font-medium">
+          {childText || type}
+          {children.length > 0 ? <div className="mt-1 font-normal"><ChildrenSlot components={children} /></div> : null}
+        </div>
+      );
+    case "DialogFooter":
+    case "AlertDialogFooter":
+      return (
+        <div className="flex items-center justify-end gap-1 rounded bg-muted/10 p-1 text-[10px]">
+          {children.length > 0 ? <ChildrenSlot components={children} /> : type}
+        </div>
+      );
+    case "SheetTitle":
+    case "SheetDescription":
+      return <span className="text-[10px]">{childText || type}</span>;
+    case "DialogTrigger":
+    case "SheetTrigger":
+    case "AlertDialogTrigger":
+    case "DrawerTrigger":
+    case "PopoverTrigger":
+    case "TooltipTrigger":
+    case "HoverCardTrigger":
+    case "DropdownMenuTrigger":
+    case "ContextMenuTrigger":
+    case "CollapsibleTrigger":
+      return (
+        <div className="rounded border bg-muted/10 p-1 text-[10px] text-muted-foreground">
+          {children.length > 0 ? <ChildrenSlot components={children} /> : type}
+        </div>
+      );
+    case "DialogContent":
+    case "SheetContent":
+    case "AlertDialogContent":
+    case "DrawerContent":
+    case "PopoverContent":
+    case "HoverCardContent":
+    case "DropdownMenuContent":
+    case "ContextMenuContent":
+    case "CollapsibleContent":
+      return (
+        <div className="rounded border bg-muted/5 p-1 text-[10px] text-muted-foreground">
+          {children.length > 0 ? <ChildrenSlot components={children} /> : type}
+        </div>
+      );
+    case "AccordionItem":
+      return (
+        <div className="rounded border bg-muted/10 p-1 text-[10px]">
+          {children.length > 0 ? <ChildrenSlot components={children} /> : "AccordionItem"}
+        </div>
+      );
+    case "AccordionTrigger":
+      return <div className="text-[10px] font-medium">{childText || "Section"}</div>;
+    case "AccordionContent":
+      return <div className="text-[10px] text-muted-foreground pl-1">{children.length > 0 ? <ChildrenSlot components={children} /> : (childText || "Content")}</div>;
+    case "TableHead":
+      return <span className="text-[10px] font-medium">{childText || "Head"}</span>;
+    case "TableCell":
+      return <span className="text-[10px]">{childText || "Cell"}</span>;
+    case "BreadcrumbItem":
+      return <span className="text-[10px] text-muted-foreground">{childText || "/ Page"}</span>;
+    case "BreadcrumbLink":
+      return <span className="text-[10px] text-primary underline">{childText || "Link"}</span>;
+    case "PaginationItem":
+      return <span className="text-[10px]">{childText || "1"}</span>;
+    case "ResizableHandle":
+      return <div className="mx-0.5 h-full w-0.5 bg-muted" />;
+    case "SelectItem":
+    case "RadioGroupItem":
+    case "DropdownMenuItem":
+    case "ContextMenuItem":
+      return <div className="rounded px-1 py-0.5 text-[10px] hover:bg-muted">{childText || type}</div>;
     default:
       return (
         <div className="rounded bg-muted/30 px-1 py-0.5 text-[10px] text-muted-foreground">
@@ -891,6 +1105,190 @@ function SimulatedChildContent({ node }: { node: ComponentNode }) {
         </div>
       );
   }
+}
+
+// ===== 画布组件项（包装 useDraggable / useDroppable） =====
+
+/**
+ * 单个画布组件的渲染包装器
+ *
+ * 为每个组件绑定 useDraggable（可拖拽）和 useDroppable（容器可接收拖入），
+ * 同时保留原有选中、缩放手柄等功能。
+ */
+function CanvasComponentItem({
+  comp, x, y, width, height, isSelected, isHovered, previewTailwind,
+  gridCols, zoom, onSelect, onHover, onResize, activeResizeCleanupRef,
+}: {
+  comp: CanvasComponent;
+  x: number; y: number; width: number; height: number;
+  isSelected: boolean; isHovered: boolean; previewTailwind: string;
+  gridCols: number; zoom: number;
+  onSelect: (id: string, multi?: boolean) => void;
+  onHover: (id: string | null) => void;
+  onResize: (id: string, width: number, height: number, x?: number, y?: number) => void;
+  activeResizeCleanupRef: React.MutableRefObject<(() => void) | null>;
+}) {
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
+    id: `canvas-comp:${comp.id}`,
+    data: createComponentDragItem(comp.id),
+  });
+
+  const { setNodeRef: setDropRef, isOver } = useDroppable({
+    id: `canvas-container:${comp.id}`,
+    data: { parentId: comp.id, type: comp.node.type },
+    disabled: !CONTAINER_TYPES.has(comp.node.type),
+  });
+
+  const ctrlDown = useCtrlDown();
+
+  const mergedRef = useCallback((node: HTMLDivElement | null) => {
+    setNodeRef(node);
+    setDropRef(node);
+  }, [setNodeRef, setDropRef]);
+
+  const handleMouseEnter = useCallback(() => { onHover(comp.id); }, [comp.id, onHover]);
+  const handleMouseLeave = useCallback(() => { onHover(null); }, [onHover]);
+
+  const handleClick = useCallback((e: RMouseEvent) => {
+    e.stopPropagation();
+    onSelect(comp.id, e.ctrlKey || e.metaKey || e.shiftKey);
+  }, [comp.id, onSelect]);
+
+  return (
+    <div
+      ref={mergedRef}
+      data-canvas-comp="true"
+      data-canvas-comp-id={comp.id}
+      data-testid={`canvas-comp-${comp.id}`}
+      className={cn(
+        previewTailwind,
+        "group relative rounded-md border transition-all duration-100",
+        isSelected
+          ? "border-blue-500 ring-2 ring-blue-200 shadow-md z-20"
+          : isHovered
+            ? "border-blue-400 ring-1 ring-blue-100 shadow-sm z-10"
+            : "border-transparent",
+        isDragging && "opacity-50",
+        isOver && "ring-2 ring-blue-400/50",
+      )}
+      style={{
+        gridColumn: `${x} / span ${width}`,
+        gridRow: `${y} / span ${height}`,
+        minHeight: `${height * CELL_HEIGHT}px`,
+      }}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+      onClick={handleClick}
+      {...listeners}
+      {...attributes}
+    >
+      {CONTAINER_TYPES.has(comp.node.type) && (
+        <div className={cn(
+          "absolute left-1 top-1 z-30 rounded px-1.5 py-0.5 text-[9px] font-medium text-white",
+          isSelected ? "bg-blue-500" : isHovered ? "bg-blue-400/80" : "bg-blue-500/80",
+        )}>
+          {comp.node.type}
+        </div>
+      )}
+
+      {/* 内容区：Ctrl 按下时 pointer-events 穿透（让组件原声事件响应），否则由上层捕获点击用于选中 */}
+      <div
+        className="h-full w-full"
+        style={{ pointerEvents: ctrlDown ? "auto" : "none" } as CSSProperties}
+        data-ctrl-gate="true"
+      >
+        <SimulatedContent comp={comp} />
+      </div>
+
+      {/* 选中标记 */}
+      {isSelected && (
+        <div className="absolute -right-1.5 -top-1.5 z-30 flex h-5 w-5 items-center justify-center rounded-full bg-blue-500 text-[10px] font-bold text-white shadow transition-transform duration-150 scale-100">
+          ✓
+        </div>
+      )}
+
+      {/* 缩放手柄 */}
+      {isSelected && allResizeDirections.map((dir) => (
+        <div
+          key={dir}
+          data-canvas-resize-handle={dir}
+          data-testid={`canvas-resize-handle-${comp.id}-${dir}`}
+          className="absolute z-10 rounded-full border border-blue-500 bg-white hover:bg-blue-100"
+          style={{ ...resizeHandleStyles[dir], touchAction: "none" }}
+          onPointerDown={(e: RPointerEvent<HTMLDivElement>) => {
+            e.stopPropagation();
+            e.preventDefault();
+            activeResizeCleanupRef.current?.();
+
+            const el = e.currentTarget;
+            const pointerId = e.pointerId;
+            const startClientX = e.clientX;
+            const startClientY = e.clientY;
+
+            const startState = { x, y, width, height, gridCols };
+            let lastSent = { x, y, width, height };
+
+            const syncResize = (ev: PointerEvent) => {
+              if (ev.pointerId !== pointerId) return;
+
+              const rawDx = (ev.clientX - startClientX) / (CELL_WIDTH * zoom);
+              const rawDy = (ev.clientY - startClientY) / (CELL_HEIGHT * zoom);
+              const deltaCols = snapGridDelta(rawDx);
+              const deltaRows = snapGridDelta(rawDy);
+
+              const next = calcResizeNext(dir, startState, deltaCols, deltaRows);
+
+              if (
+                next.x === lastSent.x
+                && next.y === lastSent.y
+                && next.width === lastSent.width
+                && next.height === lastSent.height
+              ) {
+                return;
+              }
+
+              lastSent = next;
+              onResize(comp.id, next.width, next.height, next.x, next.y);
+            };
+
+            const cleanup = () => {
+              try {
+                el.releasePointerCapture(pointerId);
+              } catch {
+                // ignore release error
+              }
+              el.removeEventListener("pointermove", syncResize);
+              el.removeEventListener("pointerup", cleanup);
+              el.removeEventListener("pointercancel", cleanup);
+              el.removeEventListener("lostpointercapture", cleanup);
+              window.removeEventListener("pointermove", syncResize);
+              window.removeEventListener("pointerup", cleanup);
+              window.removeEventListener("pointercancel", cleanup);
+              activeResizeCleanupRef.current = null;
+            };
+
+            el.addEventListener("pointermove", syncResize);
+            el.addEventListener("pointerup", cleanup);
+            el.addEventListener("pointercancel", cleanup);
+            el.addEventListener("lostpointercapture", cleanup);
+            let captured = false;
+            try {
+              el.setPointerCapture(pointerId);
+              captured = el.hasPointerCapture(pointerId);
+            } catch {
+              captured = false;
+            }
+            if (!captured) {
+              window.addEventListener("pointermove", syncResize);
+              window.addEventListener("pointerup", cleanup);
+              window.addEventListener("pointercancel", cleanup);
+            }
+            activeResizeCleanupRef.current = cleanup;
+          }}
+        />
+      ))}
+    </div>
+  );
 }
 
 // ===== 缩放手柄 =====
@@ -928,12 +1326,16 @@ interface CanvasRendererProps {
   components: CanvasComponent[];
   /** 当前选中的组件 ID 列表 */
   selectedIds: string[];
+  /** 当前 hover 的组件 ID（鼠标移入时高亮） */
+  hoveredId: string | null;
   /** 选中组件回调（id: 组件ID, multi: 是否多选模式） */
   onSelect: (id: string, multi?: boolean) => void;
   /** 清除所有选中状态回调 */
   onClearSelection: () => void;
   /** 调整组件尺寸回调（width, height: 列/行跨度；x, y 可选用于 w/n 把手） */
   onResize: (id: string, width: number, height: number, x?: number, y?: number) => void;
+  /** Hover 状态回调 */
+  onHover: (id: string | null) => void;
   /** 当前缩放比例 */
   zoom: number;
   /** 当前视口的画布宽度（px） */
@@ -969,7 +1371,7 @@ interface CanvasRendererProps {
  */
 export const CanvasRenderer = forwardRef<HTMLDivElement, CanvasRendererProps>(
   function CanvasRenderer({
-    components, selectedIds, onSelect, onClearSelection, onResize,
+    components, selectedIds, hoveredId, onSelect, onClearSelection, onResize, onHover,
     zoom, viewportWidth, panX, panY, onPan, gridCols, gridGap,
     pageBackground, pagePadding, pageMaxWidth,
   }, ref) {
@@ -982,6 +1384,15 @@ export const CanvasRenderer = forwardRef<HTMLDivElement, CanvasRendererProps>(
     // 存储 onPan 的最新引用以避免 useCallback 依赖变化
     const onPanRef = useRef(onPan);
     onPanRef.current = onPan;
+
+    const columnWidth = useMemo(() => {
+      const maxW = typeof pageMaxWidth === "number" && pageMaxWidth > 0 ? pageMaxWidth : viewportWidth;
+      const effectiveWidth = Math.min(viewportWidth, maxW);
+      const padding = typeof pagePadding === "number" ? pagePadding : 0;
+      const contentWidth = effectiveWidth - 2 * padding;
+      const gap = gridGap ?? 0;
+      return Math.max(1, (contentWidth - (gridCols - 1) * gap) / gridCols);
+    }, [viewportWidth, pageMaxWidth, pagePadding, gridCols, gridGap]);
 
     const handleMouseDown = useCallback((e: RMouseEvent) => {
       if (e.button !== 0) return;
@@ -1065,15 +1476,6 @@ export const CanvasRenderer = forwardRef<HTMLDivElement, CanvasRendererProps>(
             onClearSelection();
           }}
         >
-          {/* Grid background */}
-          <div
-            className="pointer-events-none absolute inset-0"
-            style={{
-              backgroundImage: `linear-gradient(rgba(128,128,128,0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(128,128,128,0.05) 1px, transparent 1px)`,
-              backgroundSize: `${CELL_WIDTH}px ${CELL_HEIGHT}px`,
-            }}
-          />
-
           {/* 组件网格 */}
           <div
             data-testid="canvas-grid"
@@ -1086,12 +1488,17 @@ export const CanvasRenderer = forwardRef<HTMLDivElement, CanvasRendererProps>(
               marginLeft: "auto",
               marginRight: "auto",
               maxWidth: typeof pageMaxWidth === "number" && pageMaxWidth > 0 ? `${pageMaxWidth}px` : undefined,
+              backgroundImage: `linear-gradient(rgba(128,128,128,0.12) 1px, transparent 1px), linear-gradient(90deg, rgba(128,128,128,0.12) 1px, transparent 1px)`,
+              backgroundSize: `${columnWidth}px ${CELL_HEIGHT}px`,
             }}
           >
             {components.length === 0 && (
-              <div className="col-span-full flex flex-col items-center justify-center py-12 text-center text-muted-foreground">
-                <p className="text-sm font-medium">Drop components here</p>
-                <p className="mt-1 text-xs">Drag from the component panel on the left</p>
+              <div className="col-span-full flex flex-col items-center justify-center py-20 text-center">
+                <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl border-2 border-dashed border-muted-foreground/30 bg-muted/10">
+                  <span className="text-2xl text-muted-foreground/40">+</span>
+                </div>
+                <p className="text-sm font-medium text-muted-foreground">拖拽组件到此处</p>
+                <p className="mt-1 text-xs text-muted-foreground/60">从左侧组件面板拖拽组件到画布上</p>
               </div>
             )}
 
@@ -1106,120 +1513,26 @@ export const CanvasRenderer = forwardRef<HTMLDivElement, CanvasRendererProps>(
               const isSelected = selectedIds.includes(comp.id);
               const previewTailwind = getPreviewTailwindClasses(comp.node);
 
+              const isHovered = hoveredId === comp.id;
+
               return (
-                <div
+                <CanvasComponentItem
                   key={comp.id}
-                  data-canvas-comp="true"
-                  data-canvas-comp-id={comp.id}
-                  data-testid={`canvas-comp-${comp.id}`}
-                  className={cn(
-                    previewTailwind,
-                    "group relative rounded-md border-2 transition-all",
-                    isSelected ? "border-blue-500 ring-2 ring-blue-200" : "border-transparent hover:border-blue-300",
-                  )}
-                  style={{
-                    gridColumn: `${x} / span ${width}`,
-                    gridRow: `${y} / span ${height}`,
-                    minHeight: `${height * CELL_HEIGHT}px`,
-                  }}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onSelect(comp.id, e.ctrlKey || e.metaKey || e.shiftKey);
-                  }}
-                >
-                  <SimulatedContent comp={comp} />
-
-                  {/* 选中标记 */}
-                  {isSelected && (
-                    <div className="absolute -right-1.5 -top-1.5 z-10 flex h-5 w-5 items-center justify-center rounded-full bg-blue-500 text-[10px] font-bold text-white shadow">
-                      ✓
-                    </div>
-                  )}
-
-                  {/* 缩放手柄 */}
-                  {isSelected && allResizeDirections.map((dir) => (
-                    <div
-                      key={dir}
-                      data-canvas-resize-handle={dir}
-                      data-testid={`canvas-resize-handle-${comp.id}-${dir}`}
-                      className="absolute z-10 rounded-full border border-blue-500 bg-white hover:bg-blue-100"
-                      style={{ ...resizeHandleStyles[dir], touchAction: "none" }}
-                      onPointerDown={(e: RPointerEvent<HTMLDivElement>) => {
-                        e.stopPropagation();
-                        e.preventDefault();
-                        // 同一时间只允许一个缩放会话，开始新的缩放前先把旧监听/捕获全部清理掉
-                        activeResizeCleanupRef.current?.();
-
-                        const el = e.currentTarget;
-                        const pointerId = e.pointerId;
-                        const startClientX = e.clientX;
-                        const startClientY = e.clientY;
-
-                        const startState = { x, y, width, height, gridCols };
-                        let lastSent = { x, y, width, height };
-
-                        const syncResize = (ev: PointerEvent) => {
-                          if (ev.pointerId !== pointerId) return;
-
-                          const rawDx = (ev.clientX - startClientX) / (CELL_WIDTH * zoom);
-                          const rawDy = (ev.clientY - startClientY) / (CELL_HEIGHT * zoom);
-                          // 关键：对齐到整数网格并做边界钳制，避免缩放在临界值附近抖动/越界
-                          const deltaCols = snapGridDelta(rawDx);
-                          const deltaRows = snapGridDelta(rawDy);
-
-                          const next = calcResizeNext(dir, startState, deltaCols, deltaRows);
-
-                          if (
-                            next.x === lastSent.x
-                            && next.y === lastSent.y
-                            && next.width === lastSent.width
-                            && next.height === lastSent.height
-                          ) {
-                            return;
-                          }
-
-                          lastSent = next;
-                          onResize(comp.id, next.width, next.height, next.x, next.y);
-                        };
-
-                        const cleanup = () => {
-                          try {
-                            el.releasePointerCapture(pointerId);
-                          } catch { }
-                          el.removeEventListener("pointermove", syncResize);
-                          el.removeEventListener("pointerup", cleanup);
-                          el.removeEventListener("pointercancel", cleanup);
-                          el.removeEventListener("lostpointercapture", cleanup);
-                          window.removeEventListener("pointermove", syncResize);
-                          window.removeEventListener("pointerup", cleanup);
-                          window.removeEventListener("pointercancel", cleanup);
-                          activeResizeCleanupRef.current = null;
-                        };
-
-                        // 使用 PointerEvent + pointer capture：即使指针移出手柄/组件，也能持续收到 move/up 事件
-                        el.addEventListener("pointermove", syncResize);
-                        el.addEventListener("pointerup", cleanup);
-                        el.addEventListener("pointercancel", cleanup);
-                        el.addEventListener("lostpointercapture", cleanup);
-                        // 关键：某些浏览器/边界情况下 setPointerCapture 可能抛异常，这里做兜底避免直接中断交互
-                        let captured = false;
-                        try {
-                          el.setPointerCapture(pointerId);
-                          captured = el.hasPointerCapture(pointerId);
-                        } catch {
-                          captured = false;
-                        }
-                        // 若无法 capture，则退化为 window 级监听，保证 resize 不会因为指针移出而中断
-                        if (!captured) {
-                          window.addEventListener("pointermove", syncResize);
-                          window.addEventListener("pointerup", cleanup);
-                          window.addEventListener("pointercancel", cleanup);
-                        }
-                        activeResizeCleanupRef.current = cleanup;
-                      }}
-                    />
-                  ))}
-                </div>
+                  comp={comp}
+                  x={x}
+                  y={y}
+                  width={width}
+                  height={height}
+                  isSelected={isSelected}
+                  isHovered={isHovered}
+                  previewTailwind={previewTailwind}
+                  gridCols={gridCols}
+                  zoom={zoom}
+                  onSelect={onSelect}
+                  onHover={onHover}
+                  onResize={onResize}
+                  activeResizeCleanupRef={activeResizeCleanupRef}
+                />
               );
             })}
           </div>

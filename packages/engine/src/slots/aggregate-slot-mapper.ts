@@ -132,13 +132,14 @@ function syncCardPropsToChildren(node: ComponentNode): ComponentNode {
       const header = reuse && reuse.type === "CardHeader" ? reuse : undefined;
       const headerChildren = ensureChildrenArray(header ?? ({} as ComponentNode));
       const textReuse = headerChildren.find((c) => c.type === "Text");
+      const restChildren = headerChildren.filter((c) => c.type !== "Text");
       return {
         id: header?.id ?? newId(),
         type: "CardHeader",
         name: `CardHeader-${header?.id ?? ""}`.replace(/-$/, ""),
         category: next.category,
         props: header?.props,
-        children: [makeTextNode(headerText, next.category, textReuse)],
+        children: [makeTextNode(headerText, next.category, textReuse), ...restChildren],
       };
     });
     cur = nextChildren;
@@ -151,13 +152,14 @@ function syncCardPropsToChildren(node: ComponentNode): ComponentNode {
       const content = reuse && reuse.type === "CardContent" ? reuse : undefined;
       const contentChildren = ensureChildrenArray(content ?? ({} as ComponentNode));
       const textReuse = contentChildren.find((c) => c.type === "Text");
+      const restChildren = contentChildren.filter((c) => c.type !== "Text");
       return {
         id: content?.id ?? newId(),
         type: "CardContent",
         name: `CardContent-${content?.id ?? ""}`.replace(/-$/, ""),
         category: next.category,
         props: content?.props,
-        children: [makeTextNode(contentText, next.category, textReuse)],
+        children: [makeTextNode(contentText, next.category, textReuse), ...restChildren],
       };
     });
     cur = nextChildren;
@@ -170,13 +172,14 @@ function syncCardPropsToChildren(node: ComponentNode): ComponentNode {
       const footer = reuse && reuse.type === "CardFooter" ? reuse : undefined;
       const footerChildren = ensureChildrenArray(footer ?? ({} as ComponentNode));
       const textReuse = footerChildren.find((c) => c.type === "Text");
+      const restChildren = footerChildren.filter((c) => c.type !== "Text");
       return {
         id: footer?.id ?? newId(),
         type: "CardFooter",
         name: `CardFooter-${footer?.id ?? ""}`.replace(/-$/, ""),
         category: next.category,
         props: footer?.props,
-        children: [makeTextNode(footerText, next.category, textReuse)],
+        children: [makeTextNode(footerText, next.category, textReuse), ...restChildren],
       };
     });
     cur = nextChildren;
@@ -925,6 +928,7 @@ function syncPopupPropsToChildren(node: ComponentNode, opts: { triggerType: stri
   if (showTrigger) {
     const triggerId = reuseTrigger?.id ?? newId();
     const reuseBtn = reuseTrigger ? ensureChildrenArray(reuseTrigger).find((c) => c.type === "Button") : undefined;
+    const restTriggerChildren = reuseTrigger ? ensureChildrenArray(reuseTrigger).filter((c) => c.type !== "Button") : [];
     children.push({
       id: triggerId,
       type: opts.triggerType,
@@ -939,6 +943,7 @@ function syncPopupPropsToChildren(node: ComponentNode, opts: { triggerType: stri
           category,
           props: { ...(reuseBtn?.props as Record<string, unknown> | undefined), text: triggerText },
         },
+        ...restTriggerChildren,
       ],
     });
   }
@@ -1022,6 +1027,7 @@ function syncMenuPropsToChildren(node: ComponentNode, opts: { triggerType: strin
   if (showTrigger) {
     const triggerId = reuseTrigger?.id ?? newId();
     const reuseBtn = reuseTrigger ? ensureChildrenArray(reuseTrigger).find((c) => c.type === "Button") : undefined;
+    const restTriggerChildren = reuseTrigger ? ensureChildrenArray(reuseTrigger).filter((c) => c.type !== "Button") : [];
     children.push({
       id: triggerId,
       type: opts.triggerType,
@@ -1036,6 +1042,7 @@ function syncMenuPropsToChildren(node: ComponentNode, opts: { triggerType: strin
           category,
           props: { ...(reuseBtn?.props as Record<string, unknown> | undefined), text: triggerText },
         },
+        ...restTriggerChildren,
       ],
     });
   }
@@ -1132,6 +1139,7 @@ function syncDrawerPropsToChildren(node: ComponentNode): ComponentNode {
   if (showTrigger) {
     const triggerId = reuseTrigger?.id ?? newId();
     const reuseBtn = reuseTrigger ? ensureChildrenArray(reuseTrigger).find((c) => c.type === "Button") : undefined;
+    const restTriggerChildren = reuseTrigger ? ensureChildrenArray(reuseTrigger).filter((c) => c.type !== "Button") : [];
     children.push({
       id: triggerId,
       type: "DrawerTrigger",
@@ -1146,6 +1154,7 @@ function syncDrawerPropsToChildren(node: ComponentNode): ComponentNode {
           category,
           props: { ...(reuseBtn?.props as Record<string, unknown> | undefined), text: triggerText },
         },
+        ...restTriggerChildren,
       ],
     });
   }
@@ -1161,13 +1170,14 @@ function syncDrawerPropsToChildren(node: ComponentNode): ComponentNode {
   if (showHeader) {
     const headerId = reuseHeader?.id ?? newId();
     const headerTextReuse = reuseHeader ? ensureChildrenArray(reuseHeader).find((c) => c.type === "Text") : undefined;
+    const restHeaderChildren = reuseHeader ? ensureChildrenArray(reuseHeader).filter((c) => c.type !== "Text") : [];
     contentChildren.push({
       id: headerId,
       type: "DrawerHeader",
       name: `DrawerHeader-${headerId}`,
       category,
       props: reuseHeader?.props,
-      children: [makeTextNode(titleText, category, headerTextReuse)],
+      children: [makeTextNode(titleText, category, headerTextReuse), ...restHeaderChildren],
     });
   }
 
@@ -1250,6 +1260,7 @@ function syncCollapsiblePropsToChildren(node: ComponentNode): ComponentNode {
   if (showTrigger) {
     const triggerId = reuseTrigger?.id ?? newId();
     const reuseBtn = reuseTrigger ? ensureChildrenArray(reuseTrigger).find((c) => c.type === "Button") : undefined;
+    const restTriggerChildren = reuseTrigger ? ensureChildrenArray(reuseTrigger).filter((c) => c.type !== "Button") : [];
     children.push({
       id: triggerId,
       type: "CollapsibleTrigger",
@@ -1264,6 +1275,7 @@ function syncCollapsiblePropsToChildren(node: ComponentNode): ComponentNode {
           category,
           props: { ...(reuseBtn?.props as Record<string, unknown> | undefined), text: triggerText },
         },
+        ...restTriggerChildren,
       ],
     });
   }

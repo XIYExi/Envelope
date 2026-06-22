@@ -5,6 +5,7 @@ import { cardMaterial, cardHeaderMaterial, cardContentMaterial, cardFooterMateri
 import { scrollAreaMaterial } from "./layout";
 import { aspectRatioMaterial } from "./layout";
 import { resizablePanelGroupMaterial, resizablePanelMaterial, resizableHandleMaterial } from "./layout";
+import { boxMaterial, flexMaterial, containerMaterial, gridMaterial } from "./layout";
 
 import { buttonMaterial, inputMaterial, labelMaterial } from "./form";
 import { textareaMaterial } from "./form";
@@ -69,6 +70,10 @@ export function createDefaultRegistry(): MaterialRegistry {
     resizablePanelGroupMaterial,
     internal(resizablePanelMaterial),
     internal(resizableHandleMaterial),
+    boxMaterial,
+    flexMaterial,
+    containerMaterial,
+    gridMaterial,
 
     // ========== 表单组件 ==========
     buttonMaterial,
