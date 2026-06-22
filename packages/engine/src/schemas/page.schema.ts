@@ -123,6 +123,17 @@ export interface PageSchema {
   layout?: string;
   /** 页面内边距（px），对应画布 padding */
   padding?: number;
+  /**
+   * 页面内容最大宽度（px）
+   *
+   * 用于在编辑器画布与最终渲染阶段约束“组件网格容器”的 max-width，
+   * 常见用途为实现“居中定宽内容区”的布局效果。
+   *
+   * @author xiye
+   * @date 2026/6/22
+   * @since 3.0.0
+   */
+  pageMaxWidth?: number;
   /** SEO 元数据 */
   metadata?: {
     /** 自定义标题 */
@@ -160,6 +171,8 @@ export const pageSchema: z.ZodType<PageSchema> = z.object({
   layout: z.string().optional(),
   /** 页面内边距 */
   padding: z.number().int().min(0).optional().default(16),
+  /** 页面内容最大宽度（px）；不设置表示不限制 */
+  pageMaxWidth: z.number().int().min(0).optional(),
   /** SEO 元数据，默认空对象 */
   metadata: z
     .object({

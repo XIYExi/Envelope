@@ -82,6 +82,17 @@ test.describe("/e2e/canvas", () => {
     await expect.poll(async () => (await readInput1Position(page)).h).toBeGreaterThan(before.h);
   });
 
+  test("pageMaxWidth：透传到 canvas-grid 的 max-width 样式", async ({ page }) => {
+    const grid = page.getByTestId("canvas-grid");
+    await expect(grid).toHaveCSS("max-width", "960px");
+
+    const input = page.getByTestId("e2e-page-max-width");
+    await input.fill("800");
+    await input.blur();
+
+    await expect(grid).toHaveCSS("max-width", "800px");
+  });
+
   test("平移画布 offset 变化", async ({ page }) => {
     await page.getByTestId("e2e-reset-view").click();
     const before = await readPanState(page);

@@ -6,6 +6,7 @@
  *
  * @author xiye
  * @date 2026-06-14
+ * @since 3.0.0
  */
 "use client";
 
@@ -39,8 +40,10 @@ import {
   LoaderCircle,
   Upload,
   RefreshCw,
+  Eye,
 } from "lucide-react";
 import type { CanvasState } from "@envelope/engine";
+import { PagePreviewDialog } from "./page-preview-dialog";
 
 /** 视口图标映射 */
 const viewportIcons: Record<CanvasState["viewport"], React.ReactNode> = {
@@ -120,6 +123,8 @@ export function EditorToolbar() {
   const archiveImportReconnectRef = useRef(0);
   const importFileInputRef = useRef<HTMLInputElement | null>(null);
   const archiveImportPingTimerRef = useRef<number | null>(null);
+
+  const [previewOpen, setPreviewOpen] = useState(false);
 
   const wsClientIdStorageKey = "envelope_task_ws_client_id";
   const sync = useProjectLocalSync(projectId, {
@@ -927,6 +932,17 @@ export function EditorToolbar() {
           <Button
             variant="outline"
             size="sm"
+            className="mr-1 h-7 text-[10px]"
+            data-testid="toolbar-preview-button"
+            onClick={() => setPreviewOpen(true)}
+            title="ISC-35 Preview"
+          >
+            <Eye className="mr-1 h-3 w-3" />
+            Preview
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
             className="h-7 text-[10px]"
             disabled={isSaving || !dirty}
             onClick={() => void flushAutosave()}
@@ -992,6 +1008,8 @@ export function EditorToolbar() {
           <Separator orientation="vertical" className="mx-1 h-5" />
         </>
       )}
+
+      <PagePreviewDialog open={previewOpen} onOpenChange={setPreviewOpen} />
 
       <ConfigArchiveExportDialog
         open={archiveExportDialogOpen}

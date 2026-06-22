@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import React from "react";
 import type { EditableProp } from "@envelope/materials";
@@ -140,5 +140,39 @@ describe("PropertyEditor（React）", () => {
     expect(onChange).toHaveBeenLastCalledWith("onSubmit", "flow-xyz");
 
     expect(screen.getByText("从 Flows 面板创建流程后，此处可选择绑定")).toBeInTheDocument();
+  });
+
+  it("image 字段支持选择文件并上传后写回 url（关键分支）", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ key: "uploads/2026/06/demo.png", url: "/api/media/uploads/2026/06/demo.png" }), {
+        status: 201,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const editableProps: EditableProp[] = [
+      { key: "image", label: "图片", type: "image", group: "General", order: 1 },
+    ];
+
+    render(
+      <PropertyEditorHarness
+        editableProps={editableProps}
+        initialValues={{ image: "" }}
+        onChangeSpy={onChange}
+      />,
+    );
+
+    const input = screen.getByLabelText("图片-文件选择") as HTMLInputElement;
+    const file = new File([new Uint8Array([1, 2, 3])], "demo.png", { type: "image/png" });
+    await user.upload(input, file);
+
+    await waitFor(() => {
+      expect(onChange).toHaveBeenLastCalledWith("image", "/api/media/uploads/2026/06/demo.png");
+    });
+
+    vi.unstubAllGlobals();
   });
 });

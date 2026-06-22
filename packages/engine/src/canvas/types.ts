@@ -61,6 +61,7 @@ export interface CanvasSnapshot {
   panY: number;
   pageBackground: string;
   pagePadding: number;
+  pageMaxWidth: number | null;
 }
 
 export type CanvasClipboardItem =
@@ -107,6 +108,8 @@ export interface CanvasState {
   pageBackground: string;
   /** 页面内边距（px） */
   pagePadding: number;
+  /** 页面内容最大宽度（px）；null 表示不限制 */
+  pageMaxWidth: number | null;
 
   /** 内部剪贴板（用于 Cut/Copy/Paste 闭环） */
   clipboard: CanvasClipboard | null;
@@ -155,6 +158,8 @@ export interface CanvasActions {
   setPageBackground: (color: string) => void;
   /** 设置页面内边距 */
   setPagePadding: (padding: number) => void;
+  /** 设置页面内容最大宽度（px）；传 null 表示不限制 */
+  setPageMaxWidth: (maxWidth: number | null) => void;
   /** 复制当前选中内容到内部剪贴板 */
   copySelected: () => void;
   /** 剪切当前选中内容到内部剪贴板 */

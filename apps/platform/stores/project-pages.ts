@@ -33,7 +33,7 @@ interface ProjectPagesActions {
   flushAutosave: () => Promise<void>;
   cancelAutosave: () => void;
   setCurrentPath: (path: string) => void;
-  syncCurrentPageFromCanvas: (canvas: Pick<CanvasState, "components" | "pageBackground" | "pagePadding">) => void;
+  syncCurrentPageFromCanvas: (canvas: Pick<CanvasState, "components" | "pageBackground" | "pagePadding" | "pageMaxWidth">) => void;
   setInitializedProjectId: (projectId: string | null) => void;
   markClean: () => void;
   markDirty: () => void;
@@ -242,6 +242,7 @@ export const useProjectPagesStore = create<ProjectPagesState & ProjectPagesActio
                 ...p.schema,
                 components,
                 padding: canvas.pagePadding,
+                pageMaxWidth: canvas.pageMaxWidth ?? undefined,
                 background: {
                   ...(p.schema.background ?? {}),
                   color: canvas.pageBackground,

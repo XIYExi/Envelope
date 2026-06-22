@@ -8,6 +8,21 @@ export const avatarMaterial: MaterialDefinition = {
   icon: "UserCircle",
   supportsChildren: true,
   editableProps: [
+    /**
+     * Avatar 图片配置（ISC-38）
+     *
+     * 说明：
+     * - type=image 会在右侧属性面板生成“上传图片”控件；
+     * - key 选择 src，以便与 AvatarImage 的 src 属性保持一致；
+     * - Canvas 的 simulated 渲染器会优先读取 src/image 并回显图片。
+     */
+    {
+      key: "src",
+      label: "Image",
+      type: "image",
+      group: "Content",
+      order: 1,
+    },
     {
       key: "className",
       label: "Tailwind Classes",

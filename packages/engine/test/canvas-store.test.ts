@@ -33,6 +33,7 @@ function baseSnapshot(overrides: Partial<CanvasSnapshot> = {}): CanvasSnapshot {
     panY: 0,
     pageBackground: "#ffffff",
     pagePadding: 16,
+    pageMaxWidth: null,
     ...overrides,
   };
 }

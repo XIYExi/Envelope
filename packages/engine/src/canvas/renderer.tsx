@@ -56,6 +56,24 @@ function pstr(props: Record<string, unknown> | undefined, key: string, fallback:
 }
 
 /**
+ * 解析画布预览用的 Tailwind 类名
+ *
+ * 约定：
+ * - 真实来源为 ComponentNode.tailwindClasses
+ * - 为兼容旧数据，若 tailwindClasses 为空则回退读取 props.className
+ * - 渲染时仍然会与 CanvasRenderer 自身的交互样式（选中态边框等）做 twMerge 合并
+ *
+ * @author xiye
+ * @date 2026-06-22
+ * @since 3.0.0
+ */
+function getPreviewTailwindClasses(node: ComponentNode): string {
+  const canonical = typeof node.tailwindClasses === "string" ? node.tailwindClasses : "";
+  const legacy = typeof node.props?.["className"] === "string" ? String(node.props["className"]) : "";
+  return cn(canonical, legacy);
+}
+
+/**
  * 安全地从组件属性中提取数字值
  *
  * @param props - 组件属性对象（可能为 undefined）
@@ -379,10 +397,22 @@ function SimulatedContent({ comp }: { comp: CanvasComponent }) {
 
     // ===== Display components =====
     case "Avatar": {
+      /**
+       * Avatar 在画布编辑态使用 simulated 渲染：
+       * - 若 props.src / props.image 存在，则直接回显图片；
+       * - 否则回退为首字母（避免空白占位）。
+       *
+       * 备注：之所以同时兼容 src/image，是为了兼容历史 schema 与物料字段命名差异。
+       */
+      const src = pstr(props, "src", pstr(props, "image", ""));
       const initial = String(pstr(props, "label", pstr(props, "name", "?"))).charAt(0).toUpperCase();
       return (
-        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-muted">
-          <span className="text-xs font-medium text-muted-foreground">{initial}</span>
+        <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full bg-muted">
+          {src ? (
+            <img src={src} alt="Avatar" className="h-full w-full object-cover" />
+          ) : (
+            <span className="text-xs font-medium text-muted-foreground">{initial}</span>
+          )}
         </div>
       );
     }
@@ -404,8 +434,7 @@ function SimulatedContent({ comp }: { comp: CanvasComponent }) {
 
     // ===== Feedback components =====
     case "Skeleton": {
-      const className = pstr(props, "className", "h-4 w-full");
-      return <div className={cn("animate-pulse rounded bg-muted", className)} />;
+      return <div className="h-full w-full animate-pulse rounded bg-muted" />;
     }
 
     case "Alert": {
@@ -763,7 +792,14 @@ function SimulatedChildContent({ node }: { node: ComponentNode }) {
     case "Badge":
       return <span className="inline-flex rounded-full bg-primary/15 px-1.5 py-0 text-[10px] font-medium text-primary">{(props?.label as string) || "Badge"}</span>;
     case "Avatar":
-      return <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-muted text-[10px]">?</span>;
+      return (() => {
+        const src = pstr(props, "src", pstr(props, "image", ""));
+        return (
+          <span className="inline-flex h-6 w-6 items-center justify-center overflow-hidden rounded-full bg-muted text-[10px]">
+            {src ? <img src={src} alt="Avatar" className="h-full w-full object-cover" /> : "?"}
+          </span>
+        );
+      })();
     case "Separator":
       return <hr className="border-muted" />;
     case "Skeleton":
@@ -914,6 +950,7 @@ interface CanvasRendererProps {
   gridGap: number;
   pageBackground?: string;
   pagePadding?: number;
+  pageMaxWidth?: number | null;
 }
 
 /**
@@ -934,7 +971,7 @@ export const CanvasRenderer = forwardRef<HTMLDivElement, CanvasRendererProps>(
   function CanvasRenderer({
     components, selectedIds, onSelect, onClearSelection, onResize,
     zoom, viewportWidth, panX, panY, onPan, gridCols, gridGap,
-    pageBackground, pagePadding,
+    pageBackground, pagePadding, pageMaxWidth,
   }, ref) {
     const containerRef = useRef<HTMLDivElement>(null);
     const [isPanning, setIsPanning] = useState(false);
@@ -1039,11 +1076,16 @@ export const CanvasRenderer = forwardRef<HTMLDivElement, CanvasRendererProps>(
 
           {/* 组件网格 */}
           <div
+            data-testid="canvas-grid"
             className="relative grid"
             style={{
               gridTemplateColumns: `repeat(${gridCols}, 1fr)`,
               gap: `${gridGap}px`,
               padding: typeof pagePadding === "number" ? `${pagePadding}px` : undefined,
+              width: "100%",
+              marginLeft: "auto",
+              marginRight: "auto",
+              maxWidth: typeof pageMaxWidth === "number" && pageMaxWidth > 0 ? `${pageMaxWidth}px` : undefined,
             }}
           >
             {components.length === 0 && (
@@ -1062,6 +1104,7 @@ export const CanvasRenderer = forwardRef<HTMLDivElement, CanvasRendererProps>(
               const width = Math.max(1, Math.min(gridCols - x + 1, rawW));
               const height = Math.max(1, rawH);
               const isSelected = selectedIds.includes(comp.id);
+              const previewTailwind = getPreviewTailwindClasses(comp.node);
 
               return (
                 <div
@@ -1070,6 +1113,7 @@ export const CanvasRenderer = forwardRef<HTMLDivElement, CanvasRendererProps>(
                   data-canvas-comp-id={comp.id}
                   data-testid={`canvas-comp-${comp.id}`}
                   className={cn(
+                    previewTailwind,
                     "group relative rounded-md border-2 transition-all",
                     isSelected ? "border-blue-500 ring-2 ring-blue-200" : "border-transparent hover:border-blue-300",
                   )}

@@ -318,6 +318,7 @@ function takeSnapshot(state: CanvasState): CanvasSnapshot {
     panY: state.panY,
     pageBackground: state.pageBackground,
     pagePadding: state.pagePadding,
+    pageMaxWidth: state.pageMaxWidth,
   };
 }
 
@@ -353,6 +354,7 @@ export const useCanvasStore = create<CanvasState & CanvasActions>((set, get) => 
   panY: 0,
   pageBackground: "#ffffff",
   pagePadding: 16,
+  pageMaxWidth: null,
   clipboard: null,
   canUndo: false,
   canRedo: false,
@@ -699,6 +701,34 @@ export const useCanvasStore = create<CanvasState & CanvasActions>((set, get) => 
   setPagePadding: (pagePadding) => {
     set((state) => {
       const partial = { pagePadding };
+      if (batching) return partial;
+      const prev = takeSnapshot(state);
+      const next = takeSnapshot({ ...(state as CanvasState), ...partial });
+      if (snapshotEquals(prev, next)) return partial;
+      const past = [...state.historyPast, prev];
+      const limitedPast = past.length > state.historyLimit ? past.slice(past.length - state.historyLimit) : past;
+      lastCoalesceKey = null;
+      return { ...partial, historyPast: limitedPast, historyFuture: [], canUndo: limitedPast.length > 0, canRedo: false };
+    });
+  },
+  /**
+   * 设置页面内容最大宽度（px）
+   *
+   * 约定：
+   * - 传入 null / 非正数 / 非有限值：表示不限制（渲染层不设置 max-width）
+   * - 传入正数：会向下取整，避免出现小数像素导致的布局抖动
+   *
+   * @author xiye
+   * @date 2026-06-22
+   * @since 3.0.0
+   */
+  setPageMaxWidth: (pageMaxWidth) => {
+    set((state) => {
+      const normalized =
+        typeof pageMaxWidth === "number" && Number.isFinite(pageMaxWidth) && pageMaxWidth > 0
+          ? Math.floor(pageMaxWidth)
+          : null;
+      const partial = { pageMaxWidth: normalized };
       if (batching) return partial;
       const prev = takeSnapshot(state);
       const next = takeSnapshot({ ...(state as CanvasState), ...partial });
@@ -1144,6 +1174,7 @@ export const useCanvasStore = create<CanvasState & CanvasActions>((set, get) => 
       ...partial,
       selectedIds: partial.selectedIds ?? [],
       activeNodeId: partial.activeNodeId ?? null,
+      pageMaxWidth: partial.pageMaxWidth ?? null,
       historyPast: [],
       historyFuture: [],
       canUndo: false,

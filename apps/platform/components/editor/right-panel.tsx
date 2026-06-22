@@ -45,7 +45,7 @@ interface RightPanelProps {
 export function RightPanel({ collapsed }: RightPanelProps) {
   const {
     zoom, setZoom, components, selectedIds, activeNodeId,
-    setPageBackground, pageBackground, pagePadding, setPagePadding,
+    setPageBackground, pageBackground, pagePadding, setPagePadding, pageMaxWidth, setPageMaxWidth,
     updateNode,
   } = useCanvasStore();
 
@@ -85,12 +85,23 @@ export function RightPanel({ collapsed }: RightPanelProps) {
 
   const editorValues = useMemo(() => {
     if (!active) return {};
-    return {
+    const merged: Record<string, unknown> = {
       ...(active.props ?? {}),
       ...(active.dataBindings ?? {}),
       ...(active.eventBindings ?? {}),
-    } as Record<string, unknown>;
-  }, [active]);
+    };
+
+    const legacyClassName = typeof active.props?.["className"] === "string" ? String(active.props["className"]) : "";
+    const canonical = typeof active.tailwindClasses === "string" ? active.tailwindClasses : "";
+    const effective = (canonical || legacyClassName).trim();
+
+    for (const p of material?.editableProps ?? []) {
+      if (p.type !== "tailwind") continue;
+      merged[p.key] = effective;
+    }
+
+    return merged;
+  }, [active, material]);
 
   /**
    * 属性变更处理
@@ -103,6 +114,34 @@ export function RightPanel({ collapsed }: RightPanelProps) {
       const node = activeNodeRef.current;
       if (!node) return;
       const type = editableKeyTypeMapRef.current.get(key);
+
+      /**
+       * Tailwind 字段写入策略
+       *
+       * - 真实存储位置：ComponentNode.tailwindClasses
+       * - 兼容旧物料：materials 仍可能使用 key=className
+       * - 迁移策略：一旦用户编辑 Tailwind 字段，会同步清理 props.className，避免双源漂移
+       *
+       * @author xiye
+       * @date 2026-06-22
+       * @since 3.0.0
+       */
+      if (type === "tailwind") {
+        const nextRaw = typeof value === "string" ? value : "";
+        const nextTrim = nextRaw.trim();
+        const nextTailwindClasses = nextTrim.length > 0 ? nextTrim : undefined;
+
+        const currentProps = node.props ?? {};
+        if (Object.prototype.hasOwnProperty.call(currentProps, "className")) {
+          const nextProps = { ...currentProps };
+          delete nextProps["className"];
+          updateNode(node.id, { tailwindClasses: nextTailwindClasses, props: Object.keys(nextProps).length > 0 ? nextProps : undefined });
+          return;
+        }
+
+        updateNode(node.id, { tailwindClasses: nextTailwindClasses });
+        return;
+      }
 
       if (type === "dataBinding") {
         const current = node.dataBindings ?? {};
@@ -287,6 +326,25 @@ export function RightPanel({ collapsed }: RightPanelProps) {
             <option value="16">Medium (16px)</option>
             <option value="24">Large (24px)</option>
             <option value="32">X-Large (32px)</option>
+          </select>
+        </div>
+
+        <div>
+          <label className="mb-1 block text-[10px] font-medium text-muted-foreground">Max Width</label>
+          <select
+            value={pageMaxWidth === null ? "" : String(pageMaxWidth)}
+            onChange={(e) => {
+              const raw = e.target.value;
+              setPageMaxWidth(raw === "" ? null : Number(raw));
+            }}
+            className="h-7 w-full rounded border bg-background px-2 text-xs"
+          >
+            <option value="">Auto</option>
+            <option value="640">640px</option>
+            <option value="768">768px</option>
+            <option value="1024">1024px</option>
+            <option value="1280">1280px</option>
+            <option value="1440">1440px</option>
           </select>
         </div>
       </div>

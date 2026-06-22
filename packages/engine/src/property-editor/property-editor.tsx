@@ -5,12 +5,13 @@
  * radio、image、richText、json、code、icon、tailwind、dataBinding、eventBinding
  *
  * @author xiye
- * @date 2026-06-14
+ * @date 2026-06-22
+ * @since ISC-38（image 字段支持文件上传并回填 url）
  */
 
 "use client";
 
-import { type ChangeEvent } from "react";
+import { useRef, useState } from "react";
 import type { EditableProp } from "@envelope/materials";
 
 /**
@@ -208,16 +209,80 @@ function RadioField({ prop, value, onChange }: FieldWrapperProps) {
 
 /** 图片字段 —— URL 文本输入 + 背景图预览 */
 function ImageField({ prop, value, onChange }: FieldWrapperProps) {
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+
+  /**
+   * 选择文件后立即上传到宿主应用的 `/api/media/upload`，并将返回的 url 写回 image 字段。
+   *
+   * @author xiye
+   * @date 2026-06-22
+   * @since ISC-38
+   */
+  async function uploadFile(file: File) {
+    setUploading(true);
+    setUploadError(null);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const response = await fetch("/api/media/upload", {
+        method: "POST",
+        body: formData,
+      });
+      if (!response.ok) {
+        const payload = await response.text().catch(() => "");
+        throw new Error(payload || `Upload failed: ${response.status}`);
+      }
+      const data = (await response.json()) as { url?: unknown };
+      if (!data || typeof data.url !== "string" || data.url.length === 0) {
+        throw new Error("Invalid upload response");
+      }
+      onChange(prop.key, data.url);
+    } catch (error) {
+      console.error("[PropertyEditor] image upload failed:", error);
+      setUploadError("上传失败，请重试");
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    }
+  }
+
   return (
     <div>
       <FieldLabel label={prop.label} required={prop.required} comment={prop.comment} />
-      <input
-        type="text"
-        value={typeof value === "string" ? value : ""}
-        placeholder={prop.placeholder ?? "https://..."}
-        onChange={(e) => onChange(prop.key, e.target.value)}
-        className="h-7 w-full rounded border bg-background px-2 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
-      />
+      <div className="flex gap-2">
+        <input
+          type="text"
+          value={typeof value === "string" ? value : ""}
+          placeholder={prop.placeholder ?? "https://..."}
+          onChange={(e) => onChange(prop.key, e.target.value)}
+          className="h-7 flex-1 rounded border bg-background px-2 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
+        />
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          aria-label={`${prop.label}-文件选择`}
+          className="hidden"
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (!file) return;
+            void uploadFile(file);
+          }}
+        />
+        <button
+          type="button"
+          disabled={uploading}
+          onClick={() => fileInputRef.current?.click()}
+          className="h-7 shrink-0 rounded border bg-background px-2 text-xs hover:bg-muted disabled:opacity-60"
+        >
+          {uploading ? "上传中..." : "上传图片"}
+        </button>
+      </div>
+      {uploadError && <p className="mt-0.5 text-[9px] text-destructive">{uploadError}</p>}
       {typeof value === "string" && value.length > 0 && (
         <div className="mt-1 h-12 w-full rounded border bg-muted/30 bg-cover bg-center" style={{ backgroundImage: `url(${value})` }} />
       )}

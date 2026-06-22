@@ -40,7 +40,7 @@ const CanvasDropZone = memo(function CanvasDropZone() {
   const {
     components, selectedIds, selectComponent, clearSelection,
     zoom, viewport, panX, panY, gridCols, gridGap,
-    pageBackground, pagePadding,
+    pageBackground, pagePadding, pageMaxWidth,
     resizeComponent, setZoom, setPan,
   } = useCanvasStore();
 
@@ -101,6 +101,7 @@ const CanvasDropZone = memo(function CanvasDropZone() {
         gridGap={gridGap}
         pageBackground={pageBackground}
         pagePadding={pagePadding}
+        pageMaxWidth={pageMaxWidth}
       />
     </div>
   );
@@ -134,6 +135,7 @@ export function EditorLayout() {
     moveNode,
     pageBackground,
     pagePadding,
+    pageMaxWidth,
   } = useCanvasStore();
   const isPageMode = editorMode === "pages";
 
@@ -309,6 +311,7 @@ export function EditorLayout() {
       const hydratePartial: Partial<CanvasSnapshot> = { components: canvasComponents, selectedIds: [] };
       if (current.schema.background?.color) hydratePartial.pageBackground = current.schema.background.color;
       if (typeof current.schema.padding === "number") hydratePartial.pagePadding = current.schema.padding;
+      hydratePartial.pageMaxWidth = typeof current.schema.pageMaxWidth === "number" && current.schema.pageMaxWidth > 0 ? current.schema.pageMaxWidth : null;
       useCanvasStore.getState().hydrate(hydratePartial);
     } finally {
       hydratingRef.current = false;
@@ -323,9 +326,9 @@ export function EditorLayout() {
       skipNextSyncRef.current = false;
       return;
     }
-    useProjectPagesStore.getState().syncCurrentPageFromCanvas({ components, pageBackground, pagePadding });
+    useProjectPagesStore.getState().syncCurrentPageFromCanvas({ components, pageBackground, pagePadding, pageMaxWidth });
     useProjectPagesStore.getState().scheduleAutosave(30_000);
-  }, [components, isPageMode, pageBackground, pagePadding]);
+  }, [components, isPageMode, pageBackground, pagePadding, pageMaxWidth]);
 
   // 全局键盘快捷键（仅当不在输入框内且处于 pages 模式时生效）
   useEffect(() => {

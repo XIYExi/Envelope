@@ -115,6 +115,7 @@ export default function E2ECanvasPage() {
   const [panX, setPanX] = useState<number>(0);
   const [panY, setPanY] = useState<number>(0);
   const [viewportWidth, setViewportWidth] = useState<number>(1440);
+  const [pageMaxWidth, setPageMaxWidth] = useState<number>(960);
 
   const rendererRef = useRef<HTMLDivElement>(null);
 
@@ -280,6 +281,7 @@ export default function E2ECanvasPage() {
               setPanX(0);
               setPanY(0);
               setViewportWidth(1440);
+              setPageMaxWidth(960);
             }}
           >
             重置数据
@@ -297,6 +299,19 @@ export default function E2ECanvasPage() {
               onChange={(e) => setViewportWidth(Number(e.target.value))}
             />
           </label>
+
+          <label className="ml-2 inline-flex items-center gap-2 text-xs text-muted-foreground">
+            页面最大宽度
+            <input
+              data-testid="e2e-page-max-width"
+              className="h-8 w-24 rounded-md border bg-background px-2 text-xs text-foreground"
+              type="number"
+              min={0}
+              max={1920}
+              value={pageMaxWidth}
+              onChange={(e) => setPageMaxWidth(Number(e.target.value))}
+            />
+          </label>
         </div>
       </div>
 
@@ -307,6 +322,7 @@ export default function E2ECanvasPage() {
             <div data-testid="e2e-state-selected">selectedIds: {selectedIds.length === 0 ? "[]" : JSON.stringify(selectedIds)}</div>
             <div data-testid="e2e-state-zoom">zoom: {zoom.toFixed(3)}</div>
             <div data-testid="e2e-state-pan">pan: ({Math.round(panX)}, {Math.round(panY)})</div>
+            <div data-testid="e2e-state-page-max-width">pageMaxWidth: {pageMaxWidth}</div>
             <div data-testid="e2e-state-input-1">
               e2e-input-1: {input1Position ? `x=${input1Position.x}, y=${input1Position.y}, w=${input1Position.width}, h=${input1Position.height}` : "null"}
             </div>
@@ -338,6 +354,7 @@ export default function E2ECanvasPage() {
             gridGap={gridGap}
             pageBackground="#ffffff"
             pagePadding={16}
+            pageMaxWidth={pageMaxWidth}
           />
         </div>
       </div>

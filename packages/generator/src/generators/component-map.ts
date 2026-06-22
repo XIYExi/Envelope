@@ -76,12 +76,24 @@ function comment(comp: ComponentNode, indent: string): string {
 }
 
 /**
- * 组合 tailwindClasses 和额外类名
+ * 组合 Tailwind 类名（含兼容逻辑）
+ *
+ * 约定：
+ * - 生成代码以 ComponentNode.tailwindClasses 为准；
+ * - 为兼容旧页面 schema / 旧物料写入方式，会回退合并 props.className；
+ * - extra 用于生成器内部追加基础布局类（如 flex/grid）。
+ *
+ * @author xiye
+ * @date 2026-06-22
+ * @since 3.0.0
  */
 function cx(comp: ComponentNode, extra = ""): string {
   const tw = comp.tailwindClasses || "";
-  if (!tw && !extra) return "";
-  return [tw, extra].filter(Boolean).join(" ");
+  const legacy = typeof (comp.props as Record<string, unknown> | undefined)?.["className"] === "string"
+    ? String((comp.props as Record<string, unknown>)["className"])
+    : "";
+  if (!legacy && !tw && !extra) return "";
+  return [legacy, tw, extra].filter(Boolean).join(" ");
 }
 
 function eventAttrs(comp: ComponentNode): string[] {
