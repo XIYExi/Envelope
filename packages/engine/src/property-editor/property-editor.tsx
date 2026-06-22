@@ -360,8 +360,48 @@ function IconField({ prop, value, onChange }: FieldWrapperProps) {
   );
 }
 
+/** 简单的 class 合并工具 */
+function cn(...inputs: (string | boolean | undefined | null)[]): string {
+  return inputs.filter(Boolean).join(" ");
+}
+
+/** Tailwind 常用 class 分类预设，供快捷插入面板使用 */
+const TAILWIND_CATEGORIES = [
+  {
+    id: "spacing",
+    label: "间距",
+    classes: ["p-2", "p-4", "p-6", "px-4", "py-2", "m-2", "m-4", "gap-2", "gap-4", "space-y-2", "space-x-2"],
+  },
+  {
+    id: "color",
+    label: "颜色",
+    classes: ["text-primary", "text-muted-foreground", "bg-background", "bg-muted", "bg-accent", "border", "border-muted"],
+  },
+  {
+    id: "typography",
+    label: "排版",
+    classes: ["text-xs", "text-sm", "text-base", "text-lg", "text-xl", "font-normal", "font-medium", "font-semibold", "font-bold", "text-center", "text-left"],
+  },
+  {
+    id: "layout",
+    label: "布局",
+    classes: ["flex", "grid", "items-center", "justify-center", "flex-col", "flex-wrap", "w-full", "h-full", "rounded", "shadow-sm", "shadow-md"],
+  },
+];
+
 function TailwindField({ prop, value, onChange }: FieldWrapperProps) {
   const classes = typeof value === "string" ? value : "";
+  /** 当前展开的 Tailwind class 分类 id，null 表示全部收起 */
+  const [activeCategory, setActiveCategory] = useState<string | null>(null);
+
+  /** 将 class 追加到输入值中，已存在则跳过 */
+  const handleAddClass = useCallback((cls: string) => {
+    const currentSet = new Set(classes.trim().split(/\s+/).filter(Boolean));
+    if (currentSet.has(cls)) return;
+    const next = (classes.trim() + " " + cls).trim();
+    onChange(prop.key, next);
+  }, [classes, onChange]);
+
   return (
     <div>
       <FieldLabel label={prop.label} required={prop.required} comment={prop.comment} />
@@ -372,6 +412,51 @@ function TailwindField({ prop, value, onChange }: FieldWrapperProps) {
         onChange={(e) => onChange(prop.key, e.target.value)}
         className="h-7 w-full rounded border bg-background px-2 font-mono text-[10px] focus:outline-none focus:ring-1 focus:ring-blue-500"
       />
+
+      {/* Tailwind 常用 class 分类快捷插入面板 */}
+      <div className="mt-1.5 flex flex-wrap gap-1">
+        {TAILWIND_CATEGORIES.map((cat) => (
+          <button
+            key={cat.id}
+            type="button"
+            onClick={() => setActiveCategory(activeCategory === cat.id ? null : cat.id)}
+            className={cn(
+              "rounded px-1.5 py-0.5 text-[9px] transition-colors",
+              activeCategory === cat.id
+                ? "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300"
+                : "bg-muted text-muted-foreground hover:bg-accent",
+            )}
+          >
+            {cat.label}
+          </button>
+        ))}
+      </div>
+
+      {/* 当前展开分类的 class 快捷按钮列表 */}
+      {activeCategory && (
+        <div className="mt-1 flex flex-wrap gap-0.5">
+          {TAILWIND_CATEGORIES.find((c) => c.id === activeCategory)?.classes.map((cls) => {
+            const isActive = classes.trim().split(/\s+/).includes(cls);
+            return (
+              <button
+                key={cls}
+                type="button"
+                onClick={() => handleAddClass(cls)}
+                className={cn(
+                  "rounded px-1 py-0.5 font-mono text-[9px] transition-colors",
+                  isActive
+                    ? "bg-blue-500 text-white"
+                    : "bg-muted/60 text-muted-foreground hover:bg-accent",
+                )}
+              >
+                {cls}
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      {/* 已输入的 class chip 列表（保留原逻辑） */}
       {classes && (
         <div className="mt-1 space-y-0.5">
           {classes.split(/\s+/).filter(Boolean).slice(0, 8).map((cls, i) => (
