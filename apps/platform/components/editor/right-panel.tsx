@@ -16,6 +16,17 @@ import { useFlowBindingStore } from "@envelope/flow";
 import { cn } from "@/lib/utils";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import type { ComponentNode, CanvasComponent } from "@envelope/engine";
+
+function findNodeById(root: ComponentNode, targetId: string): ComponentNode | null {
+  if (root.id === targetId) return root;
+  const children = root.children ?? [];
+  for (const c of children) {
+    const found = findNodeById(c, targetId);
+    if (found) return found;
+  }
+  return null;
+}
 
 /** 右侧面板 Props */
 interface RightPanelProps {
@@ -33,26 +44,35 @@ interface RightPanelProps {
  */
 export function RightPanel({ collapsed }: RightPanelProps) {
   const {
-    zoom, setZoom, components, selectedIds,
+    zoom, setZoom, components, selectedIds, activeNodeId,
     setPageBackground, pageBackground, pagePadding, setPagePadding,
-    updateComponent,
+    updateNode,
   } = useCanvasStore();
 
   const flowList = useFlowBindingStore((s) => s.flowList);
 
   const selected = components.filter((c) => selectedIds.includes(c.id));
-  const selectedComp = selected.length === 1 ? selected[0] : null;
+  const selectedRoot = selected.length >= 1 ? selected[0] : null;
 
-  // 用 ref 持有最新的 selectedComp，避免 handlePropChange/handleNameChange 的依赖变化
-  const selectedCompRef = useRef(selectedComp);
-  selectedCompRef.current = selectedComp;
+  const active = useMemo(() => {
+    if (!activeNodeId || !selectedRoot) return null;
+    return findNodeById(selectedRoot.node, activeNodeId);
+  }, [activeNodeId, selectedRoot]);
+
+  const activeRootComp: CanvasComponent | null = useMemo(() => {
+    if (!selectedRoot) return null;
+    return selectedRoot;
+  }, [selectedRoot]);
+
+  const activeNodeRef = useRef(active);
+  activeNodeRef.current = active;
 
   const registry = useMemo(() => createDefaultRegistry(), []);
 
   const material = useMemo(() => {
-    if (!selectedComp) return null;
-    return registry.get(selectedComp.node.type) ?? null;
-  }, [selectedComp, registry]);
+    if (!active) return null;
+    return registry.get(active.type) ?? null;
+  }, [active, registry]);
 
   const editableKeyTypeMapRef = useRef<Map<string, string>>(new Map());
   editableKeyTypeMapRef.current = useMemo(() => {
@@ -64,13 +84,13 @@ export function RightPanel({ collapsed }: RightPanelProps) {
   }, [material]);
 
   const editorValues = useMemo(() => {
-    if (!selectedComp) return {};
+    if (!active) return {};
     return {
-      ...(selectedComp.node.props ?? {}),
-      ...(selectedComp.node.dataBindings ?? {}),
-      ...(selectedComp.node.eventBindings ?? {}),
+      ...(active.props ?? {}),
+      ...(active.dataBindings ?? {}),
+      ...(active.eventBindings ?? {}),
     } as Record<string, unknown>;
-  }, [selectedComp]);
+  }, [active]);
 
   /**
    * 属性变更处理
@@ -80,60 +100,44 @@ export function RightPanel({ collapsed }: RightPanelProps) {
    */
   const handlePropChange = useCallback(
     (key: string, value: unknown) => {
-      const comp = selectedCompRef.current;
-      if (!comp) return;
+      const node = activeNodeRef.current;
+      if (!node) return;
       const type = editableKeyTypeMapRef.current.get(key);
 
       if (type === "dataBinding") {
-        const current = comp.node.dataBindings ?? {};
+        const current = node.dataBindings ?? {};
         const next = { ...current };
         if (typeof value === "string" && value.trim().length > 0) {
           next[key] = value;
         } else {
           delete next[key];
         }
-        updateComponent(comp.id, {
-          node: {
-            ...comp.node,
-            dataBindings: Object.keys(next).length > 0 ? next : undefined,
-          },
-        });
+        updateNode(node.id, { dataBindings: Object.keys(next).length > 0 ? next : undefined });
         return;
       }
 
       if (type === "eventBinding") {
-        const current = comp.node.eventBindings ?? {};
+        const current = node.eventBindings ?? {};
         const next = { ...current };
         if (typeof value === "string" && value.trim().length > 0) {
           next[key] = value;
         } else {
           delete next[key];
         }
-        updateComponent(comp.id, {
-          node: {
-            ...comp.node,
-            eventBindings: Object.keys(next).length > 0 ? next : undefined,
-          },
-        });
+        updateNode(node.id, { eventBindings: Object.keys(next).length > 0 ? next : undefined });
         return;
       }
 
-      const currentProps = comp.node.props ?? {};
+      const currentProps = node.props ?? {};
       const nextProps = { ...currentProps };
       if (value === undefined) {
         delete nextProps[key];
       } else {
         nextProps[key] = value;
       }
-
-      updateComponent(comp.id, {
-        node: {
-          ...comp.node,
-          props: Object.keys(nextProps).length > 0 ? nextProps : undefined,
-        },
-      });
+      updateNode(node.id, { props: Object.keys(nextProps).length > 0 ? nextProps : undefined });
     },
-    [updateComponent],
+    [updateNode],
   );
 
   /**
@@ -141,20 +145,16 @@ export function RightPanel({ collapsed }: RightPanelProps) {
    */
   const handleNameChange = useCallback(
     (name: string) => {
-      const comp = selectedCompRef.current;
-      if (!comp) return;
-      updateComponent(comp.id, {
-        node: {
-          ...comp.node,
-          name,
-        },
-      });
+      const node = activeNodeRef.current;
+      if (!node) return;
+      updateNode(node.id, { name });
     },
-    [updateComponent],
+    [updateNode],
   );
 
   return (
     <div
+      data-testid="right-panel"
       className={cn(
         "flex flex-col border-l bg-background transition-all duration-200",
         collapsed ? "w-0 overflow-hidden border-l-0" : "w-72",
@@ -168,7 +168,7 @@ export function RightPanel({ collapsed }: RightPanelProps) {
       </div>
 
       <ScrollArea className="flex-1">
-        {selectedComp ? (
+        {active && activeRootComp ? (
           <div className="space-y-4 p-3">
             {/* 组件标识区 */}
             <div className="space-y-3">
@@ -176,7 +176,7 @@ export function RightPanel({ collapsed }: RightPanelProps) {
                 <label className="mb-1 block text-[10px] font-medium text-muted-foreground">Component ID</label>
                 <input
                   type="text"
-                  value={selectedComp.id.slice(0, 16)}
+                  value={active.id.slice(0, 16)}
                   disabled
                   className="h-7 w-full rounded border bg-muted/30 px-2 font-mono text-[10px] text-muted-foreground"
                 />
@@ -185,8 +185,8 @@ export function RightPanel({ collapsed }: RightPanelProps) {
                 <label className="mb-1 block text-[10px] font-medium text-muted-foreground">Component Name</label>
                 <input
                   type="text"
-                  value={selectedComp.node.name ?? ""}
-                  placeholder={`${selectedComp.node.type}-${selectedComp.id.slice(0, 8)}`}
+                  value={active.name ?? ""}
+                  placeholder={`${active.type}-${active.id.slice(0, 8)}`}
                   onChange={(e) => handleNameChange(e.target.value)}
                   className="h-7 w-full rounded border bg-background px-2 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
                 />
@@ -196,22 +196,28 @@ export function RightPanel({ collapsed }: RightPanelProps) {
             <Separator />
 
             {/* 布局位置信息（只读） */}
-            <div>
-              <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Layout</label>
-              <div className="grid grid-cols-2 gap-1">
-                {([
-                  ["Col", selectedComp.position.x],
-                  ["Row", selectedComp.position.y],
-                  ["Width", selectedComp.position.width],
-                  ["Height", selectedComp.position.height],
-                ] as const).map(([label, value]) => (
-                  <div key={label} className="rounded border bg-muted/30 px-2 py-0.5">
-                    <span className="block text-[9px] text-muted-foreground">{label}</span>
-                    <span className="text-[10px] font-medium">{value}</span>
-                  </div>
-                ))}
+            {activeRootComp.id === active.id ? (
+              <div>
+                <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Layout</label>
+                <div className="grid grid-cols-2 gap-1">
+                  {([
+                    ["Col", activeRootComp.position.x],
+                    ["Row", activeRootComp.position.y],
+                    ["Width", activeRootComp.position.width],
+                    ["Height", activeRootComp.position.height],
+                  ] as const).map(([label, value]) => (
+                    <div key={label} className="rounded border bg-muted/30 px-2 py-0.5">
+                      <span className="block text-[9px] text-muted-foreground">{label}</span>
+                      <span className="text-[10px] font-medium">{value}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
-            </div>
+            ) : (
+              <div className="rounded border bg-muted/20 px-2 py-2 text-[10px] text-muted-foreground">
+                当前为嵌套节点（children），不参与 Grid 布局。
+              </div>
+            )}
 
             <Separator />
 

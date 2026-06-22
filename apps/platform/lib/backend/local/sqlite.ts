@@ -44,7 +44,18 @@ function ensureParentDir(filePath: string) {
 export function ensureLocalBackendFilesystem(config: RuntimeBackendConfig) {
   if (config.mode !== "local") return;
   ensureParentDir(config.sqlitePath);
-  fs.mkdirSync(config.mediaRoot, { recursive: true });
+  try {
+    fs.mkdirSync(config.mediaRoot, { recursive: true });
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException)?.code !== "EPERM") {
+      throw error;
+    }
+    /**
+     * Windows 某些沙箱/受限运行环境下，会拒绝在默认媒体目录提前建空目录。
+     * 项目列表等只读链路并不依赖 mediaRoot，因此这里允许延迟到真正写媒体文件时再创建，
+     * 避免本地 SQLite 已可用时仍被无关目录初始化阻断。
+     */
+  }
 }
 
 /**

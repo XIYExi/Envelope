@@ -7,6 +7,10 @@ export const selectMaterial: MaterialDefinition = {
   category: "form",
   icon: "ChevronDown",
   supportsChildren: true,
+  defaultProps: {
+    options: ["Option 1", "Option 2", "Option 3"],
+    selectedIndex: -1,
+  },
   editableProps: [
     {
       key: "placeholder",
@@ -31,6 +35,22 @@ export const selectMaterial: MaterialDefinition = {
       defaultValue: false,
       group: "Validation",
       order: 3,
+    },
+    {
+      key: "options",
+      label: "Options",
+      type: "json",
+      defaultValue: ["Option 1", "Option 2", "Option 3"],
+      group: "Slots",
+      order: 4,
+    },
+    {
+      key: "selectedIndex",
+      label: "Selected Index",
+      type: "number",
+      defaultValue: -1,
+      group: "Slots",
+      order: 5,
     },
     {
       key: "className",

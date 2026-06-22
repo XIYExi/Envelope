@@ -1,1 +1,1 @@
-export { avatarMaterial, badgeMaterial } from "./display";
+export { avatarMaterial, badgeMaterial, textMaterial } from "./display";

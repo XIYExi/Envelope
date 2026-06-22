@@ -51,6 +51,8 @@ export interface CanvasComponent {
 export interface CanvasSnapshot {
   components: CanvasComponent[];
   selectedIds: string[];
+  /** 当前“主选中”的节点 ID（用于属性面板、剪贴板等单目标操作） */
+  activeNodeId: string | null;
   zoom: number;
   viewport: CanvasState["viewport"];
   gridCols: number;
@@ -59,6 +61,21 @@ export interface CanvasSnapshot {
   panY: number;
   pageBackground: string;
   pagePadding: number;
+}
+
+export type CanvasClipboardItem =
+  | {
+      kind: "canvas-component";
+      component: CanvasComponent;
+    }
+  | {
+      kind: "component-node";
+      node: ComponentNode;
+    };
+
+export interface CanvasClipboard {
+  mode: "copy" | "cut";
+  items: CanvasClipboardItem[];
 }
 
 /**
@@ -72,6 +89,8 @@ export interface CanvasState {
   components: CanvasComponent[];
   /** 当前选中的组件 ID 列表 */
   selectedIds: string[];
+  /** 当前“主选中”的节点 ID（可指向根组件或任意嵌套子节点） */
+  activeNodeId: string | null;
   /** 缩放比例（0.25 ~ 2.0） */
   zoom: number;
   /** 视口类型（移动端/平板/桌面/自适应） */
@@ -88,6 +107,9 @@ export interface CanvasState {
   pageBackground: string;
   /** 页面内边距（px） */
   pagePadding: number;
+
+  /** 内部剪贴板（用于 Cut/Copy/Paste 闭环） */
+  clipboard: CanvasClipboard | null;
 
   canUndo: boolean;
   canRedo: boolean;
@@ -111,6 +133,8 @@ export interface CanvasActions {
   updateComponent: (id: string, updates: Partial<Omit<CanvasComponent, "id">>) => void;
   /** 选中（或取消选中）一个组件，multi 为 true 时支持多选 */
   selectComponent: (id: string, multi?: boolean) => void;
+  /** 选中组件树中的任意节点（会自动联动根组件选中态） */
+  selectNode: (nodeId: string) => void;
   /** 清除所有选中状态 */
   clearSelection: () => void;
   /** 移动组件到指定网格位置（x, y 自动钳制到有效范围） */
@@ -131,8 +155,18 @@ export interface CanvasActions {
   setPageBackground: (color: string) => void;
   /** 设置页面内边距 */
   setPagePadding: (padding: number) => void;
-  /** 复制当前选中的组件 */
+  /** 复制当前选中内容到内部剪贴板 */
   copySelected: () => void;
+  /** 剪切当前选中内容到内部剪贴板 */
+  cutSelected: () => void;
+  /** 将内部剪贴板内容粘贴到目标位置（不传则按当前选中推断） */
+  pasteClipboard: (target?: { parentId: string | null; index?: number }) => void;
+  /** 将一个新节点插入到目标位置（支持 root 与嵌套插入） */
+  insertNode: (node: ComponentNode, target: { parentId: string | null; index?: number }) => void;
+  /** 在组件树中移动/重排节点（支持 root ↔ 嵌套） */
+  moveNode: (nodeId: string, target: { parentId: string | null; index?: number }) => void;
+  /** 更新组件树中的任意节点（根或嵌套） */
+  updateNode: (nodeId: string, updates: Partial<Omit<ComponentNode, "id">>) => void;
   /** 删除当前选中的组件 */
   deleteSelected: () => void;
   /** 清空画布上的所有组件 */

@@ -21,6 +21,7 @@ import { forwardRef, useCallback, useRef, useState, useEffect, type CSSPropertie
 import { twMerge } from "tailwind-merge";
 import type { CanvasComponent } from "./types";
 import { calcResizeNext, snapGridDelta, type ResizeDirection } from "./resize-utils";
+import type { ComponentNode } from "../schemas/page.schema";
 
 /** 单个网格单元格的渲染高度（px），对应 CSS Grid 的隐式行高 */
 const CELL_HEIGHT = 40;
@@ -78,6 +79,11 @@ function pbool(props: Record<string, unknown> | undefined, key: string): boolean
   return !!props?.[key];
 }
 
+function parr<T = unknown>(props: Record<string, unknown> | undefined, key: string, fallback: T[]): T[] {
+  const v = props?.[key];
+  return Array.isArray(v) ? (v as T[]) : fallback;
+}
+
 /**
  * 模拟组件视觉呈现
  *
@@ -93,12 +99,32 @@ function SimulatedContent({ comp }: { comp: CanvasComponent }) {
   switch (type) {
     // ===== Container components =====
     case "Card":
-      return (
-        <div className="flex h-full flex-col rounded-lg border bg-card p-3">
-          <div className="mb-1 text-xs font-semibold text-muted-foreground">{pstr(props, "label", "Card")}</div>
-          <div className="flex-1">{comp.node.children && <ChildrenSlot components={comp.node.children} />}</div>
-        </div>
-      );
+      {
+        const children = comp.node.children ?? [];
+        const hasChildren = children.length > 0;
+        const showHeader = props?.showHeader !== false;
+        const showContent = props?.showContent !== false;
+        const showFooter = !!props?.showFooter;
+        const headerText = pstr(props, "headerText", "Header");
+        const contentText = pstr(props, "contentText", "Content");
+        const footerText = pstr(props, "footerText", "Footer");
+        return (
+          <div className="flex h-full flex-col rounded-lg border bg-card p-3">
+            <div className="mb-1 text-xs font-semibold text-muted-foreground">{pstr(props, "label", "Card")}</div>
+            <div className="flex-1">
+              {hasChildren ? (
+                <ChildrenSlot components={children} />
+              ) : (
+                <div className="space-y-1">
+                  {showHeader && <div className="rounded border bg-muted/30 p-1 text-[10px] font-medium">{headerText}</div>}
+                  {showContent && <div className="rounded border bg-background p-1 text-[10px] text-muted-foreground">{contentText}</div>}
+                  {showFooter && <div className="rounded border bg-muted/10 p-1 text-[10px]">{footerText}</div>}
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      }
     case "CardHeader":
       return <div className="flex items-center gap-2 p-2 text-xs font-medium">{comp.node.children && <ChildrenSlot components={comp.node.children} />}</div>;
     case "CardContent":
@@ -119,12 +145,46 @@ function SimulatedContent({ comp }: { comp: CanvasComponent }) {
     case "Tabs":
       return (
         <div className="flex h-full flex-col">
-          <div className="flex gap-1 border-b pb-1">
-            <div className="rounded bg-muted px-2 py-0.5 text-[10px] font-medium">Tab 1</div>
-            <div className="rounded px-2 py-0.5 text-[10px] text-muted-foreground">Tab 2</div>
-            <div className="rounded px-2 py-0.5 text-[10px] text-muted-foreground">Tab 3</div>
-          </div>
-          <div className="flex-1 p-2">{comp.node.children && <ChildrenSlot components={comp.node.children} />}</div>
+          {comp.node.children && comp.node.children.length > 0 ? (
+            <div className="flex-1 p-2">
+              <ChildrenSlot components={comp.node.children} />
+            </div>
+          ) : (
+            (() => {
+              const showList = props?.showList !== false;
+              const showContent = props?.showContent !== false;
+              const tabs = parr<{ label?: string; content?: string }>(props, "tabs", [
+                { label: "Tab 1", content: "Tab content..." },
+                { label: "Tab 2", content: "Tab content..." },
+                { label: "Tab 3", content: "Tab content..." },
+              ]);
+              const activeIndex = Math.max(0, Math.min(tabs.length - 1, Math.floor(pnum(props, "activeIndex", 0))));
+              return (
+                <>
+                  {showList && (
+                    <div className="flex gap-1 border-b pb-1">
+                      {tabs.slice(0, 6).map((t, idx) => (
+                        <div
+                          key={idx}
+                          className={cn(
+                            "rounded px-2 py-0.5 text-[10px]",
+                            idx === activeIndex ? "bg-muted font-medium" : "text-muted-foreground",
+                          )}
+                        >
+                          {typeof t?.label === "string" ? t.label : `Tab ${idx + 1}`}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {showContent && (
+                    <div className="flex-1 p-2 text-[10px] text-muted-foreground">
+                      {typeof tabs[activeIndex]?.content === "string" ? tabs[activeIndex].content : "Tab content..."}
+                    </div>
+                  )}
+                </>
+              );
+            })()
+          )}
         </div>
       );
     case "TabsContent":
@@ -133,26 +193,65 @@ function SimulatedContent({ comp }: { comp: CanvasComponent }) {
     case "Accordion":
       return (
         <div className="flex h-full flex-col gap-0.5">
-          <div className="flex items-center justify-between rounded bg-muted/50 px-2 py-1 text-[10px] font-medium">
-            <span>Section 1</span><span>▼</span>
-          </div>
-          <div className="p-1">{comp.node.children && <ChildrenSlot components={comp.node.children} />}</div>
+          {comp.node.children && comp.node.children.length > 0 ? (
+            <div className="p-1">
+              <ChildrenSlot components={comp.node.children} />
+            </div>
+          ) : (
+            (() => {
+              const items = parr<{ title?: string; content?: string }>(props, "items", [
+                { title: "Section 1", content: "Accordion content..." },
+              ]);
+              return (
+                <>
+                  {items.map((it, idx) => (
+                    <div key={idx} className="rounded border">
+                      <div className="flex items-center justify-between bg-muted/50 px-2 py-1 text-[10px] font-medium">
+                        <span>{typeof it?.title === "string" ? it.title : `Section ${idx + 1}`}</span><span>▼</span>
+                      </div>
+                      <div className="px-2 py-1 text-[10px] text-muted-foreground">
+                        {typeof it?.content === "string" ? it.content : "Accordion content..."}
+                      </div>
+                    </div>
+                  ))}
+                </>
+              );
+            })()
+          )}
         </div>
       );
 
     case "Table":
       return (
         <div className="flex h-full flex-col text-[10px]">
-          <div className="flex border-b bg-muted/50 font-medium">
-            <div className="flex-1 px-1 py-0.5">Col 1</div>
-            <div className="flex-1 border-l px-1 py-0.5">Col 2</div>
-            <div className="flex-1 border-l px-1 py-0.5">Col 3</div>
-          </div>
-          <div className="flex border-b">
-            <div className="flex-1 px-1 py-0.5">...</div>
-            <div className="flex-1 border-l px-1 py-0.5">...</div>
-            <div className="flex-1 border-l px-1 py-0.5">...</div>
-          </div>
+          {comp.node.children && comp.node.children.length > 0 ? (
+            <ChildrenSlot components={comp.node.children} />
+          ) : (
+            (() => {
+              const showHeader = props?.showHeader !== false;
+              const columns = parr<string>(props, "columns", ["Col 1", "Col 2", "Col 3"]).filter((c) => typeof c === "string");
+              const safeCols = columns.length > 0 ? columns : ["Col 1"];
+              const rowCount = Math.max(0, Math.floor(pnum(props, "rowCount", 2)));
+              return (
+                <>
+                  {showHeader && (
+                    <div className="flex border-b bg-muted/50 font-medium">
+                      {safeCols.map((c, i) => (
+                        <div key={i} className={cn("flex-1 px-1 py-0.5", i > 0 && "border-l")}>{c}</div>
+                      ))}
+                    </div>
+                  )}
+                  {Array.from({ length: rowCount }).map((_, r) => (
+                    <div key={r} className="flex border-b">
+                      {safeCols.map((_, i) => (
+                        <div key={i} className={cn("flex-1 px-1 py-0.5 text-muted-foreground", i > 0 && "border-l")}>...</div>
+                      ))}
+                    </div>
+                  ))}
+                </>
+              );
+            })()
+          )}
         </div>
       );
 
@@ -210,13 +309,20 @@ function SimulatedContent({ comp }: { comp: CanvasComponent }) {
       );
     }
 
-    case "RadioGroup":
+    case "RadioGroup": {
+      const options = parr<string>(props, "options", ["Option 1", "Option 2"]).filter((v) => typeof v === "string");
+      const safe = options.length > 0 ? options : ["Option"];
       return (
         <div className="flex flex-col gap-1">
-          <label className="inline-flex items-center gap-1.5 text-xs"><span className="inline-block h-3 w-3 rounded-full border-2 border-primary"></span>Option 1</label>
-          <label className="inline-flex items-center gap-1.5 text-xs"><span className="inline-block h-3 w-3 rounded-full border"></span>Option 2</label>
+          {safe.slice(0, 6).map((label, idx) => (
+            <label key={idx} className="inline-flex items-center gap-1.5 text-xs">
+              <span className={cn("inline-block h-3 w-3 rounded-full border", idx === 0 && "border-2 border-primary")} />
+              {label}
+            </label>
+          ))}
         </div>
       );
+    }
 
     case "Switch": {
       const checked = pbool(props, "defaultChecked");
@@ -230,13 +336,18 @@ function SimulatedContent({ comp }: { comp: CanvasComponent }) {
       );
     }
 
-    case "Select":
+    case "Select": {
+      const placeholder = pstr(props, "placeholder", "Select...");
+      const options = parr<string>(props, "options", []).filter((v) => typeof v === "string");
+      const selectedIndex = Math.floor(pnum(props, "selectedIndex", -1));
+      const selected = selectedIndex >= 0 && selectedIndex < options.length ? options[selectedIndex] : null;
       return (
         <div className="flex h-8 items-center justify-between rounded-md border bg-background px-2 text-xs text-muted-foreground">
-          <span>{pstr(props, "placeholder", "Select...")}</span>
+          <span className={cn(selected ? "text-foreground" : "")}>{selected ?? placeholder}</span>
           <span>▼</span>
         </div>
       );
+    }
 
     case "Slider":
       return (
@@ -300,10 +411,20 @@ function SimulatedContent({ comp }: { comp: CanvasComponent }) {
     case "Alert": {
       const variant = pstr(props, "variant", "default");
       const variantColor = variant === "destructive" ? "border-destructive/50 bg-destructive/10" : "border-primary/50 bg-primary/5";
+      const showTitle = props?.showTitle !== false;
+      const showDescription = props?.showDescription !== false;
+      const titleText = pstr(props, "titleText", "Alert");
+      const descriptionText = pstr(props, "descriptionText", "Alert description...");
       return (
         <div className={cn("flex h-full flex-col gap-1 rounded-lg border p-2", variantColor)}>
-          <span className="text-[10px] font-semibold">⚠ Alert</span>
-          {comp.node.children && <ChildrenSlot components={comp.node.children} />}
+          {comp.node.children && comp.node.children.length > 0 ? (
+            <ChildrenSlot components={comp.node.children} />
+          ) : (
+            <>
+              {showTitle && <span className="text-[10px] font-semibold">⚠ {titleText}</span>}
+              {showDescription && <span className="text-[10px] text-muted-foreground">{descriptionText}</span>}
+            </>
+          )}
         </div>
       );
     }
@@ -318,18 +439,43 @@ function SimulatedContent({ comp }: { comp: CanvasComponent }) {
     }
 
     // ===== Navigation components =====
-    case "Breadcrumb":
-      return <div className="inline-flex items-center gap-1 text-[10px] text-muted-foreground">Home / <span className="font-medium text-foreground">Current</span></div>;
-    case "Pagination":
+    case "Breadcrumb": {
+      const items = parr<string>(props, "items", ["Home", "Page", "Current"]).filter((v) => typeof v === "string");
+      const safe = items.length > 0 ? items : ["Home", "Current"];
       return (
-        <div className="inline-flex items-center gap-1">
-          <div className="rounded border px-1.5 py-0.5 text-[10px]">‹</div>
-          <div className="rounded bg-primary px-1.5 py-0.5 text-[10px] text-primary-foreground">1</div>
-          <div className="rounded border px-1.5 py-0.5 text-[10px]">2</div>
-          <div className="rounded border px-1.5 py-0.5 text-[10px]">3</div>
-          <div className="rounded border px-1.5 py-0.5 text-[10px]">›</div>
+        <div className="inline-flex flex-wrap items-center gap-1 text-[10px] text-muted-foreground">
+          {safe.map((it, idx) => (
+            <span key={idx} className="inline-flex items-center gap-1">
+              {idx > 0 && <span>/</span>}
+              <span className={cn(idx === safe.length - 1 && "font-medium text-foreground")}>{it}</span>
+            </span>
+          ))}
         </div>
       );
+    }
+    case "Pagination": {
+      const pageCount = Math.max(1, Math.floor(pnum(props, "pageCount", 5)));
+      const currentPage = Math.max(1, Math.min(pageCount, Math.floor(pnum(props, "currentPage", 1))));
+      const showPrevNext = props?.showPrevNext !== false;
+      const pages = Array.from({ length: Math.min(7, pageCount) }).map((_, i) => i + 1);
+      return (
+        <div className="inline-flex items-center gap-1">
+          {showPrevNext && <div className="rounded border px-1.5 py-0.5 text-[10px]">‹</div>}
+          {pages.map((p) => (
+            <div
+              key={p}
+              className={cn(
+                "rounded border px-1.5 py-0.5 text-[10px]",
+                p === currentPage && "border-primary bg-primary text-primary-foreground",
+              )}
+            >
+              {p}
+            </div>
+          ))}
+          {showPrevNext && <div className="rounded border px-1.5 py-0.5 text-[10px]">›</div>}
+        </div>
+      );
+    }
 
     // ===== Layout components =====
     case "Separator":
@@ -348,41 +494,203 @@ function SimulatedContent({ comp }: { comp: CanvasComponent }) {
         </div>
       );
 
-    case "ResizablePanelGroup":
+    case "ResizablePanelGroup": {
+      if (comp.node.children && comp.node.children.length > 0) {
+        return <ChildrenSlot components={comp.node.children} />;
+      }
+      const direction = pstr(props, "direction", "horizontal");
+      const showPanel1 = props?.showPanel1 !== false;
+      const showHandle = props?.showHandle !== false;
+      const showPanel2 = props?.showPanel2 !== false;
+      const panel1Text = pstr(props, "panel1Text", "Panel 1");
+      const panel2Text = pstr(props, "panel2Text", "Panel 2");
+      const isVertical = direction === "vertical";
       return (
-        <div className="flex h-full">
-          <div className="flex-1 border-r-2 p-1 text-[10px]">Panel 1</div>
-          <div className="w-1.5 cursor-col-resize bg-muted" />
-          <div className="flex-1 p-1 text-[10px]">Panel 2</div>
+        <div className={cn("flex h-full", isVertical ? "flex-col" : "")}>
+          {showPanel1 && <div className={cn("flex-1 p-1 text-[10px]", !isVertical && showHandle && "border-r-2", isVertical && showHandle && "border-b-2")}>{panel1Text}</div>}
+          {showHandle && <div className={cn(isVertical ? "h-1.5 w-full cursor-row-resize" : "h-full w-1.5 cursor-col-resize", "bg-muted")} />}
+          {showPanel2 && <div className="flex-1 p-1 text-[10px]">{panel2Text}</div>}
         </div>
       );
+    }
 
     // ===== Overlay components =====
-    case "Dialog":
-    case "Sheet":
-    case "AlertDialog":
-    case "Popover":
-    case "Tooltip":
-    case "HoverCard":
-    case "Drawer":
-      return <div className="flex h-full items-center justify-center rounded border-2 border-dashed border-muted-foreground/30 text-[10px] text-muted-foreground">{type}</div>;
+    case "Dialog": {
+      const showTrigger = props?.showTrigger !== false;
+      const showHeader = props?.showHeader !== false;
+      const showDescription = props?.showDescription !== false;
+      const showFooter = props?.showFooter !== false;
+      const triggerText = pstr(props, "triggerText", "Open");
+      const titleText = pstr(props, "titleText", "Dialog title");
+      const descriptionText = pstr(props, "descriptionText", "Dialog description...");
+      const primaryActionText = pstr(props, "primaryActionText", "Confirm");
+      const secondaryActionText = pstr(props, "secondaryActionText", "Cancel");
+      return (
+        <div className="flex h-full flex-col gap-2">
+          {showTrigger && <button className="inline-flex w-fit items-center rounded border bg-background px-2 py-0.5 text-[10px]" tabIndex={-1}>{triggerText}</button>}
+          <div className="flex-1 rounded-lg border-2 border-primary/30 bg-background p-2 shadow-sm">
+            {showHeader && <div className="text-xs font-semibold">{titleText}</div>}
+            {showDescription && <div className="mt-0.5 text-[10px] text-muted-foreground">{descriptionText}</div>}
+            {showFooter && (
+              <div className="mt-2 flex items-center justify-end gap-1">
+                <button className="rounded border bg-background px-2 py-0.5 text-[10px]" tabIndex={-1}>{secondaryActionText}</button>
+                <button className="rounded bg-primary px-2 py-0.5 text-[10px] text-primary-foreground" tabIndex={-1}>{primaryActionText}</button>
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    case "AlertDialog": {
+      const showTrigger = props?.showTrigger !== false;
+      const showHeader = props?.showHeader !== false;
+      const showDescription = props?.showDescription !== false;
+      const showActions = props?.showActions !== false;
+      const showCancel = props?.showCancel !== false;
+      const triggerText = pstr(props, "triggerText", "Open");
+      const titleText = pstr(props, "titleText", "Are you absolutely sure?");
+      const descriptionText = pstr(props, "descriptionText", "This action cannot be undone.");
+      const actionText = pstr(props, "actionText", "Continue");
+      const cancelText = pstr(props, "cancelText", "Cancel");
+      return (
+        <div className="flex h-full flex-col gap-2">
+          {showTrigger && <button className="inline-flex w-fit items-center rounded border bg-background px-2 py-0.5 text-[10px]" tabIndex={-1}>{triggerText}</button>}
+          <div className="flex-1 rounded-lg border-2 border-destructive/30 bg-background p-2 shadow-sm">
+            {showHeader && <div className="text-xs font-semibold">{titleText}</div>}
+            {showDescription && <div className="mt-0.5 text-[10px] text-muted-foreground">{descriptionText}</div>}
+            {showActions && (
+              <div className="mt-2 flex items-center justify-end gap-1">
+                {showCancel && <button className="rounded border bg-background px-2 py-0.5 text-[10px]" tabIndex={-1}>{cancelText}</button>}
+                <button className="rounded bg-destructive px-2 py-0.5 text-[10px] text-destructive-foreground" tabIndex={-1}>{actionText}</button>
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    case "Sheet": {
+      const showTrigger = props?.showTrigger !== false;
+      const showHeader = props?.showHeader !== false;
+      const showContent = props?.showContent !== false;
+      const triggerText = pstr(props, "triggerText", "Open");
+      const titleText = pstr(props, "titleText", "Sheet");
+      const descriptionText = pstr(props, "descriptionText", "Sheet description...");
+      const bodyText = pstr(props, "bodyText", "Sheet content...");
+      return (
+        <div className="flex h-full flex-col gap-2">
+          {showTrigger && <button className="inline-flex w-fit items-center rounded border bg-background px-2 py-0.5 text-[10px]" tabIndex={-1}>{triggerText}</button>}
+          <div className="flex-1 rounded-lg border-2 border-primary/30 bg-background p-2 shadow-sm">
+            {showHeader && (
+              <>
+                <div className="text-xs font-semibold">{titleText}</div>
+                <div className="mt-0.5 text-[10px] text-muted-foreground">{descriptionText}</div>
+              </>
+            )}
+            {showContent && <div className="mt-2 rounded border bg-muted/10 p-2 text-[10px] text-muted-foreground">{bodyText}</div>}
+          </div>
+        </div>
+      );
+    }
+
+    case "Popover": {
+      const showTrigger = props?.showTrigger !== false;
+      const showContent = props?.showContent !== false;
+      const triggerText = pstr(props, "triggerText", "Open");
+      const contentText = pstr(props, "contentText", "Popover content...");
+      return (
+        <div className="flex h-full flex-col gap-2">
+          {showTrigger && <button className="inline-flex w-fit items-center rounded border bg-background px-2 py-0.5 text-[10px]" tabIndex={-1}>{triggerText}</button>}
+          {showContent && <div className="flex-1 rounded-lg border bg-background p-2 text-[10px] text-muted-foreground shadow-sm">{contentText}</div>}
+        </div>
+      );
+    }
+
+    case "Tooltip": {
+      const showTrigger = props?.showTrigger !== false;
+      const showContent = props?.showContent !== false;
+      const triggerText = pstr(props, "triggerText", "Hover me");
+      const contentText = pstr(props, "contentText", "Tooltip content...");
+      return (
+        <div className="flex h-full flex-col gap-2">
+          {showTrigger && <button className="inline-flex w-fit items-center rounded border bg-background px-2 py-0.5 text-[10px]" tabIndex={-1}>{triggerText}</button>}
+          {showContent && <div className="w-fit rounded bg-foreground px-2 py-1 text-[10px] text-background">{contentText}</div>}
+        </div>
+      );
+    }
+
+    case "HoverCard": {
+      const showTrigger = props?.showTrigger !== false;
+      const showContent = props?.showContent !== false;
+      const triggerText = pstr(props, "triggerText", "Hover me");
+      const contentText = pstr(props, "contentText", "Hover card content...");
+      return (
+        <div className="flex h-full flex-col gap-2">
+          {showTrigger && <button className="inline-flex w-fit items-center rounded border bg-background px-2 py-0.5 text-[10px]" tabIndex={-1}>{triggerText}</button>}
+          {showContent && <div className="flex-1 rounded-lg border bg-background p-2 text-[10px] text-muted-foreground shadow-sm">{contentText}</div>}
+        </div>
+      );
+    }
+
+    case "Drawer": {
+      const showTrigger = props?.showTrigger !== false;
+      const showHeader = props?.showHeader !== false;
+      const showContent = props?.showContent !== false;
+      const triggerText = pstr(props, "triggerText", "Open");
+      const titleText = pstr(props, "titleText", "Drawer");
+      const contentText = pstr(props, "contentText", "Drawer content...");
+      return (
+        <div className="flex h-full flex-col gap-2">
+          {showTrigger && <button className="inline-flex w-fit items-center rounded border bg-background px-2 py-0.5 text-[10px]" tabIndex={-1}>{triggerText}</button>}
+          <div className="flex-1 rounded-lg border bg-background p-2 shadow-sm">
+            {showHeader && <div className="text-xs font-semibold">{titleText}</div>}
+            {showContent && <div className="mt-2 text-[10px] text-muted-foreground">{contentText}</div>}
+          </div>
+        </div>
+      );
+    }
 
     case "DropdownMenu":
     case "ContextMenu":
       return (
-        <div className="rounded border bg-background p-1 shadow">
-          <div className="rounded px-2 py-0.5 text-[10px] hover:bg-muted">Item 1</div>
-          <div className="rounded px-2 py-0.5 text-[10px] hover:bg-muted">Item 2</div>
-          <div className="my-0.5 border-t" />
-          <div className="rounded px-2 py-0.5 text-[10px] hover:bg-muted">Item 3</div>
+        <div className="flex h-full flex-col gap-2">
+          {(props?.showTrigger !== false) && (
+            <button className="inline-flex w-fit items-center rounded border bg-background px-2 py-0.5 text-[10px]" tabIndex={-1}>
+              {pstr(props, "triggerText", type === "ContextMenu" ? "Right click" : "Open")}
+            </button>
+          )}
+          {(props?.showContent !== false) && (
+            <div className="rounded border bg-background p-1 shadow">
+              {(() => {
+                const items = parr<string>(props, "items", ["Item 1", "Item 2", "Item 3"]).filter((v) => typeof v === "string");
+                const safe = items.length > 0 ? items : ["Item 1"];
+                return safe.slice(0, 6).map((it, idx) => (
+                  <div key={idx} className="rounded px-2 py-0.5 text-[10px] hover:bg-muted">{it}</div>
+                ));
+              })()}
+            </div>
+          )}
         </div>
       );
 
     case "Collapsible":
       return (
         <div className="flex h-full flex-col">
-          <div className="flex items-center gap-1 text-[10px] font-medium">▶ {pstr(props, "label", "Toggle")}</div>
-          <div className="flex-1 p-1">{comp.node.children && <ChildrenSlot components={comp.node.children} />}</div>
+          {(props?.showTrigger !== false) && (
+            <div className="flex items-center gap-1 text-[10px] font-medium">▶ {pstr(props, "triggerText", pstr(props, "label", "Toggle"))}</div>
+          )}
+          <div className="flex-1 p-1">
+            {comp.node.children && comp.node.children.length > 0 ? (
+              <ChildrenSlot components={comp.node.children} />
+            ) : (
+              (props?.showContent !== false) && (
+                <div className="rounded border bg-muted/10 p-1 text-[10px] text-muted-foreground">
+                  {pstr(props, "contentText", "Collapsible content...")}
+                </div>
+              )
+            )}
+          </div>
         </div>
       );
 
@@ -404,13 +712,17 @@ function SimulatedContent({ comp }: { comp: CanvasComponent }) {
  *
  * @param props - 组件属性
  * @param props.components - 子组件节点数组
+ *
+ * @author xiye
+ * @date 2026-06-22
+ * @since 3.0.0
  */
-function ChildrenSlot({ components }: { components: { type: string; props?: Record<string, unknown>; id: string }[] }) {
+function ChildrenSlot({ components }: { components: ComponentNode[] }) {
   if (!components || components.length === 0) return null;
   return (
     <div className="space-y-1">
       {components.map((child) => (
-        <SimulatedChildContent key={child.id} type={child.type} props={child.props} />
+        <SimulatedChildContent key={child.id} node={child} />
       ))}
     </div>
   );
@@ -426,10 +738,24 @@ function ChildrenSlot({ components }: { components: { type: string; props?: Reco
  * @param props.type - 组件类型名称
  * @param props.props - 组件属性对象（可选）
  */
-function SimulatedChildContent({ type, props }: { type: string; props?: Record<string, unknown> }) {
+function SimulatedChildContent({ node }: { node: ComponentNode }) {
+  const { type, props } = node;
+  const children = node.children ?? [];
+  const childText = (() => {
+    const first = children[0];
+    if (!first) return "";
+    if (first.type !== "Text") return "";
+    const t = (first.props as Record<string, unknown> | undefined)?.text;
+    return typeof t === "string" ? t : "";
+  })();
+
   switch (type) {
     case "Button":
-      return <button className="inline-flex items-center rounded bg-primary px-2 py-0.5 text-[10px] text-primary-foreground" tabIndex={-1}>{(props?.label as string) || "Btn"}</button>;
+      return (
+        <button className="inline-flex items-center rounded bg-primary px-2 py-0.5 text-[10px] text-primary-foreground" tabIndex={-1}>
+          {(props?.label as string) || (props?.text as string) || "Btn"}
+        </button>
+      );
     case "Input":
       return <div className="h-6 rounded border bg-background px-1 text-[10px] leading-6 text-muted-foreground">{(props?.placeholder as string) || "Input"}</div>;
     case "Label":
@@ -451,29 +777,83 @@ function SimulatedChildContent({ type, props }: { type: string; props?: Record<s
     case "Switch":
       return <span className="inline-flex h-4 w-7 items-center rounded-full bg-primary p-0.5"><span className="h-3 w-3 rounded-full bg-background" /></span>;
     case "CardHeader":
-      return <div className="rounded-t border-b bg-muted/30 p-1 text-[10px] font-medium">Header</div>;
+      return (
+        <div className="rounded-t border-b bg-muted/30 p-1 text-[10px] font-medium">
+          {childText || "Header"}
+          {children.length > 0 ? <div className="mt-1 font-normal"><ChildrenSlot components={children} /></div> : null}
+        </div>
+      );
     case "CardContent":
-      return <div className="p-1 text-[10px] text-muted-foreground">Content</div>;
+      return (
+        <div className="p-1 text-[10px] text-muted-foreground">
+          {childText || "Content"}
+          {children.length > 0 ? <div className="mt-1"><ChildrenSlot components={children} /></div> : null}
+        </div>
+      );
     case "CardFooter":
-      return <div className="rounded-b border-t bg-muted/10 p-1 text-[10px]">Footer</div>;
+      return (
+        <div className="rounded-b border-t bg-muted/10 p-1 text-[10px]">
+          {childText || "Footer"}
+          {children.length > 0 ? <div className="mt-1"><ChildrenSlot components={children} /></div> : null}
+        </div>
+      );
     case "TabsList":
-      return <div className="inline-flex gap-0.5 rounded bg-muted p-0.5 text-[10px]"><span className="rounded bg-background px-1">Tab</span></div>;
+      return (
+        <div className="inline-flex gap-0.5 rounded bg-muted p-0.5 text-[10px]">
+          {children.length > 0 ? (
+            children.slice(0, 6).map((c) => (
+              <span key={c.id} className="rounded bg-background px-1">
+                {((c.children?.[0]?.props as Record<string, unknown> | undefined)?.text as string) || "Tab"}
+              </span>
+            ))
+          ) : (
+            <span className="rounded bg-background px-1">Tab</span>
+          )}
+        </div>
+      );
     case "TabsTrigger":
-      return <span className="inline-flex rounded px-1 py-0.5 text-[10px] font-medium">Tab</span>;
+      return <span className="inline-flex rounded px-1 py-0.5 text-[10px] font-medium">{childText || "Tab"}</span>;
     case "BreadcrumbItem":
-      return <span className="text-[10px] text-muted-foreground">/ Page</span>;
+      return <span className="text-[10px] text-muted-foreground">{childText || "/ Page"}</span>;
     case "BreadcrumbLink":
-      return <span className="text-[10px] text-primary underline">Link</span>;
+      return <span className="text-[10px] text-primary underline">{childText || "Link"}</span>;
     case "DropdownMenuItem":
       return <div className="rounded px-1 py-0.5 text-[10px] hover:bg-muted">Action</div>;
     case "TableHeader":
-      return <div className="flex border-b bg-muted/50 font-medium text-[10px]"><div className="flex-1 px-1">H1</div><div className="flex-1 px-1">H2</div></div>;
+      return (
+        <div className="rounded border bg-muted/20 p-1 text-[10px] font-medium">
+          <div>TableHeader</div>
+          {children.length > 0 ? <div className="mt-1 font-normal"><ChildrenSlot components={children} /></div> : null}
+        </div>
+      );
     case "TableBody":
-      return <div className="text-[10px]"><div className="flex border-b"><div className="flex-1 px-1">D1</div><div className="flex-1 px-1">D2</div></div></div>;
+      return (
+        <div className="rounded border bg-background p-1 text-[10px]">
+          <div className="font-medium">TableBody</div>
+          {children.length > 0 ? <div className="mt-1"><ChildrenSlot components={children} /></div> : null}
+        </div>
+      );
     case "TableRow":
-      return <div className="flex border-b text-[10px]"><div className="flex-1 px-1">Cell</div></div>;
+      return (
+        <div className="rounded border bg-background/50 p-1 text-[10px]">
+          <div className="font-medium">TableRow</div>
+          {children.length > 0 ? <div className="mt-1"><ChildrenSlot components={children} /></div> : null}
+        </div>
+      );
+    case "Text":
+      return <span className="text-[10px] text-foreground">{(props?.text as string) || ""}</span>;
     default:
-      return <div className="rounded bg-muted/30 px-1 py-0.5 text-[10px] text-muted-foreground">{type}</div>;
+      return (
+        <div className="rounded bg-muted/30 px-1 py-0.5 text-[10px] text-muted-foreground">
+          <span className="font-medium">{type}</span>
+          {childText ? <span className="ml-1 text-muted-foreground">· {childText}</span> : null}
+          {children.length > 0 && type !== "Text" ? (
+            <div className="mt-1">
+              <ChildrenSlot components={children} />
+            </div>
+          ) : null}
+        </div>
+      );
   }
 }
 
@@ -486,14 +866,14 @@ function SimulatedChildContent({ type, props }: { type: string; props?: Record<s
  * 使用负 margin 使手柄视觉居中于边缘线上。
  */
 const resizeHandleStyles: Record<ResizeDirection, CSSProperties> = {
-  n:  { top: -RESIZE_HANDLE_SIZE/2, left: "50%", marginLeft: -RESIZE_HANDLE_SIZE/2, width: RESIZE_HANDLE_SIZE, height: RESIZE_HANDLE_SIZE, cursor: "n-resize" },
-  s:  { bottom: -RESIZE_HANDLE_SIZE/2, left: "50%", marginLeft: -RESIZE_HANDLE_SIZE/2, width: RESIZE_HANDLE_SIZE, height: RESIZE_HANDLE_SIZE, cursor: "s-resize" },
-  e:  { right: -RESIZE_HANDLE_SIZE/2, top: "50%", marginTop: -RESIZE_HANDLE_SIZE/2, width: RESIZE_HANDLE_SIZE, height: RESIZE_HANDLE_SIZE, cursor: "e-resize" },
-  w:  { left: -RESIZE_HANDLE_SIZE/2, top: "50%", marginTop: -RESIZE_HANDLE_SIZE/2, width: RESIZE_HANDLE_SIZE, height: RESIZE_HANDLE_SIZE, cursor: "w-resize" },
-  ne: { top: -RESIZE_HANDLE_SIZE/2, right: -RESIZE_HANDLE_SIZE/2, width: RESIZE_HANDLE_SIZE, height: RESIZE_HANDLE_SIZE, cursor: "ne-resize" },
-  nw: { top: -RESIZE_HANDLE_SIZE/2, left: -RESIZE_HANDLE_SIZE/2, width: RESIZE_HANDLE_SIZE, height: RESIZE_HANDLE_SIZE, cursor: "nw-resize" },
-  se: { bottom: -RESIZE_HANDLE_SIZE/2, right: -RESIZE_HANDLE_SIZE/2, width: RESIZE_HANDLE_SIZE, height: RESIZE_HANDLE_SIZE, cursor: "se-resize" },
-  sw: { bottom: -RESIZE_HANDLE_SIZE/2, left: -RESIZE_HANDLE_SIZE/2, width: RESIZE_HANDLE_SIZE, height: RESIZE_HANDLE_SIZE, cursor: "sw-resize" },
+  n: { top: -RESIZE_HANDLE_SIZE / 2, left: "50%", marginLeft: -RESIZE_HANDLE_SIZE / 2, width: RESIZE_HANDLE_SIZE, height: RESIZE_HANDLE_SIZE, cursor: "n-resize" },
+  s: { bottom: -RESIZE_HANDLE_SIZE / 2, left: "50%", marginLeft: -RESIZE_HANDLE_SIZE / 2, width: RESIZE_HANDLE_SIZE, height: RESIZE_HANDLE_SIZE, cursor: "s-resize" },
+  e: { right: -RESIZE_HANDLE_SIZE / 2, top: "50%", marginTop: -RESIZE_HANDLE_SIZE / 2, width: RESIZE_HANDLE_SIZE, height: RESIZE_HANDLE_SIZE, cursor: "e-resize" },
+  w: { left: -RESIZE_HANDLE_SIZE / 2, top: "50%", marginTop: -RESIZE_HANDLE_SIZE / 2, width: RESIZE_HANDLE_SIZE, height: RESIZE_HANDLE_SIZE, cursor: "w-resize" },
+  ne: { top: -RESIZE_HANDLE_SIZE / 2, right: -RESIZE_HANDLE_SIZE / 2, width: RESIZE_HANDLE_SIZE, height: RESIZE_HANDLE_SIZE, cursor: "ne-resize" },
+  nw: { top: -RESIZE_HANDLE_SIZE / 2, left: -RESIZE_HANDLE_SIZE / 2, width: RESIZE_HANDLE_SIZE, height: RESIZE_HANDLE_SIZE, cursor: "nw-resize" },
+  se: { bottom: -RESIZE_HANDLE_SIZE / 2, right: -RESIZE_HANDLE_SIZE / 2, width: RESIZE_HANDLE_SIZE, height: RESIZE_HANDLE_SIZE, cursor: "se-resize" },
+  sw: { bottom: -RESIZE_HANDLE_SIZE / 2, left: -RESIZE_HANDLE_SIZE / 2, width: RESIZE_HANDLE_SIZE, height: RESIZE_HANDLE_SIZE, cursor: "sw-resize" },
 };
 
 /** 所有缩放手柄方向的数组，用于遍历渲染 */
@@ -761,7 +1141,7 @@ export const CanvasRenderer = forwardRef<HTMLDivElement, CanvasRendererProps>(
                         const cleanup = () => {
                           try {
                             el.releasePointerCapture(pointerId);
-                          } catch {}
+                          } catch { }
                           el.removeEventListener("pointermove", syncResize);
                           el.removeEventListener("pointerup", cleanup);
                           el.removeEventListener("pointercancel", cleanup);

@@ -9,14 +9,17 @@
  */
 "use client";
 
-import { useState, useMemo, memo } from "react";
+import { useState, useMemo, memo, useCallback } from "react";
+import type { ComponentType } from "react";
 import { useDraggable } from "@dnd-kit/core";
 import { createDefaultRegistry } from "@envelope/materials";
 import { createMaterialDragItem } from "@envelope/engine";
 import type { ComponentCategory } from "@envelope/materials";
+import * as LucideIcons from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ComponentTreePanel } from "./component-tree-panel";
 
 /** 分类配置 */
 const CATEGORIES: { key: ComponentCategory; label: string }[] = [
@@ -29,13 +32,31 @@ const CATEGORIES: { key: ComponentCategory; label: string }[] = [
   { key: "overlay", label: "Overlay" },
 ];
 
+function MaterialIcon({ icon }: { icon?: string }) {
+  const Icon = (icon ? (LucideIcons as unknown as Record<string, ComponentType<{ className?: string }>>)[icon] : undefined)
+    ?? LucideIcons.Square;
+  return <Icon className="h-4 w-4 text-muted-foreground" />;
+}
+
 /**
  * 单个可拖拽物料项
  *
  * 使用 @dnd-kit/core 的 useDraggable hook 注册为可拖拽源。
  * data 负载包含 createMaterialDragItem 返回的 { type, materialName }。
  */
-const MaterialItem = memo(function MaterialItem({ name, displayName }: { name: string; displayName: string }) {
+const MaterialItem = memo(function MaterialItem({
+  name,
+  displayName,
+  description,
+  icon,
+  onAdd,
+}: {
+  name: string;
+  displayName: string;
+  description?: string;
+  icon?: string;
+  onAdd?: (name: string) => void;
+}) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: `material-${name}`,
     data: createMaterialDragItem(name),
@@ -46,12 +67,22 @@ const MaterialItem = memo(function MaterialItem({ name, displayName }: { name: s
       ref={setNodeRef}
       {...listeners}
       {...attributes}
+      onClick={() => onAdd?.(name)}
+      data-testid={`material-item-${name}`}
       className={cn(
-        "flex cursor-grab items-center gap-2 rounded-md border px-3 py-2 text-sm transition-colors hover:bg-accent hover:text-accent-foreground",
+        "flex cursor-grab items-start gap-2 rounded-md border px-3 py-2 text-sm transition-colors hover:bg-accent hover:text-accent-foreground touch-none",
         isDragging && "opacity-50",
       )}
     >
-      <span className="truncate">{displayName}</span>
+      <MaterialIcon icon={icon} />
+      <div className="min-w-0 flex-1">
+        <div className="truncate leading-5">{displayName}</div>
+        {description && (
+          <div className="line-clamp-2 text-xs leading-4 text-muted-foreground">
+            {description}
+          </div>
+        )}
+      </div>
     </div>
   );
 });
@@ -60,6 +91,8 @@ const MaterialItem = memo(function MaterialItem({ name, displayName }: { name: s
 interface MaterialPanelProps {
   /** 左面板是否折叠（用于联动显隐） */
   collapsed: boolean;
+  /** 点击添加（非拖拽） */
+  onAddMaterial?: (name: string) => void;
 }
 
 /**
@@ -70,13 +103,20 @@ interface MaterialPanelProps {
  * 每个分类标签右侧显示该分类下的组件数量。
  * 空分类显示 "Coming soon" 占位文字。
  */
-export function MaterialPanel({ collapsed }: MaterialPanelProps) {
+export function MaterialPanel({ collapsed, onAddMaterial }: MaterialPanelProps) {
+  const [panelTab, setPanelTab] = useState<string>("palette");
   const [activeTab, setActiveTab] = useState<string>("layout");
 
   const registry = useMemo(() => createDefaultRegistry(), []);
 
+  const getVisibleByCategory = useCallback(
+    (cat: ComponentCategory) => registry.getByCategory(cat).filter((m) => m.showInPalette !== false),
+    [registry],
+  );
+
   return (
     <div
+      data-testid="material-panel"
       className={cn(
         "flex flex-col border-r bg-background transition-all duration-200",
         collapsed ? "w-0 overflow-hidden border-r-0" : "w-64",
@@ -86,52 +126,66 @@ export function MaterialPanel({ collapsed }: MaterialPanelProps) {
         <span className="text-xs font-medium text-muted-foreground">Components</span>
       </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-1 flex-col">
-        <ScrollArea className="flex-1">
-          {/* 分类标签栏 */}
-          <TabsList className="flex h-auto w-full flex-wrap justify-start gap-0.5 rounded-none border-b bg-transparent p-1">
-            {CATEGORIES.map((cat) => {
-              const count = registry.getByCategory(cat.key).length;
-              return (
-                <TabsTrigger
-                  key={cat.key}
-                  value={cat.key}
-                  className={cn(
-                    "h-7 rounded-sm px-2 text-xs data-[state=active]:bg-muted",
-                    count === 0 && "opacity-40",
-                  )}
-                >
-                  {cat.label}
-                  {count > 0 && (
-                    <span className="ml-1 text-[10px] text-muted-foreground">{count}</span>
-                  )}
-                </TabsTrigger>
-              );
-            })}
-          </TabsList>
+      <Tabs value={panelTab} onValueChange={setPanelTab} className="flex flex-1 min-h-0 flex-col">
+        <TabsList className="grid grid-cols-2 rounded-none border-b bg-transparent p-1">
+          <TabsTrigger value="palette" className="h-7 text-xs data-[state=active]:bg-muted">组件库</TabsTrigger>
+          <TabsTrigger value="tree" className="h-7 text-xs data-[state=active]:bg-muted">组件树</TabsTrigger>
+        </TabsList>
 
-          {/* 分类内容 */}
-          {CATEGORIES.map((cat) => {
-            const materials = registry.getByCategory(cat.key);
-            return (
-              <TabsContent key={cat.key} value={cat.key} className="space-y-1 p-2">
-                {materials.length === 0 ? (
-                  <p className="px-2 py-4 text-center text-xs text-muted-foreground">
-                    Coming soon
-                  </p>
-                ) : (
-                  materials.map((mat) => (
-                    <MaterialItem
-                      key={mat.name}
-                      name={mat.name}
-                      displayName={mat.displayName}
-                    />
-                  ))
-                )}
-              </TabsContent>
-            );
-          })}
-        </ScrollArea>
+        <TabsContent value="palette" className="flex min-h-0 flex-1 flex-col p-0">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-1 flex-col">
+            <ScrollArea className="flex-1">
+              <TabsList className="flex h-auto w-full flex-wrap justify-start gap-0.5 rounded-none border-b bg-transparent p-1">
+                {CATEGORIES.map((cat) => {
+                  const count = getVisibleByCategory(cat.key).length;
+                  return (
+                    <TabsTrigger
+                      key={cat.key}
+                      value={cat.key}
+                      className={cn(
+                        "h-7 rounded-sm px-2 text-xs data-[state=active]:bg-muted",
+                        count === 0 && "opacity-40",
+                      )}
+                    >
+                      {cat.label}
+                      {count > 0 && (
+                        <span className="ml-1 text-[10px] text-muted-foreground">{count}</span>
+                      )}
+                    </TabsTrigger>
+                  );
+                })}
+              </TabsList>
+
+              {CATEGORIES.map((cat) => {
+                const materials = getVisibleByCategory(cat.key);
+                return (
+                  <TabsContent key={cat.key} value={cat.key} className="space-y-1 p-2">
+                    {materials.length === 0 ? (
+                      <p className="px-2 py-4 text-center text-xs text-muted-foreground">
+                        Coming soon
+                      </p>
+                    ) : (
+                      materials.map((mat) => (
+                        <MaterialItem
+                          key={mat.name}
+                          name={mat.name}
+                          displayName={mat.displayName}
+                          description={mat.description}
+                          icon={mat.icon}
+                          onAdd={onAddMaterial}
+                        />
+                      ))
+                    )}
+                  </TabsContent>
+                );
+              })}
+            </ScrollArea>
+          </Tabs>
+        </TabsContent>
+
+        <TabsContent value="tree" className="flex min-h-0 flex-1 flex-col p-0">
+          <ComponentTreePanel />
+        </TabsContent>
       </Tabs>
     </div>
   );

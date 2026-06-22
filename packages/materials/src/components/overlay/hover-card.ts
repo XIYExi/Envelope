@@ -7,6 +7,12 @@ export const hoverCardMaterial: MaterialDefinition = {
   category: "overlay",
   icon: "MousePointerSquare",
   supportsChildren: true,
+  defaultProps: {
+    showTrigger: true,
+    showContent: true,
+    triggerText: "Hover me",
+    contentText: "Hover card content...",
+  },
   editableProps: [
     {
       key: "openDelay",
@@ -27,6 +33,38 @@ export const hoverCardMaterial: MaterialDefinition = {
       max: 3000,
       group: "Behavior",
       order: 2,
+    },
+    {
+      key: "showTrigger",
+      label: "Trigger",
+      type: "switch",
+      defaultValue: true,
+      group: "Slots",
+      order: 3,
+    },
+    {
+      key: "triggerText",
+      label: "Trigger Text",
+      type: "text",
+      defaultValue: "Hover me",
+      group: "Slots",
+      order: 4,
+    },
+    {
+      key: "showContent",
+      label: "Content",
+      type: "switch",
+      defaultValue: true,
+      group: "Slots",
+      order: 5,
+    },
+    {
+      key: "contentText",
+      label: "Content Text",
+      type: "text",
+      defaultValue: "Hover card content...",
+      group: "Slots",
+      order: 6,
     },
     {
       key: "className",

@@ -14,9 +14,9 @@
 
 import { useCallback, useEffect, useMemo, useRef, memo } from "react";
 import { useSearchParams } from "next/navigation";
-import { DndContext, useDroppable, pointerWithin, type DragEndEvent } from "@dnd-kit/core";
+import { DndContext, useDroppable, pointerWithin, type DragEndEvent, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
 import { createDefaultRegistry } from "@envelope/materials";
-import { useCanvasStore, createCanvasComponent, CanvasRenderer, VIEWPORT_WIDTHS, type CanvasSnapshot } from "@envelope/engine";
+import { useCanvasStore, createComponentNode, CanvasRenderer, VIEWPORT_WIDTHS, type CanvasSnapshot } from "@envelope/engine";
 import { useEditorStore } from "@/stores/editor";
 import { useProjectPagesStore, componentNodesToCanvasComponents } from "@/stores/project-pages";
 import { useProjectFlowsStore } from "@/stores/project-flows";
@@ -84,7 +84,7 @@ const CanvasDropZone = memo(function CanvasDropZone() {
   return (
     <div
       ref={combinedRef}
-      className={`flex-1 overflow-hidden ${isOver ? "bg-blue-50/30" : ""}`}
+      className={`flex flex-1 min-h-0 overflow-hidden ${isOver ? "bg-blue-50/30" : ""}`}
     >
       <CanvasRenderer
         components={components}
@@ -121,7 +121,20 @@ export function EditorLayout() {
     leftPanelCollapsed, rightPanelCollapsed,
     canvasViewport, editorMode,
   } = useEditorStore();
-  const { addComponent, copySelected, components, setViewport, deleteSelected, undo, redo, pageBackground, pagePadding } = useCanvasStore();
+  const {
+    components,
+    setViewport,
+    deleteSelected,
+    undo,
+    redo,
+    copySelected,
+    cutSelected,
+    pasteClipboard,
+    insertNode,
+    moveNode,
+    pageBackground,
+    pagePadding,
+  } = useCanvasStore();
   const isPageMode = editorMode === "pages";
 
   const {
@@ -146,6 +159,12 @@ export function EditorLayout() {
 
   const registry = useMemo(() => createDefaultRegistry(), []);
 
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: { distance: 5 },
+    }),
+  );
+
   /**
    * 物料名称 → 物料信息的快速查找表
    * 用于拖拽结束时根据物料名称获取分类信息
@@ -155,6 +174,26 @@ export function EditorLayout() {
     registry.getAll().forEach((m) => map.set(m.name, { category: m.category }));
     return map;
   }, [registry]);
+
+  const parseTreeDropTarget = useCallback((overId: string): { parentId: string | null; index?: number } | null => {
+    if (overId.startsWith("tree-drop:")) {
+      const parts = overId.split(":");
+      if (parts.length < 3) return null;
+      const parentKey = parts[1]!;
+      const idxStr = parts[2]!;
+      const idx = Number(idxStr);
+      return {
+        parentId: parentKey === "root" ? null : parentKey,
+        index: Number.isFinite(idx) ? idx : undefined,
+      };
+    }
+    if (overId.startsWith("tree-container:")) {
+      const parentId = overId.replace(/^tree-container:/, "");
+      if (!parentId) return null;
+      return { parentId, index: 999999 };
+    }
+    return null;
+  }, []);
 
   /**
    * 拖拽结束处理
@@ -167,18 +206,50 @@ export function EditorLayout() {
   const handleDragEnd = useCallback(
     (event: DragEndEvent) => {
       const { active, over } = event;
-      if (!over || over.id !== "canvas-drop-zone") return;
+      if (!over) return;
+      const overId = String(over.id);
+      const treeTarget = parseTreeDropTarget(overId);
 
+      const dragType = active.data.current?.type as string | undefined;
       const materialName = active.data.current?.materialName as string | undefined;
-      if (!materialName) return;
+      const draggedNodeId = active.data.current?.componentId as string | undefined;
 
-      const material = materialMap.get(materialName);
-      const category = material?.category ?? "layout";
+      if (treeTarget) {
+        if (dragType === "material" && materialName) {
+          const material = registry.get(materialName);
+          const category = materialMap.get(materialName)?.category ?? material?.category ?? "layout";
+          const defaultProps = material?.defaultProps ?? {};
+          const node = createComponentNode(materialName, category, { ...defaultProps });
+          insertNode(node, treeTarget);
+          return;
+        }
+        if (dragType === "canvas-component" && draggedNodeId) {
+          moveNode(draggedNodeId, treeTarget);
+          return;
+        }
+        return;
+      }
 
-      const comp = createCanvasComponent(materialName, category, {}, components);
-      addComponent(comp);
+      if (overId !== "canvas-drop-zone" && !overId.startsWith("canvas")) return;
+      if (dragType !== "material" || !materialName) return;
+      const material = registry.get(materialName);
+      const category = materialMap.get(materialName)?.category ?? material?.category ?? "layout";
+      const defaultProps = material?.defaultProps ?? {};
+      const node = createComponentNode(materialName, category, { ...defaultProps });
+      insertNode(node, { parentId: null, index: components.length });
     },
-    [addComponent, materialMap, components],
+    [components.length, insertNode, materialMap, moveNode, parseTreeDropTarget, registry],
+  );
+
+  const handleAddMaterial = useCallback(
+    (materialName: string) => {
+      const material = registry.get(materialName);
+      const category = materialMap.get(materialName)?.category ?? material?.category ?? "layout";
+      const defaultProps = material?.defaultProps ?? {};
+      const node = createComponentNode(materialName, category, { ...defaultProps });
+      insertNode(node, { parentId: null, index: components.length });
+    },
+    [components.length, insertNode, materialMap, registry],
   );
 
   // 编辑器 store 中的视口变化同步到画布 store
@@ -270,7 +341,11 @@ export function EditorLayout() {
       }
       if ((e.ctrlKey || e.metaKey) && e.key === "x") {
         e.preventDefault();
-        deleteSelected();
+        cutSelected();
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key === "v") {
+        e.preventDefault();
+        pasteClipboard();
       }
       if ((e.ctrlKey || e.metaKey) && e.key === "z") {
         e.preventDefault();
@@ -292,7 +367,7 @@ export function EditorLayout() {
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [copySelected, deleteSelected, isPageMode, undo, redo]);
+  }, [copySelected, cutSelected, deleteSelected, isPageMode, pasteClipboard, undo, redo]);
 
 
   return (
@@ -303,10 +378,11 @@ export function EditorLayout() {
           onDragEnd={handleDragEnd}
           collisionDetection={pointerWithin}
           autoScroll={false}
+          sensors={sensors}
         >
           <div className="flex flex-1 overflow-hidden">
             {!leftPanelCollapsed && <LeftPanel collapsed={leftPanelCollapsed} />}
-            <MaterialPanel collapsed={leftPanelCollapsed} />
+            <MaterialPanel collapsed={leftPanelCollapsed} onAddMaterial={handleAddMaterial} />
             <CanvasDropZone />
             <RightPanel collapsed={rightPanelCollapsed} />
           </div>

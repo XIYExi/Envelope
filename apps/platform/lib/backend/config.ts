@@ -23,6 +23,7 @@ export type StorageMode = z.infer<typeof storageModeSchema>;
 
 type EnvLike = Record<string, string | undefined>;
 const DEFAULT_LOCAL_BACKEND_ROOT_SEGMENTS = [".envelope", "local"];
+const WINDOWS_LOCAL_BACKEND_ROOT_SEGMENTS = ["Envelope", "local"];
 
 const supabaseConfigSchema = z.object({
   /** 当前后端模式：Supabase 云端模式。 */
@@ -116,15 +117,24 @@ function resolveUserHomeDir(env: EnvLike = process.env): string {
 /**
  * 解析 local 模式的默认根目录。
  *
- * 统一收敛为用户 home 下的 `.envelope/local`，避免桌面环境仍把数据库、
- * 媒体文件写入工作区目录，导致升级、移动安装目录或只读工作区时行为不稳定。
+ * 非 Windows 环境统一收敛为用户 home 下的 `.envelope/local`；
+ * Windows 环境则落到用户主目录下的 `Envelope/local` 非隐藏目录，
+ * 避免隐藏目录触发 SQLite `SQLITE_CANTOPEN`，同时规避部分沙箱环境对
+ * `%LOCALAPPDATA%` 目录创建的额外权限限制。
  *
  * @param env 运行时环境变量集合
+ * @param runtimePlatform 运行时平台，默认取当前 Node 平台；测试场景可显式覆盖
  * @returns local 模式默认根目录
  * @author xiye
  * @date 2026-06-21
  */
-export function resolveDefaultLocalBackendRoot(env: EnvLike = process.env): string {
+export function resolveDefaultLocalBackendRoot(
+  env: EnvLike = process.env,
+  runtimePlatform: NodeJS.Platform = process.platform,
+): string {
+  if (runtimePlatform === "win32") {
+    return path.join(resolveUserHomeDir(env), ...WINDOWS_LOCAL_BACKEND_ROOT_SEGMENTS);
+  }
   return path.join(resolveUserHomeDir(env), ...DEFAULT_LOCAL_BACKEND_ROOT_SEGMENTS);
 }
 
@@ -137,11 +147,15 @@ export function resolveDefaultLocalBackendRoot(env: EnvLike = process.env): stri
  * - 最终返回一个经过 Zod 校验的强类型配置对象。
  *
  * @param env 运行时环境变量集合
+ * @param runtimePlatform 运行时平台，默认取当前 Node 平台；测试场景可显式覆盖
  * @returns 当前平台应使用的后端配置
  * @author xiye
  * @date 2026-06-20
  */
-export function resolvePlatformBackendConfig(env: EnvLike = process.env): RuntimeBackendConfig {
+export function resolvePlatformBackendConfig(
+  env: EnvLike = process.env,
+  runtimePlatform: NodeJS.Platform = process.platform,
+): RuntimeBackendConfig {
   const mode = normalizeBackendMode(env.ENVELOPE_PLATFORM_BACKEND);
 
   if (mode === "supabase") {
@@ -163,7 +177,7 @@ export function resolvePlatformBackendConfig(env: EnvLike = process.env): Runtim
   }
 
   if (mode === "local") {
-    const localRoot = env.ENVELOPE_LOCAL_ROOT || resolveDefaultLocalBackendRoot(env);
+    const localRoot = env.ENVELOPE_LOCAL_ROOT || resolveDefaultLocalBackendRoot(env, runtimePlatform);
     const sqlitePath = env.ENVELOPE_LOCAL_SQLITE_PATH || path.join(localRoot, "envelope.db");
     const mediaRoot = env.ENVELOPE_LOCAL_MEDIA_ROOT || path.join(localRoot, "media");
     const parsed = localConfigSchema.safeParse({

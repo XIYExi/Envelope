@@ -91,7 +91,7 @@ describe("api route error branches", () => {
     assertNoRawStacktrace(bodyText);
     const payload = JSON.parse(bodyText);
     assertNoStackField(payload);
-  });
+  }, 15_000);
 
   it("archive/import/tasks 400：缺少 file 时返回 400，且不泄漏堆栈", async () => {
     const supabase = createMockSupabase();

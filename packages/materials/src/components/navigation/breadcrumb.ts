@@ -6,9 +6,20 @@ export const breadcrumbMaterial: MaterialDefinition = {
   description: "A navigation aid showing the user's location in a hierarchy.",
   category: "navigation",
   icon: "Slash",
+  defaultProps: {
+    items: ["Home", "Page", "Current"],
+  },
   supportsChildren: true,
   isContainer: true,
   editableProps: [
+    {
+      key: "items",
+      label: "Items",
+      type: "json",
+      defaultValue: ["Home", "Page", "Current"],
+      group: "Slots",
+      order: 1,
+    },
     {
       key: "className",
       label: "Tailwind Classes",

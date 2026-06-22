@@ -7,7 +7,36 @@ export const paginationMaterial: MaterialDefinition = {
   category: "navigation",
   icon: "SkipForward",
   supportsChildren: true,
+  defaultProps: {
+    pageCount: 5,
+    currentPage: 1,
+    showPrevNext: true,
+  },
   editableProps: [
+    {
+      key: "pageCount",
+      label: "Pages",
+      type: "number",
+      defaultValue: 5,
+      group: "Slots",
+      order: 1,
+    },
+    {
+      key: "currentPage",
+      label: "Current Page",
+      type: "number",
+      defaultValue: 1,
+      group: "Slots",
+      order: 2,
+    },
+    {
+      key: "showPrevNext",
+      label: "Prev/Next",
+      type: "switch",
+      defaultValue: true,
+      group: "Slots",
+      order: 3,
+    },
     {
       key: "className",
       label: "Tailwind Classes",

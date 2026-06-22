@@ -15,7 +15,7 @@ import { switchMaterial } from "./form";
 import { toggleMaterial, toggleGroupMaterial } from "./form";
 import { sliderMaterial } from "./form";
 
-import { avatarMaterial, badgeMaterial } from "./display";
+import { avatarMaterial, badgeMaterial, textMaterial } from "./display";
 
 import { skeletonMaterial } from "./feedback";
 import { alertMaterial, alertTitleMaterial, alertDescriptionMaterial } from "./feedback";
@@ -43,7 +43,7 @@ import {
 import { popoverMaterial, popoverTriggerMaterial, popoverContentMaterial } from "./overlay";
 import { tooltipMaterial, tooltipTriggerMaterial, tooltipContentMaterial } from "./overlay";
 import { dropdownMenuMaterial, dropdownMenuTriggerMaterial, dropdownMenuContentMaterial, dropdownMenuItemMaterial } from "./overlay";
-import { contextMenuMaterial, contextMenuTriggerMaterial, contextMenuContentMaterial } from "./overlay";
+import { contextMenuMaterial, contextMenuTriggerMaterial, contextMenuContentMaterial, contextMenuItemMaterial } from "./overlay";
 import { hoverCardMaterial, hoverCardTriggerMaterial, hoverCardContentMaterial } from "./overlay";
 import { drawerMaterial, drawerTriggerMaterial, drawerContentMaterial, drawerHeaderMaterial } from "./overlay";
 import { collapsibleMaterial, collapsibleTriggerMaterial, collapsibleContentMaterial } from "./overlay";
@@ -55,18 +55,20 @@ export function createDefaultRegistry(): MaterialRegistry {
 
   const registry = createRegistry();
 
+  const internal = <T extends { showInPalette?: boolean }>(def: T): T => ({ ...def, showInPalette: false });
+
   registry.registerAll([
     // ========== 布局组件 ==========
     cardMaterial,
-    cardHeaderMaterial,
-    cardContentMaterial,
-    cardFooterMaterial,
+    internal(cardHeaderMaterial),
+    internal(cardContentMaterial),
+    internal(cardFooterMaterial),
     separatorMaterial,
     scrollAreaMaterial,
     aspectRatioMaterial,
     resizablePanelGroupMaterial,
-    resizablePanelMaterial,
-    resizableHandleMaterial,
+    internal(resizablePanelMaterial),
+    internal(resizableHandleMaterial),
 
     // ========== 表单组件 ==========
     buttonMaterial,
@@ -75,9 +77,9 @@ export function createDefaultRegistry(): MaterialRegistry {
     textareaMaterial,
     checkboxMaterial,
     radioGroupMaterial,
-    radioGroupItemMaterial,
+    internal(radioGroupItemMaterial),
     selectMaterial,
-    selectItemMaterial,
+    internal(selectItemMaterial),
     switchMaterial,
     toggleMaterial,
     toggleGroupMaterial,
@@ -86,80 +88,82 @@ export function createDefaultRegistry(): MaterialRegistry {
     // ========== 展示组件 ==========
     avatarMaterial,
     badgeMaterial,
+    internal(textMaterial),
 
     // ========== 反馈组件 ==========
     skeletonMaterial,
     alertMaterial,
-    alertTitleMaterial,
-    alertDescriptionMaterial,
+    internal(alertTitleMaterial),
+    internal(alertDescriptionMaterial),
     progressMaterial,
 
     // ========== 导航组件 ==========
     tabsMaterial,
-    tabsListMaterial,
-    tabsTriggerMaterial,
-    tabsContentMaterial,
+    internal(tabsListMaterial),
+    internal(tabsTriggerMaterial),
+    internal(tabsContentMaterial),
     breadcrumbMaterial,
-    breadcrumbItemMaterial,
-    breadcrumbLinkMaterial,
+    internal(breadcrumbItemMaterial),
+    internal(breadcrumbLinkMaterial),
     paginationMaterial,
-    paginationItemMaterial,
+    internal(paginationItemMaterial),
 
     // ========== 数据组件 ==========
     tableMaterial,
-    tableHeaderMaterial,
-    tableBodyMaterial,
-    tableRowMaterial,
-    tableHeadMaterial,
-    tableCellMaterial,
+    internal(tableHeaderMaterial),
+    internal(tableBodyMaterial),
+    internal(tableRowMaterial),
+    internal(tableHeadMaterial),
+    internal(tableCellMaterial),
     accordionMaterial,
-    accordionItemMaterial,
-    accordionTriggerMaterial,
-    accordionContentMaterial,
+    internal(accordionItemMaterial),
+    internal(accordionTriggerMaterial),
+    internal(accordionContentMaterial),
 
     // ========== 弹层组件 ==========
     dialogMaterial,
-    dialogTriggerMaterial,
-    dialogContentMaterial,
-    dialogHeaderMaterial,
-    dialogTitleMaterial,
-    dialogDescriptionMaterial,
-    dialogFooterMaterial,
+    internal(dialogTriggerMaterial),
+    internal(dialogContentMaterial),
+    internal(dialogHeaderMaterial),
+    internal(dialogTitleMaterial),
+    internal(dialogDescriptionMaterial),
+    internal(dialogFooterMaterial),
     sheetMaterial,
-    sheetTriggerMaterial,
-    sheetContentMaterial,
-    sheetHeaderMaterial,
-    sheetTitleMaterial,
-    sheetDescriptionMaterial,
+    internal(sheetTriggerMaterial),
+    internal(sheetContentMaterial),
+    internal(sheetHeaderMaterial),
+    internal(sheetTitleMaterial),
+    internal(sheetDescriptionMaterial),
     alertDialogMaterial,
-    alertDialogTriggerMaterial,
-    alertDialogContentMaterial,
-    alertDialogHeaderMaterial,
-    alertDialogActionMaterial,
-    alertDialogCancelMaterial,
+    internal(alertDialogTriggerMaterial),
+    internal(alertDialogContentMaterial),
+    internal(alertDialogHeaderMaterial),
+    internal(alertDialogActionMaterial),
+    internal(alertDialogCancelMaterial),
     popoverMaterial,
-    popoverTriggerMaterial,
-    popoverContentMaterial,
+    internal(popoverTriggerMaterial),
+    internal(popoverContentMaterial),
     tooltipMaterial,
-    tooltipTriggerMaterial,
-    tooltipContentMaterial,
+    internal(tooltipTriggerMaterial),
+    internal(tooltipContentMaterial),
     dropdownMenuMaterial,
-    dropdownMenuTriggerMaterial,
-    dropdownMenuContentMaterial,
-    dropdownMenuItemMaterial,
+    internal(dropdownMenuTriggerMaterial),
+    internal(dropdownMenuContentMaterial),
+    internal(dropdownMenuItemMaterial),
     contextMenuMaterial,
-    contextMenuTriggerMaterial,
-    contextMenuContentMaterial,
+    internal(contextMenuTriggerMaterial),
+    internal(contextMenuContentMaterial),
+    internal(contextMenuItemMaterial),
     hoverCardMaterial,
-    hoverCardTriggerMaterial,
-    hoverCardContentMaterial,
+    internal(hoverCardTriggerMaterial),
+    internal(hoverCardContentMaterial),
     drawerMaterial,
-    drawerTriggerMaterial,
-    drawerContentMaterial,
-    drawerHeaderMaterial,
+    internal(drawerTriggerMaterial),
+    internal(drawerContentMaterial),
+    internal(drawerHeaderMaterial),
     collapsibleMaterial,
-    collapsibleTriggerMaterial,
-    collapsibleContentMaterial,
+    internal(collapsibleTriggerMaterial),
+    internal(collapsibleContentMaterial),
   ]);
 
   defaultRegistry = registry;

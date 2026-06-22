@@ -6,6 +6,12 @@ export const accordionMaterial: MaterialDefinition = {
   description: "A vertically stacked set of expandable and collapsible sections.",
   category: "data",
   icon: "ChevronsUpDown",
+  defaultProps: {
+    items: [
+      { title: "Section 1", content: "Accordion content..." },
+      { title: "Section 2", content: "Accordion content..." },
+    ],
+  },
   supportsChildren: true,
   isContainer: true,
   editableProps: [
@@ -29,6 +35,17 @@ export const accordionMaterial: MaterialDefinition = {
       group: "Behavior",
       order: 2,
       comment: "Allow all items to be collapsed.",
+    },
+    {
+      key: "items",
+      label: "Items",
+      type: "json",
+      defaultValue: [
+        { title: "Section 1", content: "Accordion content..." },
+        { title: "Section 2", content: "Accordion content..." },
+      ],
+      group: "Slots",
+      order: 3,
     },
     {
       key: "className",

@@ -7,6 +7,9 @@ export const radioGroupMaterial: MaterialDefinition = {
   category: "form",
   icon: "Circle",
   supportsChildren: true,
+  defaultProps: {
+    options: ["Option 1", "Option 2"],
+  },
   editableProps: [
     {
       key: "defaultValue",
@@ -43,6 +46,14 @@ export const radioGroupMaterial: MaterialDefinition = {
       defaultValue: false,
       group: "Validation",
       order: 4,
+    },
+    {
+      key: "options",
+      label: "Options",
+      type: "json",
+      defaultValue: ["Option 1", "Option 2"],
+      group: "Slots",
+      order: 5,
     },
     {
       key: "className",

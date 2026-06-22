@@ -6,9 +6,38 @@ export const tableMaterial: MaterialDefinition = {
   description: "A responsive table for displaying structured data in rows and columns.",
   category: "data",
   icon: "Table",
+  defaultProps: {
+    showHeader: true,
+    columns: ["Col 1", "Col 2", "Col 3"],
+    rowCount: 2,
+  },
   supportsChildren: true,
   isContainer: true,
   editableProps: [
+    {
+      key: "showHeader",
+      label: "Header",
+      type: "switch",
+      defaultValue: true,
+      group: "Slots",
+      order: 1,
+    },
+    {
+      key: "columns",
+      label: "Columns",
+      type: "json",
+      defaultValue: ["Col 1", "Col 2", "Col 3"],
+      group: "Slots",
+      order: 2,
+    },
+    {
+      key: "rowCount",
+      label: "Rows",
+      type: "number",
+      defaultValue: 2,
+      group: "Slots",
+      order: 3,
+    },
     {
       key: "className",
       label: "Tailwind Classes",

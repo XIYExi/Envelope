@@ -17,7 +17,9 @@
 "use client";
 
 import { create } from "zustand";
-import type { CanvasState, CanvasActions, CanvasComponent, CanvasSnapshot } from "./types";
+import type { CanvasState, CanvasActions, CanvasComponent, CanvasSnapshot, CanvasClipboard, CanvasClipboardItem } from "./types";
+import { syncAggregateSlots } from "../slots";
+import type { ComponentNode } from "../schemas/page.schema";
 
 /**
  * 生成唯一 ID
@@ -29,6 +31,233 @@ import type { CanvasState, CanvasActions, CanvasComponent, CanvasSnapshot } from
  */
 function generateId(): string {
   return crypto.randomUUID();
+}
+
+function isAutoName(node: ComponentNode): boolean {
+  const name = typeof node.name === "string" ? node.name.trim() : "";
+  if (!name) return true;
+  return name === `${node.type}-${node.id}`;
+}
+
+function cloneNodeWithNewIds(node: ComponentNode): ComponentNode {
+  const id = generateId();
+  return {
+    ...node,
+    id,
+    name: isAutoName(node) ? `${node.type}-${id}` : node.name,
+    props: node.props ? structuredClone(node.props) : undefined,
+    tailwindClasses: node.tailwindClasses,
+    dataBindings: node.dataBindings ? structuredClone(node.dataBindings) : undefined,
+    eventBindings: node.eventBindings ? structuredClone(node.eventBindings) : undefined,
+    children: node.children ? node.children.map(cloneNodeWithNewIds) : undefined,
+    grid: undefined,
+  };
+}
+
+function nodeContainsId(node: ComponentNode, targetId: string): boolean {
+  if (node.id === targetId) return true;
+  const children = node.children ?? [];
+  for (const c of children) {
+    if (nodeContainsId(c, targetId)) return true;
+  }
+  return false;
+}
+
+type NodeLocation =
+  | {
+      kind: "root";
+      rootIndex: number;
+      rootId: string;
+      node: ComponentNode;
+    }
+  | {
+      kind: "child";
+      rootIndex: number;
+      rootId: string;
+      parentId: string;
+      index: number;
+      node: ComponentNode;
+    };
+
+function findNodeLocation(components: CanvasComponent[], nodeId: string): NodeLocation | null {
+  for (let i = 0; i < components.length; i += 1) {
+    const comp = components[i]!;
+    if (comp.id === nodeId) {
+      return { kind: "root", rootIndex: i, rootId: comp.id, node: comp.node };
+    }
+
+    type FoundChild = { kind: "child"; parentId: string; index: number; node: ComponentNode };
+    const walk = (parent: ComponentNode): FoundChild | null => {
+      const children = parent.children ?? [];
+      for (let j = 0; j < children.length; j += 1) {
+        const child = children[j]!;
+        if (child.id === nodeId) {
+          return { kind: "child", parentId: parent.id, index: j, node: child };
+        }
+        const nested = walk(child);
+        if (nested) return nested;
+      }
+      return null;
+    };
+
+    const found = walk(comp.node);
+    if (found) return { ...found, rootIndex: i, rootId: comp.id };
+  }
+  return null;
+}
+
+function reflowRootComponentsByOrder(components: CanvasComponent[]): CanvasComponent[] {
+  let y = 1;
+  return components.map((c) => {
+    const nextY = y;
+    y += Math.max(1, Math.round(c.position.height));
+    return { ...c, position: { ...c.position, y: nextY } };
+  });
+}
+
+function removeNodeFromTree(
+  node: ComponentNode,
+  targetId: string,
+): { nextNode: ComponentNode; removed: ComponentNode | null; removedParentId: string | null; removedIndex: number } {
+  const children = node.children ?? [];
+  if (children.length === 0) return { nextNode: node, removed: null, removedParentId: null, removedIndex: -1 };
+
+  let removed: ComponentNode | null = null;
+  let removedParentId: string | null = null;
+  let removedIndex = -1;
+  let changed = false;
+
+  const nextChildren: ComponentNode[] = [];
+  for (let i = 0; i < children.length; i += 1) {
+    const child = children[i]!;
+    if (child.id === targetId) {
+      removed = child;
+      removedParentId = node.id;
+      removedIndex = i;
+      changed = true;
+      continue;
+    }
+    const res = removeNodeFromTree(child, targetId);
+    if (res.removed) {
+      removed = res.removed;
+      removedParentId = res.removedParentId;
+      removedIndex = res.removedIndex;
+    }
+    if (res.nextNode !== child) changed = true;
+    nextChildren.push(res.nextNode);
+  }
+
+  if (!changed) return { nextNode: node, removed, removedParentId, removedIndex };
+
+  const next: ComponentNode = {
+    ...node,
+    children: nextChildren.length > 0 ? nextChildren : undefined,
+  };
+  return { nextNode: syncAggregateSlots(next, "children"), removed, removedParentId, removedIndex };
+}
+
+function insertNodeIntoTree(
+  node: ComponentNode,
+  parentId: string,
+  index: number,
+  child: ComponentNode,
+): { nextNode: ComponentNode; inserted: boolean } {
+  if (node.id === parentId) {
+    const children = node.children ?? [];
+    const nextChildren = children.slice();
+    const safeIndex = Math.max(0, Math.min(nextChildren.length, index));
+    nextChildren.splice(safeIndex, 0, child);
+    const next: ComponentNode = { ...node, children: nextChildren };
+    return { nextNode: syncAggregateSlots(next, "children"), inserted: true };
+  }
+
+  const children = node.children ?? [];
+  if (children.length === 0) return { nextNode: node, inserted: false };
+
+  let inserted = false;
+  let changed = false;
+  const nextChildren = children.map((c) => {
+    if (inserted) return c;
+    const res = insertNodeIntoTree(c, parentId, index, child);
+    if (res.inserted) inserted = true;
+    if (res.nextNode !== c) changed = true;
+    return res.nextNode;
+  });
+
+  if (!inserted) return { nextNode: node, inserted: false };
+  if (!changed) return { nextNode: node, inserted: true };
+
+  const next: ComponentNode = { ...node, children: nextChildren };
+  return { nextNode: syncAggregateSlots(next, "children"), inserted: true };
+}
+
+function updateNodeInTree(
+  node: ComponentNode,
+  targetId: string,
+  updates: Partial<Omit<ComponentNode, "id">>,
+): { nextNode: ComponentNode; updated: boolean } {
+  if (node.id === targetId) {
+    const next: ComponentNode = {
+      ...node,
+      ...updates,
+      props: Object.prototype.hasOwnProperty.call(updates, "props") ? updates.props : node.props,
+      dataBindings: Object.prototype.hasOwnProperty.call(updates, "dataBindings") ? updates.dataBindings : node.dataBindings,
+      eventBindings: Object.prototype.hasOwnProperty.call(updates, "eventBindings") ? updates.eventBindings : node.eventBindings,
+      children: Object.prototype.hasOwnProperty.call(updates, "children") ? updates.children : node.children,
+    };
+
+    const hasProps = Object.prototype.hasOwnProperty.call(updates, "props");
+    const hasChildren = Object.prototype.hasOwnProperty.call(updates, "children");
+    const source = hasChildren && !hasProps ? "children" : "props";
+    return { nextNode: (hasProps || hasChildren) ? syncAggregateSlots(next, source) : next, updated: true };
+  }
+
+  const children = node.children ?? [];
+  if (children.length === 0) return { nextNode: node, updated: false };
+
+  let updated = false;
+  let changed = false;
+  const nextChildren = children.map((c) => {
+    if (updated) return c;
+    const res = updateNodeInTree(c, targetId, updates);
+    if (res.updated) updated = true;
+    if (res.nextNode !== c) changed = true;
+    return res.nextNode;
+  });
+
+  if (!updated) return { nextNode: node, updated: false };
+  if (!changed) return { nextNode: node, updated: true };
+  return { nextNode: { ...node, children: nextChildren }, updated: true };
+}
+
+/**
+ * 创建一个新的 ComponentNode（不带画布 Grid 位置信息）
+ *
+ * 用途：
+ * - 组件树面板 / 嵌套插入：只需要 node 结构，不需要 CanvasComponent.position
+ * - 剪贴板 Paste：当需要把“节点”粘贴到某个父节点 children 时直接复用
+ *
+ * 注意：
+ * - 会自动生成 id，并将默认 name 规范化为 `${type}-${id}`
+ * - 会执行聚合组件 slots 初始化（props → children），确保编辑器内部始终拥有 children tree
+ *
+ * @author xiye
+ * @date 2026-06-22
+ * @since 3.0.0
+ */
+export function createComponentNode(
+  type: string,
+  category: string,
+  props: Record<string, unknown> = {},
+): ComponentNode {
+  const id = generateId();
+  return syncAggregateSlots({
+    id,
+    type,
+    name: `${type}-${id}`,
+    category,
+    props,
+  }, "props");
 }
 
 /**
@@ -80,6 +309,7 @@ function takeSnapshot(state: CanvasState): CanvasSnapshot {
   return {
     components: structuredClone(state.components),
     selectedIds: structuredClone(state.selectedIds),
+    activeNodeId: state.activeNodeId,
     zoom: state.zoom,
     viewport: state.viewport,
     gridCols: state.gridCols,
@@ -114,6 +344,7 @@ export const useCanvasStore = create<CanvasState & CanvasActions>((set, get) => 
   // ========== 初始状态 ==========
   components: [],
   selectedIds: [],
+  activeNodeId: null,
   zoom: 1,
   viewport: "desktop",
   gridCols: 12,
@@ -122,6 +353,7 @@ export const useCanvasStore = create<CanvasState & CanvasActions>((set, get) => 
   panY: 0,
   pageBackground: "#ffffff",
   pagePadding: 16,
+  clipboard: null,
   canUndo: false,
   canRedo: false,
   historyPast: [],
@@ -149,6 +381,7 @@ export const useCanvasStore = create<CanvasState & CanvasActions>((set, get) => 
       const partial = {
         components: state.components.filter((c) => c.id !== id),
         selectedIds: state.selectedIds.filter((sid) => sid !== id),
+        activeNodeId: state.activeNodeId === id ? null : state.activeNodeId,
       };
       if (batching) return partial;
       const prev = takeSnapshot(state);
@@ -164,7 +397,33 @@ export const useCanvasStore = create<CanvasState & CanvasActions>((set, get) => 
   updateComponent: (id, updates) => {
     set((state) => {
       const partial = {
-        components: state.components.map((c) => (c.id === id ? { ...c, ...updates } : c)),
+        components: state.components.map((c) => {
+          if (c.id !== id) return c;
+
+          const next = {
+            ...c,
+            ...updates,
+            node: updates.node ? { ...c.node, ...updates.node } : c.node,
+          };
+
+          if (!updates.node) return next;
+
+          /**
+           * 聚合组件 slots 同步（props ↔ children）
+           *
+           * 约定：
+           * - 仅传入 props（常见于右侧属性面板）：认为“props 为真实来源”，据此重建 children tree；
+           * - 仅传入 children（未来/外部场景）：认为“children 为真实来源”，回写 slots props。
+           *
+           * @author xiye
+           * @date 2026-06-22
+           * @since 3.0.0
+           */
+          const hasProps = Object.prototype.hasOwnProperty.call(updates.node, "props");
+          const hasChildren = Object.prototype.hasOwnProperty.call(updates.node, "children");
+          const source = hasChildren && !hasProps ? "children" : "props";
+          return { ...next, node: syncAggregateSlots(next.node, source) };
+        }),
       };
       if (batching) return partial;
       const prev = takeSnapshot(state);
@@ -182,11 +441,13 @@ export const useCanvasStore = create<CanvasState & CanvasActions>((set, get) => 
       const partial = multi
         ? (() => {
             const already = state.selectedIds.includes(id);
+            const nextSelectedIds = already ? state.selectedIds.filter((s) => s !== id) : [...state.selectedIds, id];
             return {
-              selectedIds: already ? state.selectedIds.filter((s) => s !== id) : [...state.selectedIds, id],
+              selectedIds: nextSelectedIds,
+              activeNodeId: nextSelectedIds.length === 1 ? nextSelectedIds[0]! : null,
             };
           })()
-        : { selectedIds: [id] };
+        : { selectedIds: [id], activeNodeId: id };
       if (batching) return partial;
       const prev = takeSnapshot(state);
       const next = takeSnapshot({ ...(state as CanvasState), ...partial });
@@ -204,9 +465,28 @@ export const useCanvasStore = create<CanvasState & CanvasActions>((set, get) => 
     });
   },
 
+  selectNode: (nodeId) => {
+    set((state) => {
+      const loc = findNodeLocation(state.components, nodeId);
+      if (!loc) return {};
+      const partial = {
+        selectedIds: [loc.rootId],
+        activeNodeId: nodeId,
+      };
+      if (batching) return partial;
+      const prev = takeSnapshot(state);
+      const next = takeSnapshot({ ...(state as CanvasState), ...partial });
+      if (snapshotEquals(prev, next)) return partial;
+      const past = [...state.historyPast, prev];
+      const limitedPast = past.length > state.historyLimit ? past.slice(past.length - state.historyLimit) : past;
+      lastCoalesceKey = null;
+      return { ...partial, historyPast: limitedPast, historyFuture: [], canUndo: limitedPast.length > 0, canRedo: false };
+    });
+  },
+
   clearSelection: () => {
     set((state) => {
-      const partial = { selectedIds: [] as string[] };
+      const partial = { selectedIds: [] as string[], activeNodeId: null };
       if (batching) return partial;
       const prev = takeSnapshot(state);
       const next = takeSnapshot({ ...(state as CanvasState), ...partial });
@@ -439,34 +719,306 @@ export const useCanvasStore = create<CanvasState & CanvasActions>((set, get) => 
    * - 偏移后的 x 仍要做边界钳制，避免复制到画布外
    */
   copySelected: () => {
-    set((state) => {
-      const componentMap = new Map(state.components.map((c) => [c.id, c]));
-      const copies = state.selectedIds
-        .map((sid) => componentMap.get(sid))
-        .filter((c): c is CanvasComponent => c !== undefined);
+    const state = get();
+    if (state.selectedIds.length === 0) return;
 
-      const newComps: CanvasComponent[] = copies.map((c) => {
-        // 关键：CanvasComponent.id 与 node.id 必须保持一致，避免后续基于 id 的映射出现歧义
-        const newId = generateId();
-        const clonedNode = structuredClone(c.node);
-        clonedNode.id = newId;
-        clonedNode.name = `${clonedNode.type}-${newId}`;
-        const nextX = clampXByWidth(c.position.x + 2, c.position.width, state.gridCols);
-        const nextY = Math.max(1, Math.round(c.position.y + 1));
-        return {
-          id: newId,
-          node: clonedNode,
-          position: { ...c.position, x: nextX, y: nextY },
-        };
+    const primaryId = state.activeNodeId ?? state.selectedIds[0] ?? null;
+    if (!primaryId) return;
+
+    const loc = findNodeLocation(state.components, primaryId);
+    if (!loc) return;
+
+    const items: CanvasClipboardItem[] = (() => {
+      if (state.selectedIds.length > 1) {
+        const map = new Map(state.components.map((c) => [c.id, c]));
+        return state.selectedIds
+          .map((id) => map.get(id))
+          .filter((c): c is CanvasComponent => Boolean(c))
+          .map((c) => ({ kind: "canvas-component", component: structuredClone(c) }));
+      }
+      if (loc.kind === "root") {
+        const comp = state.components[loc.rootIndex]!;
+        return [{ kind: "canvas-component", component: structuredClone(comp) }];
+      }
+      return [{ kind: "component-node", node: structuredClone(loc.node) }];
+    })();
+
+    const clipboard: CanvasClipboard = { mode: "copy", items };
+    set({ clipboard });
+  },
+
+  cutSelected: () => {
+    const state = get();
+    if (state.selectedIds.length === 0) return;
+    get().copySelected();
+    set({ clipboard: get().clipboard ? { ...get().clipboard!, mode: "cut" } : null });
+    get().deleteSelected();
+  },
+
+  pasteClipboard: (target) => {
+    set((state) => {
+      const clipboard = state.clipboard;
+      if (!clipboard || clipboard.items.length === 0) return {};
+
+      const inferredTarget = (() => {
+        if (target) return target;
+        if (state.activeNodeId) {
+          const loc = findNodeLocation(state.components, state.activeNodeId);
+          if (!loc) return { parentId: null as string | null, index: state.components.length };
+          if (loc.kind === "root") return { parentId: null as string | null, index: loc.rootIndex + 1 };
+          return { parentId: loc.parentId, index: loc.index + 1 };
+        }
+        if (state.selectedIds.length > 0) {
+          const map = new Map(state.components.map((c, idx) => [c.id, idx]));
+          const maxIndex = Math.max(...state.selectedIds.map((id) => map.get(id) ?? -1));
+          return { parentId: null as string | null, index: Math.max(0, maxIndex + 1) };
+        }
+        return { parentId: null as string | null, index: state.components.length };
+      })();
+
+      const parentId = inferredTarget.parentId;
+      const index = inferredTarget.index ?? (parentId === null ? state.components.length : 0);
+
+      const prev = takeSnapshot(state);
+
+      const clonedNodes = clipboard.items.map((it) => {
+        if (it.kind === "canvas-component") return cloneNodeWithNewIds(it.component.node);
+        return cloneNodeWithNewIds(it.node);
       });
 
-      const partial = {
-        components: [...state.components, ...newComps],
-        selectedIds: newComps.map((c) => c.id),
+      let nextComponents = state.components.slice();
+
+      if (parentId === null) {
+        const safeIndex = Math.max(0, Math.min(nextComponents.length, index));
+        const newComps = clonedNodes.map((n) => ({
+          id: n.id,
+          node: n,
+          position: { x: 1, y: 1, width: 3, height: 2 },
+        }));
+        nextComponents.splice(safeIndex, 0, ...newComps);
+        nextComponents = reflowRootComponentsByOrder(nextComponents);
+        const firstId = newComps[0]?.id ?? null;
+        const partial: Partial<CanvasState> = {
+          components: nextComponents,
+          selectedIds: firstId ? [firstId] : [],
+          activeNodeId: firstId,
+          ...(clipboard.mode === "cut" ? { clipboard: null } : {}),
+        };
+        if (batching) return partial;
+        const next = takeSnapshot({ ...(state as CanvasState), ...partial });
+        if (snapshotEquals(prev, next)) return partial;
+        const past = [...state.historyPast, prev];
+        const limitedPast = past.length > state.historyLimit ? past.slice(past.length - state.historyLimit) : past;
+        lastCoalesceKey = null;
+        return { ...partial, historyPast: limitedPast, historyFuture: [], canUndo: limitedPast.length > 0, canRedo: false };
+      }
+
+      let insertedRootId: string | null = null;
+      nextComponents = nextComponents.map((c) => {
+        if (insertedRootId) return c;
+        const res = insertNodeIntoTree(c.node, parentId, index, clonedNodes[0]!);
+        if (!res.inserted) return c;
+        insertedRootId = c.id;
+
+        let nextNode = res.nextNode;
+        for (let i = 1; i < clonedNodes.length; i += 1) {
+          const more = insertNodeIntoTree(nextNode, parentId, index + i, clonedNodes[i]!);
+          nextNode = more.nextNode;
+        }
+
+        return { ...c, node: nextNode };
+      });
+
+      const firstInserted = clonedNodes[0]?.id ?? null;
+      const partial: Partial<CanvasState> = {
+        components: nextComponents,
+        selectedIds: insertedRootId ? [insertedRootId] : state.selectedIds,
+        activeNodeId: firstInserted,
+        ...(clipboard.mode === "cut" ? { clipboard: null } : {}),
       };
 
       if (batching) return partial;
+      const next = takeSnapshot({ ...(state as CanvasState), ...partial });
+      if (snapshotEquals(prev, next)) return partial;
+      const past = [...state.historyPast, prev];
+      const limitedPast = past.length > state.historyLimit ? past.slice(past.length - state.historyLimit) : past;
+      lastCoalesceKey = null;
+      return { ...partial, historyPast: limitedPast, historyFuture: [], canUndo: limitedPast.length > 0, canRedo: false };
+    });
+  },
+
+  insertNode: (node, target) => {
+    set((state) => {
       const prev = takeSnapshot(state);
+      const parentId = target.parentId;
+      const index = target.index ?? (parentId === null ? state.components.length : 0);
+
+      if (parentId === null) {
+        const nextComponents = state.components.slice();
+        const safeIndex = Math.max(0, Math.min(nextComponents.length, index));
+        nextComponents.splice(safeIndex, 0, {
+          id: node.id,
+          node,
+          position: { x: 1, y: 1, width: 3, height: 2 },
+        });
+        const reflowed = reflowRootComponentsByOrder(nextComponents);
+        const partial = { components: reflowed, selectedIds: [node.id], activeNodeId: node.id };
+        if (batching) return partial;
+        const next = takeSnapshot({ ...(state as CanvasState), ...partial });
+        if (snapshotEquals(prev, next)) return partial;
+        const past = [...state.historyPast, prev];
+        const limitedPast = past.length > state.historyLimit ? past.slice(past.length - state.historyLimit) : past;
+        lastCoalesceKey = null;
+        return { ...partial, historyPast: limitedPast, historyFuture: [], canUndo: limitedPast.length > 0, canRedo: false };
+      }
+
+      let insertedRootId: string | null = null;
+      const nextComponents = state.components.map((c) => {
+        if (insertedRootId) return c;
+        const res = insertNodeIntoTree(c.node, parentId, index, node);
+        if (!res.inserted) return c;
+        insertedRootId = c.id;
+        return { ...c, node: res.nextNode };
+      });
+
+      if (!insertedRootId) return {};
+      const partial = { components: nextComponents, selectedIds: [insertedRootId], activeNodeId: node.id };
+      if (batching) return partial;
+      const next = takeSnapshot({ ...(state as CanvasState), ...partial });
+      if (snapshotEquals(prev, next)) return partial;
+      const past = [...state.historyPast, prev];
+      const limitedPast = past.length > state.historyLimit ? past.slice(past.length - state.historyLimit) : past;
+      lastCoalesceKey = null;
+      return { ...partial, historyPast: limitedPast, historyFuture: [], canUndo: limitedPast.length > 0, canRedo: false };
+    });
+  },
+
+  moveNode: (nodeId, target) => {
+    set((state) => {
+      const loc = findNodeLocation(state.components, nodeId);
+      if (!loc) return {};
+
+      const targetParentId = target.parentId;
+      if (targetParentId && nodeContainsId(loc.node, targetParentId)) return {};
+
+      const prev = takeSnapshot(state);
+
+      let removedKind: "canvas-component" | "component-node" | null = null;
+      let removedComponent: CanvasComponent | null = null;
+      let removedNode: ComponentNode | null = null;
+      let originParentId: string | null = null;
+      let originIndex = -1;
+
+      let nextComponents = state.components.slice();
+
+      if (loc.kind === "root") {
+        originParentId = null;
+        originIndex = loc.rootIndex;
+        const removedComp = nextComponents.splice(loc.rootIndex, 1)[0]!;
+        removedKind = "canvas-component";
+        removedComponent = removedComp;
+      } else {
+        originParentId = loc.parentId;
+        originIndex = loc.index;
+        const rootComp = nextComponents[loc.rootIndex];
+        if (!rootComp) return {};
+        const res = removeNodeFromTree(rootComp.node, nodeId);
+        if (!res.removed) return {};
+        removedKind = "component-node";
+        removedNode = res.removed;
+        nextComponents[loc.rootIndex] = { ...rootComp, node: res.nextNode };
+      }
+
+      if (!removedKind) return {};
+
+      const adjustedIndex = (() => {
+        const raw = target.index ?? (targetParentId === null ? nextComponents.length : 0);
+        if (originParentId !== targetParentId) return raw;
+        if (originIndex >= 0 && originIndex < raw) return Math.max(0, raw - 1);
+        return raw;
+      })();
+
+      if (targetParentId === null) {
+        const safeIndex = Math.max(0, Math.min(nextComponents.length, adjustedIndex));
+        const compsToInsert: CanvasComponent[] = [];
+        if (removedKind === "canvas-component" && removedComponent) {
+          compsToInsert.push(removedComponent);
+        } else if (removedKind === "component-node" && removedNode) {
+          compsToInsert.push({ id: removedNode.id, node: removedNode, position: { x: 1, y: 1, width: 3, height: 2 } });
+        } else {
+          return {};
+        }
+        nextComponents.splice(safeIndex, 0, ...compsToInsert);
+        nextComponents = reflowRootComponentsByOrder(nextComponents);
+      } else {
+        const nodeToInsert = removedKind === "canvas-component" ? removedComponent?.node : removedNode;
+        if (!nodeToInsert) return {};
+        let inserted = false;
+        nextComponents = nextComponents.map((c) => {
+          if (inserted) return c;
+          const res = insertNodeIntoTree(c.node, targetParentId, adjustedIndex, nodeToInsert);
+          if (!res.inserted) return c;
+          inserted = true;
+          return { ...c, node: res.nextNode };
+        });
+        if (!inserted) return {};
+      }
+
+      const nextLoc = findNodeLocation(nextComponents, nodeId);
+      const partial = {
+        components: nextComponents,
+        selectedIds: nextLoc ? [nextLoc.rootId] : [],
+        activeNodeId: nodeId,
+      };
+
+      if (batching) return partial;
+      const next = takeSnapshot({ ...(state as CanvasState), ...partial });
+      if (snapshotEquals(prev, next)) return partial;
+      const past = [...state.historyPast, prev];
+      const limitedPast = past.length > state.historyLimit ? past.slice(past.length - state.historyLimit) : past;
+      lastCoalesceKey = null;
+      return { ...partial, historyPast: limitedPast, historyFuture: [], canUndo: limitedPast.length > 0, canRedo: false };
+    });
+  },
+
+  updateNode: (nodeId, updates) => {
+    set((state) => {
+      const loc = findNodeLocation(state.components, nodeId);
+      if (!loc) return {};
+
+      const prev = takeSnapshot(state);
+
+      if (loc.kind === "root") {
+        const partial = {
+          components: state.components.map((c) => {
+            if (c.id !== nodeId) return c;
+            const nextNode: ComponentNode = { ...c.node, ...updates } as ComponentNode;
+            const hasProps = Object.prototype.hasOwnProperty.call(updates, "props");
+            const hasChildren = Object.prototype.hasOwnProperty.call(updates, "children");
+            const source = hasChildren && !hasProps ? "children" : "props";
+            const synced = (hasProps || hasChildren) ? syncAggregateSlots(nextNode, source) : nextNode;
+            return { ...c, node: synced };
+          }),
+        };
+        if (batching) return partial;
+        const next = takeSnapshot({ ...(state as CanvasState), ...partial });
+        if (snapshotEquals(prev, next)) return partial;
+        const past = [...state.historyPast, prev];
+        const limitedPast = past.length > state.historyLimit ? past.slice(past.length - state.historyLimit) : past;
+        lastCoalesceKey = null;
+        return { ...partial, historyPast: limitedPast, historyFuture: [], canUndo: limitedPast.length > 0, canRedo: false };
+      }
+
+      const partial = {
+        components: state.components.map((c) => {
+          if (c.id !== loc.rootId) return c;
+          const res = updateNodeInTree(c.node, nodeId, updates);
+          if (!res.updated) return c;
+          return { ...c, node: res.nextNode };
+        }),
+      };
+
+      if (batching) return partial;
       const next = takeSnapshot({ ...(state as CanvasState), ...partial });
       if (snapshotEquals(prev, next)) return partial;
       const past = [...state.historyPast, prev];
@@ -478,12 +1030,40 @@ export const useCanvasStore = create<CanvasState & CanvasActions>((set, get) => 
 
   deleteSelected: () => {
     set((state) => {
-      const partial = {
-        components: state.components.filter((c) => !state.selectedIds.includes(c.id)),
-        selectedIds: [] as string[],
-      };
-      if (batching) return partial;
+      if (state.selectedIds.length === 0) return {};
+
+      const active = state.activeNodeId;
+      const activeLoc = active ? findNodeLocation(state.components, active) : null;
+
+      const isMultiRoot = state.selectedIds.length > 1;
+      const shouldDeleteRoots = isMultiRoot || !activeLoc || activeLoc.kind === "root";
+
       const prev = takeSnapshot(state);
+
+      if (shouldDeleteRoots) {
+        const nextComponents = state.components.filter((c) => !state.selectedIds.includes(c.id));
+        const partial = { components: nextComponents, selectedIds: [] as string[], activeNodeId: null };
+        if (batching) return partial;
+        const next = takeSnapshot({ ...(state as CanvasState), ...partial });
+        if (snapshotEquals(prev, next)) return partial;
+        const past = [...state.historyPast, prev];
+        const limitedPast = past.length > state.historyLimit ? past.slice(past.length - state.historyLimit) : past;
+        lastCoalesceKey = null;
+        return { ...partial, historyPast: limitedPast, historyFuture: [], canUndo: limitedPast.length > 0, canRedo: false };
+      }
+
+      const loc = activeLoc;
+      if (!loc || loc.kind !== "child") return {};
+
+      const nextComponents = state.components.map((c) => {
+        if (c.id !== loc.rootId) return c;
+        const res = removeNodeFromTree(c.node, active!);
+        if (!res.removed) return c;
+        return { ...c, node: res.nextNode };
+      });
+
+      const partial = { components: nextComponents, selectedIds: [loc.rootId], activeNodeId: loc.rootId };
+      if (batching) return partial;
       const next = takeSnapshot({ ...(state as CanvasState), ...partial });
       if (snapshotEquals(prev, next)) return partial;
       const past = [...state.historyPast, prev];
@@ -495,7 +1075,7 @@ export const useCanvasStore = create<CanvasState & CanvasActions>((set, get) => 
 
   clearAll: () => {
     set((state) => {
-      const partial = { components: [] as CanvasComponent[], selectedIds: [] as string[] };
+      const partial = { components: [] as CanvasComponent[], selectedIds: [] as string[], activeNodeId: null };
       if (batching) return partial;
       const prev = takeSnapshot(state);
       const next = takeSnapshot({ ...(state as CanvasState), ...partial });
@@ -560,7 +1140,16 @@ export const useCanvasStore = create<CanvasState & CanvasActions>((set, get) => 
     lastCoalesceKey = null;
     batchStartSnapshot = null;
     batching = false;
-    set({ ...partial, historyPast: [], historyFuture: [], canUndo: false, canRedo: false });
+    set({
+      ...partial,
+      selectedIds: partial.selectedIds ?? [],
+      activeNodeId: partial.activeNodeId ?? null,
+      historyPast: [],
+      historyFuture: [],
+      canUndo: false,
+      canRedo: false,
+      clipboard: null,
+    });
   },
 
   batch: (fn) => {
@@ -617,15 +1206,26 @@ export function createCanvasComponent(
     y = Math.max(...existingComponents.map((c) => c.position.y + c.position.height));
   }
   const id = generateId();
+  /**
+   * 聚合组件 slots 初始化（props → children）
+   *
+   * 新增组件时物料默认值通常仅存在于 props，编辑器内部需要同时生成 children tree，
+   * 以便后续导出/渲染阶段可以真正按 children 结构处理 slots。
+   *
+   * @author xiye
+   * @date 2026-06-22
+   * @since 3.0.0
+   */
+  const node = syncAggregateSlots({
+    id,
+    type,
+    name: `${type}-${id}`,
+    category,
+    props,
+  }, "props");
   return {
     id,
-    node: {
-      id,
-      type,
-      name: `${type}-${id}`,
-      category,
-      props,
-    },
+    node,
     position: { x: 1, y, width: 3, height: 2 },
   };
 }

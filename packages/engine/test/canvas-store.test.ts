@@ -12,7 +12,7 @@
  * - 这里不测试 React 视图层，只测试 Zustand store 的纯状态与 action 逻辑
  */
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { createCanvasComponent, useCanvasStore } from "../src/canvas/store";
+import { createCanvasComponent, createComponentNode, useCanvasStore } from "../src/canvas/store";
 import type { CanvasComponent, CanvasSnapshot } from "../src/canvas/types";
 
 /**
@@ -24,6 +24,7 @@ function baseSnapshot(overrides: Partial<CanvasSnapshot> = {}): CanvasSnapshot {
   return {
     components: [],
     selectedIds: [],
+    activeNodeId: null,
     zoom: 1,
     viewport: "desktop",
     gridCols: 12,
@@ -104,22 +105,25 @@ describe("canvas/store", () => {
     expect(resized.position.height).toBe(1);
   });
 
-  it("copySelected：复制后组件/节点 ID 必须一致，且偏移后的 x 仍会被钳制到有效范围", () => {
+  it("Copy/Paste：copySelected 只写入内部剪贴板，pasteClipboard 会生成新 ID 并保持 node.id 与组件 id 一致", () => {
     const nearRight = comp({ position: { x: 10, y: 2, width: 3, height: 2 } });
-    resetStore({ components: [nearRight], selectedIds: [nearRight.id] });
+    resetStore({ components: [nearRight], selectedIds: [nearRight.id], activeNodeId: nearRight.id });
 
     useCanvasStore.getState().copySelected();
     const st = useCanvasStore.getState();
 
-    expect(st.components).toHaveLength(2);
-    expect(st.selectedIds).toHaveLength(1);
+    expect(st.components).toHaveLength(1);
+    expect(st.clipboard?.mode).toBe("copy");
+    expect(st.clipboard?.items[0]?.kind).toBe("canvas-component");
 
-    const copied = st.components[1]!;
-    expect(copied.id).toBe("test-uuid-1");
-    expect(copied.node.id).toBe(copied.id);
-    expect(copied.node.name).toBe(`Button-${copied.id}`);
-    expect(copied.position.x).toBe(10);
-    expect(copied.position.y).toBe(3);
+    useCanvasStore.getState().pasteClipboard();
+    const pastedState = useCanvasStore.getState();
+    expect(pastedState.components).toHaveLength(2);
+
+    const pasted = pastedState.components[1]!;
+    expect(pasted.id).toBe("test-uuid-1");
+    expect(pasted.node.id).toBe(pasted.id);
+    expect(pasted.node.name).toBe(`Button-${pasted.id}`);
   });
 
   it("undo/redo：可以回退与前进组件列表，并维护 canUndo/canRedo", () => {
@@ -248,5 +252,122 @@ describe("canvas/store", () => {
 
     const created = createCanvasComponent("Card", "layout", {}, existing);
     expect(created.position.y).toBe(15);
+  });
+
+  it("insertNode：支持将新节点插入到任意父节点 children，并联动 selectedIds/activeNodeId", () => {
+    const root = createCanvasComponent("Card", "layout", {}, []);
+    resetStore({ components: [root], selectedIds: [root.id], activeNodeId: root.id });
+
+    const child = createComponentNode("Button", "form", { label: "nested" });
+    useCanvasStore.getState().insertNode(child, { parentId: root.id, index: 0 });
+
+    const st = useCanvasStore.getState();
+    expect(st.components).toHaveLength(1);
+    expect(st.selectedIds).toEqual([root.id]);
+    expect(st.activeNodeId).toBe(child.id);
+    expect(st.components[0]!.node.children?.some((n) => n.id === child.id)).toBe(true);
+  });
+
+  it("moveNode：支持将根组件移动为另一个组件的子节点（嵌套插入）", () => {
+    const c1 = createCanvasComponent("Button", "form", { label: "A" }, []);
+    const c2 = createCanvasComponent("Card", "layout", {}, []);
+    resetStore({ components: [c1, c2], selectedIds: [c1.id], activeNodeId: c1.id });
+
+    useCanvasStore.getState().moveNode(c1.id, { parentId: c2.id, index: 0 });
+    const st = useCanvasStore.getState();
+
+    expect(st.components).toHaveLength(1);
+    expect(st.components[0]!.id).toBe(c2.id);
+    expect(st.components[0]!.node.children?.some((n) => n.id === c1.id)).toBe(true);
+  });
+
+  it("copySelected：多选根组件时会把多项写入 clipboard.items", () => {
+    const c1 = comp();
+    const c2 = comp();
+    resetStore({ components: [c1, c2], selectedIds: [c1.id, c2.id], activeNodeId: c1.id });
+
+    useCanvasStore.getState().copySelected();
+    const st = useCanvasStore.getState();
+    expect(st.clipboard?.mode).toBe("copy");
+    expect(st.clipboard?.items).toHaveLength(2);
+    expect(st.clipboard?.items.every((it) => it.kind === "canvas-component")).toBe(true);
+  });
+
+  it("copy/paste：当 activeNodeId 指向子节点时，复制的是 component-node，粘贴默认插入到同一父节点之后", () => {
+    const root = createCanvasComponent("Box", "layout", {}, []);
+    const a = createComponentNode("Button", "form", { label: "A" });
+    const b = createComponentNode("Button", "form", { label: "B" });
+    root.node = { ...root.node, children: [a, b] };
+    resetStore({ components: [root], selectedIds: [root.id], activeNodeId: a.id });
+
+    useCanvasStore.getState().copySelected();
+    expect(useCanvasStore.getState().clipboard?.items[0]?.kind).toBe("component-node");
+
+    useCanvasStore.getState().pasteClipboard();
+    const st = useCanvasStore.getState();
+    const children = st.components[0]!.node.children ?? [];
+    expect(children).toHaveLength(3);
+    expect(children[0]!.id).toBe(a.id);
+    expect(children[1]!.id).toBe("test-uuid-3");
+    expect(children[2]!.id).toBe(b.id);
+    expect(st.activeNodeId).toBe("test-uuid-3");
+  });
+
+  it("cut/paste：cutSelected 会删除子节点并将 clipboard.mode 置为 cut；pasteClipboard 后会自动清空 clipboard", () => {
+    const root = createCanvasComponent("Box", "layout", {}, []);
+    const a = createComponentNode("Button", "form", { label: "A" });
+    root.node = { ...root.node, children: [a] };
+    resetStore({ components: [root], selectedIds: [root.id], activeNodeId: a.id });
+
+    useCanvasStore.getState().cutSelected();
+    const afterCut = useCanvasStore.getState();
+    expect(afterCut.clipboard?.mode).toBe("cut");
+    expect(afterCut.components[0]!.node.children ?? []).toHaveLength(0);
+
+    useCanvasStore.getState().pasteClipboard({ parentId: root.id, index: 0 });
+    const st = useCanvasStore.getState();
+    expect(st.components[0]!.node.children ?? []).toHaveLength(1);
+    expect(st.components[0]!.node.children?.[0]?.id).toBe("test-uuid-2");
+    expect(st.clipboard).toBe(null);
+  });
+
+  it("deleteSelected：当 activeNodeId 指向子节点时会删除该子节点，并回退选择到根组件", () => {
+    const root = createCanvasComponent("Box", "layout", {}, []);
+    const a = createComponentNode("Button", "form", { label: "A" });
+    const b = createComponentNode("Button", "form", { label: "B" });
+    root.node = { ...root.node, children: [a, b] };
+    resetStore({ components: [root], selectedIds: [root.id], activeNodeId: a.id });
+
+    useCanvasStore.getState().deleteSelected();
+    const st = useCanvasStore.getState();
+    expect(st.components[0]!.node.children?.map((c) => c.id)).toEqual([b.id]);
+    expect(st.selectedIds).toEqual([root.id]);
+    expect(st.activeNodeId).toBe(root.id);
+  });
+
+  it("moveNode：禁止把节点移动到自身子树内部（避免循环）", () => {
+    const root = createCanvasComponent("Box", "layout", {}, []);
+    const a = createComponentNode("Button", "form", { label: "A" });
+    root.node = { ...root.node, children: [a] };
+    resetStore({ components: [root], selectedIds: [root.id], activeNodeId: root.id });
+
+    useCanvasStore.getState().moveNode(root.id, { parentId: a.id, index: 0 });
+    const st = useCanvasStore.getState();
+    expect(st.components).toHaveLength(1);
+    expect(st.components[0]!.id).toBe(root.id);
+    expect(st.components[0]!.node.children?.[0]?.id).toBe(a.id);
+  });
+
+  it("moveNode：同一父节点内移动时会根据 originIndex 调整 index，避免 off-by-one", () => {
+    const root = createCanvasComponent("Box", "layout", {}, []);
+    const a = createComponentNode("Button", "form", { label: "A" });
+    const b = createComponentNode("Button", "form", { label: "B" });
+    const c = createComponentNode("Button", "form", { label: "C" });
+    root.node = { ...root.node, children: [a, b, c] };
+    resetStore({ components: [root], selectedIds: [root.id], activeNodeId: b.id });
+
+    useCanvasStore.getState().moveNode(b.id, { parentId: root.id, index: 3 });
+    const children = useCanvasStore.getState().components[0]!.node.children ?? [];
+    expect(children.map((x) => x.id)).toEqual([a.id, c.id, b.id]);
   });
 });

@@ -34,7 +34,7 @@ export { aspectRatioMaterial } from "./components/layout";
 export { resizablePanelGroupMaterial, resizablePanelMaterial, resizableHandleMaterial } from "./components/layout";
 
 // ========== 展示组件 ==========
-export { avatarMaterial, badgeMaterial } from "./components/display";
+export { avatarMaterial, badgeMaterial, textMaterial } from "./components/display";
 
 // ========== 反馈组件 ==========
 export { skeletonMaterial } from "./components/feedback";
@@ -72,6 +72,7 @@ export {
   dropdownMenuMaterial, dropdownMenuTriggerMaterial, dropdownMenuContentMaterial, dropdownMenuItemMaterial,
 } from "./components/overlay";
 export { contextMenuMaterial, contextMenuTriggerMaterial, contextMenuContentMaterial } from "./components/overlay";
+export { contextMenuItemMaterial } from "./components/overlay";
 export { hoverCardMaterial, hoverCardTriggerMaterial, hoverCardContentMaterial } from "./components/overlay";
 export { drawerMaterial, drawerTriggerMaterial, drawerContentMaterial, drawerHeaderMaterial } from "./components/overlay";
 export { collapsibleMaterial, collapsibleTriggerMaterial, collapsibleContentMaterial } from "./components/overlay";

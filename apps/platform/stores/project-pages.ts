@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import type { ProjectPage } from "@/lib/supabase/types";
-import { pageSchema, type PageSchema, type ComponentNode } from "@envelope/engine";
+import { pageSchema, type PageSchema, type ComponentNode, syncAggregateSlotsPropsToChildren, syncAggregateSlotsChildrenToProps } from "@envelope/engine";
 import type { CanvasComponent, CanvasState } from "@envelope/engine";
 
 export interface EditorProjectPage {
@@ -87,29 +87,55 @@ function toEditorPage(row: ProjectPage): EditorProjectPage {
 
 export function componentNodesToCanvasComponents(nodes: ComponentNode[]): CanvasComponent[] {
   return nodes.map((n, idx) => {
+    /**
+     * 聚合组件 slots 初始化（props → children）
+     *
+     * 从数据库加载的 PageSchema 可能仍然是“slots 存在于 props”的旧形态，
+     * 这里统一在进入画布前做一次规范化，确保编辑器内部始终拥有 children tree。
+     *
+     * @author xiye
+     * @date 2026-06-22
+     * @since 3.0.0
+     */
+    const normalized = syncAggregateSlotsPropsToChildren(n);
     const x = n.grid?.col ?? 1;
     const y = n.grid?.row ?? idx + 1;
     const width = n.grid?.colSpan ?? 3;
     const height = n.grid?.rowSpan ?? 2;
     return {
-      id: n.id,
-      node: n,
+      id: normalized.id,
+      node: normalized,
       position: { x, y, width, height },
     };
   });
 }
 
 export function canvasComponentsToComponentNodes(components: CanvasComponent[]): ComponentNode[] {
-  return components.map((c) => ({
-    ...c.node,
-    id: c.id,
-    grid: {
-      col: c.position.x,
-      row: c.position.y,
-      colSpan: c.position.width,
-      rowSpan: c.position.height,
-    },
-  }));
+  return components.map((c) => {
+    /**
+     * 聚合组件 slots 回写（children → props）
+     *
+     * 保存前将 children tree 的结构信息反向同步到 props，
+     * 以便：
+     * - 兼容旧版渲染/预览逻辑（仍读取 props）；
+     * - 让“Slots”属性面板值与 children tree 保持一致。
+     *
+     * @author xiye
+     * @date 2026-06-22
+     * @since 3.0.0
+     */
+    const denormalized = syncAggregateSlotsChildrenToProps(c.node);
+    return {
+      ...denormalized,
+      id: c.id,
+      grid: {
+        col: c.position.x,
+        row: c.position.y,
+        colSpan: c.position.width,
+        rowSpan: c.position.height,
+      },
+    };
+  });
 }
 
 async function getApiErrorMessage(res: Response, fallback: string): Promise<string> {

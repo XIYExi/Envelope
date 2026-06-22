@@ -39,9 +39,12 @@ describe("platform backend config", () => {
   });
 
   it("defaults to local backend and builds local paths under user home", () => {
-    const config = resolvePlatformBackendConfig({
-      HOME: "/mock-home",
-    });
+    const config = resolvePlatformBackendConfig(
+      {
+        HOME: "/mock-home",
+      },
+      "linux",
+    );
 
     expect(config.mode).toBe("local");
     expect(config.storageMode).toBe("local");
@@ -65,8 +68,19 @@ describe("platform backend config", () => {
     expect(
       resolveDefaultLocalBackendRoot({
         HOME: "/demo-home",
-      }),
+      }, "linux"),
     ).toBe(path.join("/demo-home", ".envelope", "local"));
+  });
+
+  it("uses a non-hidden user-home path as the default root on Windows", () => {
+    expect(
+      resolveDefaultLocalBackendRoot(
+        {
+          USERPROFILE: "C:\\Users\\demo",
+        },
+        "win32",
+      ),
+    ).toBe(path.join("C:\\Users\\demo", "Envelope", "local"));
   });
 
   it("rejects incomplete custom config", () => {

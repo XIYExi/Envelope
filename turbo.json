@@ -1,6 +1,8 @@
 {
   "$schema": "https://turbo.build/schema.json",
-  "globalDependencies": ["**/.env.*local"],
+  "globalDependencies": [
+    "**/.env.*local"
+  ],
   "globalEnv": [
     "NODE_ENV",
     "NEXT_PUBLIC_SUPABASE_URL",
@@ -9,18 +11,25 @@
   ],
   "tasks": {
     "build": {
-      "dependsOn": ["^build"],
-      "outputs": [".next/**", "!.next/cache/**", "dist/**"]
+      "dependsOn": [
+        "^build"
+      ],
+      "outputs": [
+        ".next/**",
+        "!.next/cache/**",
+        "dist/**"
+      ]
     },
     "dev": {
-      "dependsOn": ["^build"],
+      "dependsOn": [
+        "^build"
+      ],
       "cache": false,
       "persistent": true
     },
     "lint": {},
     "typecheck": {},
     "test": {
-      "_comment": "test 不依赖 build：单测应尽量直跑源码，避免把编译/构建作为前置条件（提升 Turbo 并行度与反馈速度）。",
       "inputs": [
         "src/**/*.tsx",
         "src/**/*.ts",

@@ -152,6 +152,8 @@ export const materialDefinitionSchema = z.object({
   category: componentCategorySchema,
   /** 图标名称（Lucide 图标名，可选） */
   icon: z.string().optional(),
+  /** 是否在组件菜单（palette）中展示（可选；默认展示） */
+  showInPalette: z.boolean().optional(),
   /** 可编辑属性列表（决定编辑器中显示哪些属性） */
   editableProps: z.array(editablePropSchema).optional(),
   /** 默认属性值（组件初始化时使用的属性） */
