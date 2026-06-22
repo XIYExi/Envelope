@@ -19,13 +19,14 @@
  */
 "use client";
 
-import { memo, useMemo, useState, useCallback, type ReactNode } from "react";
+import { memo, useMemo, useState, useCallback, useRef, useEffect, type ReactNode } from "react";
 import { useDroppable, useDraggable } from "@dnd-kit/core";
 import { createDefaultRegistry } from "@envelope/materials";
 import { createComponentDragItem, useCanvasStore } from "@envelope/engine";
 import type { CanvasComponent, ComponentNode } from "@envelope/engine";
 import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Input } from "@/components/ui/input";
 import { ChevronDown, ChevronRight, GripVertical, Plus } from "lucide-react";
 
 function nodeLabel(node: ComponentNode, displayNameMap: Map<string, string>): string {
@@ -139,11 +140,19 @@ function renderNodeGroup(args: {
   expandedSet: Set<string>;
   toggle: (id: string) => void;
   displayNameMap: Map<string, string>;
+  visibleSet?: Set<string>;
 }): ReactNode[] {
-  const { nodes, parentKey, depth, expandedSet, toggle, displayNameMap } = args;
+  const { nodes, parentKey, depth, expandedSet, toggle, displayNameMap, visibleSet } = args;
+  const isSearchMode = visibleSet !== undefined;
   const out: ReactNode[] = [];
-  out.push(<TreeDropSlot key={`${parentKey}:drop:0`} parentKey={parentKey} index={0} depth={depth} />);
+  // 搜索模式下不渲染 TreeDropSlot，减少视觉噪音
+  if (!isSearchMode) {
+    out.push(<TreeDropSlot key={`${parentKey}:drop:0`} parentKey={parentKey} index={0} depth={depth} />);
+  }
   nodes.forEach((n, idx) => {
+    // 搜索模式下只显示匹配节点及其祖先
+    if (isSearchMode && !visibleSet.has(n.id)) return;
+
     const expanded = expandedSet.has(n.id);
     out.push(
       <TreeNodeRow
@@ -164,10 +173,14 @@ function renderNodeGroup(args: {
           expandedSet,
           toggle,
           displayNameMap,
+          visibleSet,
         }),
       );
     }
-    out.push(<TreeDropSlot key={`${parentKey}:drop:${idx + 1}`} parentKey={parentKey} index={idx + 1} depth={depth} />);
+    // 搜索模式下不渲染 TreeDropSlot
+    if (!isSearchMode) {
+      out.push(<TreeDropSlot key={`${parentKey}:drop:${idx + 1}`} parentKey={parentKey} index={idx + 1} depth={depth} />);
+    }
   });
   return out;
 }
@@ -194,6 +207,34 @@ export const ComponentTreePanel = memo(function ComponentTreePanel() {
     return new Set(ids);
   });
 
+  // 记录已识别的节点 ID 集合，用于检测新增容器节点并自动展开
+  const knownIdsRef = useRef<Set<string>>(new Set());
+
+  // 当组件树发生变化时，将新出现的节点 ID 自动加入展开集
+  useEffect(() => {
+    const currentIds = new Set<string>();
+    const collect = (node: ComponentNode) => {
+      currentIds.add(node.id);
+      node.children?.forEach(collect);
+    };
+    components.forEach((c) => collect(c.node));
+
+    const newIds: string[] = [];
+    for (const id of currentIds) {
+      if (!knownIdsRef.current.has(id)) {
+        newIds.push(id);
+      }
+    }
+    if (newIds.length > 0) {
+      setExpandedIds((prev) => {
+        const next = new Set(prev);
+        newIds.forEach((id) => next.add(id));
+        return next;
+      });
+    }
+    knownIdsRef.current = currentIds;
+  }, [components]);
+
   const toggle = useCallback((id: string) => {
     setExpandedIds((prev) => {
       const next = new Set(prev);
@@ -204,14 +245,58 @@ export const ComponentTreePanel = memo(function ComponentTreePanel() {
   }, []);
 
   const roots: ComponentNode[] = useMemo(() => components.map((c: CanvasComponent) => c.node), [components]);
+
+  // 组件树搜索关键词
+  const [searchQuery, setSearchQuery] = useState("");
+
+  // 搜索过滤结果：匹配节点 ID 及其所有祖先 ID
+  const searchMatchIds = useMemo(() => {
+    if (!searchQuery.trim()) return null;
+    const q = searchQuery.trim().toLowerCase();
+
+    // 收集所有匹配节点
+    const matched = new Set<string>();
+    const parentMap = new Map<string, string | null>();
+
+    const walk = (nodes: ComponentNode[], parentId: string | null) => {
+      for (const node of nodes) {
+        parentMap.set(node.id, parentId);
+        const label = nodeLabel(node, displayNameMap).toLowerCase();
+        if (label.includes(q) || node.type.toLowerCase().includes(q)) {
+          matched.add(node.id);
+        }
+        if (node.children) walk(node.children, node.id);
+      }
+    };
+    walk(roots, null);
+
+    // 为每个匹配节点补充其所有祖先 ID
+    const result = new Set(matched);
+    for (const id of matched) {
+      let current = parentMap.get(id);
+      while (current) {
+        result.add(current);
+        current = parentMap.get(current);
+      }
+    }
+    return result;
+  }, [searchQuery, roots, displayNameMap]);
+
+  // 搜索模式下，实际生效的展开集 = 用户手动展开 + 搜索祖先展开
+  const effectiveExpandedIds = useMemo(() => {
+    if (!searchMatchIds) return expandedIds;
+    return new Set([...expandedIds, ...searchMatchIds]);
+  }, [searchMatchIds, expandedIds]);
+
   const rows = useMemo(() => renderNodeGroup({
     nodes: roots,
     parentKey: "root",
     depth: 0,
-    expandedSet: expandedIds,
+    expandedSet: effectiveExpandedIds,
     toggle,
     displayNameMap,
-  }), [roots, expandedIds, toggle, displayNameMap]);
+    visibleSet: searchMatchIds ?? undefined,
+  }), [roots, effectiveExpandedIds, toggle, displayNameMap, searchMatchIds]);
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
@@ -219,6 +304,30 @@ export const ComponentTreePanel = memo(function ComponentTreePanel() {
         组件树
         <span className="ml-auto text-[10px]">{roots.length}</span>
       </div>
+
+      {/* 组件树搜索输入框 */}
+      <div className="flex-shrink-0 border-b px-2 py-1.5">
+        <Input
+          placeholder="搜索组件..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="h-7 text-xs"
+        />
+        {searchQuery && (
+          <div className="mt-1 text-[10px] text-muted-foreground">
+            {(() => {
+              const total = roots.reduce((count, r) => {
+                const w = (n: ComponentNode) => { if (searchMatchIds?.has(n.id)) count++; n.children?.forEach(w); };
+                w(r);
+                return count;
+              }, 0);
+              return `匹配 ${total} 个组件`;
+            })()}
+            <button className="ml-2 underline hover:text-foreground" onClick={() => setSearchQuery("")}>清除</button>
+          </div>
+        )}
+      </div>
+
       <ScrollArea className="flex-1">
         <div className="space-y-0.5 p-2">
           {rows.length > 0 ? rows : (
