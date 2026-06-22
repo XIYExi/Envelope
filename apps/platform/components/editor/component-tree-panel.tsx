@@ -26,6 +26,13 @@ import { createComponentDragItem, useCanvasStore } from "@envelope/engine";
 import type { CanvasComponent, ComponentNode } from "@envelope/engine";
 import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuSeparator,
+  ContextMenuTrigger,
+} from "@/components/ui/context-menu";
 import { Input } from "@/components/ui/input";
 import { ChevronDown, ChevronRight, GripVertical, Plus } from "lucide-react";
 
@@ -69,15 +76,57 @@ const TreeNodeRow = memo(function TreeNodeRow({
   expanded,
   onToggle,
   displayNameMap,
+  parentId,
+  index,
+  siblingCount,
+  editingId,
+  onStartRename,
+  onRenameSubmit,
+  onRenameCancel,
 }: {
   node: ComponentNode;
   depth: number;
   expanded: boolean;
   onToggle: (id: string) => void;
   displayNameMap: Map<string, string>;
+  parentId: string | null;
+  index: number;
+  siblingCount: number;
+  editingId: string | null;
+  onStartRename: (id: string) => void;
+  onRenameSubmit: (id: string, name: string) => void;
+  onRenameCancel: () => void;
 }) {
   const activeNodeId = useCanvasStore((s) => s.activeNodeId);
   const selectNode = useCanvasStore((s) => s.selectNode);
+  const selectedIds = useCanvasStore((s) => s.selectedIds);
+  const copySelected = useCanvasStore((s) => s.copySelected);
+  const cutSelected = useCanvasStore((s) => s.cutSelected);
+  const pasteClipboard = useCanvasStore((s) => s.pasteClipboard);
+  const deleteSelected = useCanvasStore((s) => s.deleteSelected);
+  const moveNode = useCanvasStore((s) => s.moveNode);
+  const clipboard = useCanvasStore((s) => s.clipboard);
+  const isEditing = editingId === node.id;
+  const hasSelection = selectedIds.length > 0;
+  const canPaste = clipboard !== null;
+  const canMoveUp = index > 0;
+  const canMoveDown = index < siblingCount - 1;
+
+  // 内联重命名状态
+  const [editValue, setEditValue] = useState(node.name || "");
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // 进入编辑态时聚焦输入框并全选文字
+  useEffect(() => {
+    if (isEditing && inputRef.current) {
+      inputRef.current.focus();
+      inputRef.current.select();
+    }
+    // 重新编辑时重置输入框内容
+    if (isEditing) {
+      setEditValue(node.name || "");
+    }
+  }, [isEditing, node.name]);
 
   const { setNodeRef: setDropRef, isOver } = useDroppable({
     id: `tree-container:${node.id}`,
@@ -92,44 +141,87 @@ const TreeNodeRow = memo(function TreeNodeRow({
   const isActive = activeNodeId === node.id;
 
   return (
-    <div
-      ref={setDropRef}
-      className={cn(
-        "flex h-7 items-center gap-1 rounded px-2 text-xs transition-colors",
-        isActive ? "bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300" : "hover:bg-accent",
-        isOver && "ring-1 ring-blue-400",
-        isDragging && "opacity-50",
-      )}
-      style={{ paddingLeft: `${depth * 12 + 8}px` }}
-      onClick={() => selectNode(node.id)}
-      data-testid={`component-tree-node-${node.id}`}
-    >
-      <button
-        type="button"
-        className={cn("flex h-5 w-5 items-center justify-center rounded hover:bg-accent", !hasChildren && "opacity-30")}
-        onClick={(e) => {
-          e.stopPropagation();
-          if (hasChildren) onToggle(node.id);
-        }}
-        aria-label="toggle"
-      >
-        {hasChildren ? (expanded ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />) : <ChevronRight className="h-3.5 w-3.5" />}
-      </button>
+    <ContextMenu>
+      <ContextMenuTrigger asChild>
+        <div
+          ref={setDropRef}
+          className={cn(
+            "flex h-7 items-center gap-1 rounded px-2 text-xs transition-colors",
+            isActive ? "bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300" : "hover:bg-accent",
+            isOver && "ring-1 ring-blue-400",
+            isDragging && "opacity-50",
+          )}
+          style={{ paddingLeft: `${depth * 12 + 8}px` }}
+          onClick={() => selectNode(node.id)}
+          onContextMenu={() => selectNode(node.id)}
+          data-testid={`component-tree-node-${node.id}`}
+        >
+          <button
+            type="button"
+            className={cn("flex h-5 w-5 items-center justify-center rounded hover:bg-accent", !hasChildren && "opacity-30")}
+            onClick={(e) => {
+              e.stopPropagation();
+              if (hasChildren) onToggle(node.id);
+            }}
+            aria-label="toggle"
+          >
+            {hasChildren ? (expanded ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />) : <ChevronRight className="h-3.5 w-3.5" />}
+          </button>
 
-      <span
-        ref={setDragRef}
-        {...listeners}
-        {...attributes}
-        className="inline-flex h-5 w-5 items-center justify-center rounded text-muted-foreground hover:bg-accent"
-        onClick={(e) => e.stopPropagation()}
-        aria-label="drag"
-      >
-        <GripVertical className="h-4 w-4" />
-      </span>
+          <span
+            ref={setDragRef}
+            {...listeners}
+            {...attributes}
+            className="inline-flex h-5 w-5 items-center justify-center rounded text-muted-foreground hover:bg-accent"
+            onClick={(e) => e.stopPropagation()}
+            aria-label="drag"
+          >
+            <GripVertical className="h-4 w-4" />
+          </span>
 
-      <span className="min-w-0 flex-1 truncate text-[11px]">{nodeLabel(node, displayNameMap)}</span>
-      <span className="shrink-0 font-mono text-[9px] text-muted-foreground">{node.type}</span>
-    </div>
+          {isEditing ? (
+            <input
+              ref={inputRef}
+              value={editValue}
+              onChange={(e) => setEditValue(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  onRenameSubmit(node.id, editValue);
+                } else if (e.key === "Escape") {
+                  onRenameCancel();
+                }
+                e.stopPropagation();
+              }}
+              onBlur={() => onRenameSubmit(node.id, editValue)}
+              className="min-w-0 flex-1 rounded border bg-background px-1 text-[11px] outline-none focus:ring-1 focus:ring-blue-500"
+              onClick={(e) => e.stopPropagation()}
+            />
+          ) : (
+            <span
+              className="min-w-0 flex-1 truncate text-[11px]"
+              onDoubleClick={(e) => {
+                e.stopPropagation();
+                onStartRename(node.id);
+              }}
+            >
+              {nodeLabel(node, displayNameMap)}
+            </span>
+          )}
+          <span className="shrink-0 font-mono text-[9px] text-muted-foreground">{node.type}</span>
+        </div>
+      </ContextMenuTrigger>
+      <ContextMenuContent className="w-40">
+        <ContextMenuItem onClick={() => copySelected()} disabled={!hasSelection}>复制</ContextMenuItem>
+        <ContextMenuItem onClick={() => cutSelected()} disabled={!hasSelection}>剪切</ContextMenuItem>
+        <ContextMenuItem onClick={() => pasteClipboard()} disabled={!canPaste}>粘贴</ContextMenuItem>
+        <ContextMenuSeparator />
+        <ContextMenuItem onClick={() => deleteSelected()} disabled={!hasSelection}>删除</ContextMenuItem>
+        <ContextMenuItem onClick={() => onStartRename(node.id)}>重命名</ContextMenuItem>
+        <ContextMenuSeparator />
+        <ContextMenuItem onClick={() => moveNode(node.id, { parentId, index: index - 1 })} disabled={!canMoveUp}>上移一层</ContextMenuItem>
+        <ContextMenuItem onClick={() => moveNode(node.id, { parentId, index: index + 1 })} disabled={!canMoveDown}>下移一层</ContextMenuItem>
+      </ContextMenuContent>
+    </ContextMenu>
   );
 });
 
@@ -141,8 +233,12 @@ function renderNodeGroup(args: {
   toggle: (id: string) => void;
   displayNameMap: Map<string, string>;
   visibleSet?: Set<string>;
+  editingId: string | null;
+  onStartRename: (id: string) => void;
+  onRenameSubmit: (id: string, name: string) => void;
+  onRenameCancel: () => void;
 }): ReactNode[] {
-  const { nodes, parentKey, depth, expandedSet, toggle, displayNameMap, visibleSet } = args;
+  const { nodes, parentKey, depth, expandedSet, toggle, displayNameMap, visibleSet, editingId, onStartRename, onRenameSubmit, onRenameCancel } = args;
   const isSearchMode = visibleSet !== undefined;
   const out: ReactNode[] = [];
   // 搜索模式下不渲染 TreeDropSlot，减少视觉噪音
@@ -162,6 +258,13 @@ function renderNodeGroup(args: {
         expanded={expanded}
         onToggle={toggle}
         displayNameMap={displayNameMap}
+        parentId={parentKey === "root" ? null : parentKey}
+        index={idx}
+        siblingCount={nodes.length}
+        editingId={editingId}
+        onStartRename={onStartRename}
+        onRenameSubmit={onRenameSubmit}
+        onRenameCancel={onRenameCancel}
       />,
     );
     if (expanded && (n.children?.length ?? 0) > 0) {
@@ -174,6 +277,10 @@ function renderNodeGroup(args: {
           toggle,
           displayNameMap,
           visibleSet,
+          editingId,
+          onStartRename,
+          onRenameSubmit,
+          onRenameCancel,
         }),
       );
     }
@@ -248,6 +355,27 @@ export const ComponentTreePanel = memo(function ComponentTreePanel() {
 
   // 组件树搜索关键词
   const [searchQuery, setSearchQuery] = useState("");
+  // 当前正在执行内联重命名的节点 ID，null 表示不在编辑状态
+  const [editingId, setEditingId] = useState<string | null>(null);
+
+  // 双击节点文本进入内联重命名模式
+  const handleStartRename = useCallback((id: string) => {
+    setEditingId(id);
+  }, []);
+
+  // 提交重命名：保存 name 到 store，退出编辑态
+  const handleRenameSubmit = useCallback((id: string, name: string) => {
+    const finalName = name.trim() || "";
+    if (finalName) {
+      useCanvasStore.getState().updateNode(id, { name: finalName });
+    }
+    setEditingId(null);
+  }, []);
+
+  // 取消重命名：不保存，直接退出编辑态
+  const handleRenameCancel = useCallback(() => {
+    setEditingId(null);
+  }, []);
 
   // 搜索过滤结果：匹配节点 ID 及其所有祖先 ID
   const searchMatchIds = useMemo(() => {
@@ -296,7 +424,11 @@ export const ComponentTreePanel = memo(function ComponentTreePanel() {
     toggle,
     displayNameMap,
     visibleSet: searchMatchIds ?? undefined,
-  }), [roots, effectiveExpandedIds, toggle, displayNameMap, searchMatchIds]);
+    editingId,
+    onStartRename: handleStartRename,
+    onRenameSubmit: handleRenameSubmit,
+    onRenameCancel: handleRenameCancel,
+  }), [roots, effectiveExpandedIds, toggle, displayNameMap, searchMatchIds, editingId, handleStartRename, handleRenameSubmit, handleRenameCancel]);
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">

@@ -14,7 +14,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, memo } from "react";
 import { useSearchParams } from "next/navigation";
-import { DndContext, useDroppable, pointerWithin, DragOverlay, type DragEndEvent, type DragStartEvent, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
+import { DndContext, useDroppable, pointerWithin, DragOverlay, type DragEndEvent, type DragMoveEvent, type DragStartEvent, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
 import { createDefaultRegistry } from "@envelope/materials";
 import { useCanvasStore, createComponentNode, CanvasRenderer, VIEWPORT_WIDTHS, CANVAS_CELL_SIZE, CANVAS_CELL_HEIGHT, COMPONENT_TYPES_THAT_SUPPORT_CHILDREN, type CanvasSnapshot } from "@envelope/engine";
 import { useEditorStore } from "@/stores/editor";
@@ -107,6 +107,7 @@ const CanvasDropZone = memo(function CanvasDropZone() {
   return (
     <div
       ref={combinedRef}
+      data-role="canvas-viewport"
       className={`flex flex-1 min-h-0 overflow-hidden ${isOver ? "bg-blue-50/30" : ""}`}
     >
       <CanvasRenderer
@@ -483,6 +484,80 @@ export function EditorLayout() {
   }, [clearSelection, copySelected, cutSelected, deleteSelected, isPageMode, pasteClipboard, undo, redo]);
 
 
+  // ===== 自定义 autoScroll：拖拽到画布边缘时自动平移 =====
+  // 由于画布使用 overflow-hidden + transform 实现平移，非原生 scroll，
+  // 因此不能依赖 dnd-kit 的 autoScroll props（依赖原生 scroll 事件），需自行实现。
+  // 原理：onDragMove 中检测鼠标距画布边界的距离，计算出平移方向/速度存入 ref，
+  //       由 requestAnimationFrame 循环持续读取该 ref 并调用 setPan。
+  const scrollDirRef = useRef({ x: 0, y: 0 });
+  const rafRef = useRef<number | null>(null);
+
+  // rAF 循环：持续读取 scrollDirRef 并调用 setPan，实现平滑平移
+  useEffect(() => {
+    function tick() {
+      const dir = scrollDirRef.current;
+      if (dir.x !== 0 || dir.y !== 0) {
+        const state = useCanvasStore.getState();
+        state.setPan(state.panX + dir.x, state.panY + dir.y);
+        rafRef.current = requestAnimationFrame(tick);
+      } else {
+        rafRef.current = null;
+      }
+    }
+
+    return () => {
+      if (rafRef.current !== null) {
+        cancelAnimationFrame(rafRef.current);
+        rafRef.current = null;
+      }
+    };
+  }, []);
+
+  // 拖拽移动中检测鼠标是否位于画布边缘，计算需要自动平移的方向和速度
+  const handleDragMove = useCallback((event: DragMoveEvent) => {
+    // 仅对画布组件重排或从素材面板拖拽新组件到画布时启用自动平移
+    const dragType = event.active.data.current?.type;
+    if (dragType !== "canvas-component" && dragType !== "material") {
+      scrollDirRef.current = { x: 0, y: 0 };
+      return;
+    }
+
+    const me = event.activatorEvent;
+    if (!(me instanceof MouseEvent)) return;
+
+    // 查找画布容器的 DOM 边界
+    const el = document.querySelector<HTMLElement>('[data-role="canvas-viewport"]');
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+
+    // 边缘触发阈值（像素）和最大平移速度（像素/帧）
+    const EDGE_THRESHOLD = 30;
+    const MAX_SPEED = 15;
+
+    // 计算鼠标距画布四边的距离，越靠近边缘平移速度越快
+    const distLeft = me.clientX - rect.left;
+    const distRight = rect.right - me.clientX;
+    const distTop = me.clientY - rect.top;
+    const distBottom = rect.bottom - me.clientY;
+
+    let dx = 0;
+    let dy = 0;
+
+    if (distLeft < EDGE_THRESHOLD) {
+      dx = -MAX_SPEED * (1 - distLeft / EDGE_THRESHOLD);
+    } else if (distRight < EDGE_THRESHOLD) {
+      dx = MAX_SPEED * (1 - distRight / EDGE_THRESHOLD);
+    }
+
+    if (distTop < EDGE_THRESHOLD) {
+      dy = -MAX_SPEED * (1 - distTop / EDGE_THRESHOLD);
+    } else if (distBottom < EDGE_THRESHOLD) {
+      dy = MAX_SPEED * (1 - distBottom / EDGE_THRESHOLD);
+    }
+
+    scrollDirRef.current = { x: dx, y: dy };
+  }, []);
+
   const [activeDragId, setActiveDragId] = useState<string | null>(null);
   const handleDragStart = useCallback((event: DragStartEvent) => {
     const name = event.active.data.current?.materialName as string | undefined
@@ -491,6 +566,8 @@ export function EditorLayout() {
   }, []);
   const handleDragEndWrapper = useCallback((event: DragEndEvent) => {
     setActiveDragId(null);
+    // 停止 autoScroll 平移
+    scrollDirRef.current = { x: 0, y: 0 };
     handleDragEnd(event);
   }, [handleDragEnd]);
 
@@ -500,6 +577,7 @@ export function EditorLayout() {
       {isPageMode ? (
         <DndContext
           onDragStart={handleDragStart}
+          onDragMove={handleDragMove}
           onDragEnd={handleDragEndWrapper}
           collisionDetection={pointerWithin}
           autoScroll={false}
