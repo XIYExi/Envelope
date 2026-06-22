@@ -85,6 +85,9 @@ describe("PropertyEditor（React）", () => {
     expect(screen.getByText("Advanced")).toBeInTheDocument();
     expect(screen.getByText("Events")).toBeInTheDocument();
 
+    // "Advanced" 组默认折叠，展开后再验证其内部字段
+    await user.click(screen.getByText("Advanced"));
+
     // 文本输入：模拟用户修改标题，验证回调参数
     const titleInput = screen.getByPlaceholderText("请输入标题");
     onChange.mockClear();

@@ -11,7 +11,7 @@
 
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef, useState, useCallback } from "react";
 import type { EditableProp } from "@envelope/materials";
 
 /**
@@ -476,6 +476,39 @@ const FIELD_COMPONENTS: Record<string, React.FC<FieldWrapperProps>> = {
 export function PropertyEditor({ editableProps, values, onChange, flowList }: PropertyEditorProps) {
   const grouped = groupProps(editableProps);
 
+  // 从 localStorage 读取分组折叠状态
+  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(() => {
+    try {
+      const saved = localStorage.getItem("property-editor-collapsed-groups");
+      if (saved) return new Set(JSON.parse(saved));
+    } catch { /* ignore */ }
+    // 默认折叠：组名包含 "Advanced" 或平均 order > 80 的组
+    const defaults = new Set<string>();
+    for (const [groupName, groupProps] of grouped.entries()) {
+      const avgOrder = groupProps.reduce((sum, p) => sum + (p.order ?? 50), 0) / groupProps.length;
+      if (groupName.includes("Advanced") || avgOrder > 80) {
+        defaults.add(groupName);
+      }
+    }
+    return defaults;
+  });
+
+  // 切换分组折叠状态并持久化到 localStorage
+  const toggleGroup = useCallback((groupName: string) => {
+    setCollapsedGroups((prev) => {
+      const next = new Set(prev);
+      if (next.has(groupName)) {
+        next.delete(groupName);
+      } else {
+        next.add(groupName);
+      }
+      try {
+        localStorage.setItem("property-editor-collapsed-groups", JSON.stringify([...next]));
+      } catch { /* ignore */ }
+      return next;
+    });
+  }, []);
+
   if (editableProps.length === 0) {
     return (
       <div className="flex h-full items-center justify-center p-3 text-center text-xs text-muted-foreground">
@@ -486,30 +519,47 @@ export function PropertyEditor({ editableProps, values, onChange, flowList }: Pr
 
   return (
     <div className="space-y-4">
-      {Array.from(grouped.entries()).map(([group, props]) => (
-        <div key={group}>
-          <div className="mb-2 border-b pb-1">
-            <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{group}</span>
+      {Array.from(grouped.entries()).map(([group, props]) => {
+        const isCollapsed = collapsedGroups.has(group);
+        return (
+          <div key={group}>
+            {/* 可点击的分组头部，点击切换折叠/展开 */}
+            <button
+              type="button"
+              onClick={() => toggleGroup(group)}
+              className="mb-2 flex w-full items-center justify-between border-b pb-1 cursor-pointer hover:text-foreground transition-colors"
+            >
+              <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                {group}
+              </span>
+              {/* 折叠指示箭头 */}
+              <span className={`text-[10px] text-muted-foreground transition-transform duration-150 ${isCollapsed ? "" : "rotate-90"}`}>
+                ▶
+              </span>
+            </button>
+            {/* 折叠时隐藏属性字段区 */}
+            {!isCollapsed && (
+              <div className="space-y-3">
+                {props
+                  .sort((a, b) => (a.order ?? 50) - (b.order ?? 50))
+                  .map((prop) => {
+                    const FieldComponent = FIELD_COMPONENTS[prop.type] ?? TextField;
+                    const value = values[prop.key] ?? prop.defaultValue;
+                    return (
+                      <FieldComponent
+                        key={prop.key}
+                        prop={prop}
+                        value={value}
+                        onChange={onChange}
+                        flowList={flowList}
+                      />
+                    );
+                  })}
+              </div>
+            )}
           </div>
-          <div className="space-y-3">
-            {props
-              .sort((a, b) => (a.order ?? 50) - (b.order ?? 50))
-              .map((prop) => {
-                const FieldComponent = FIELD_COMPONENTS[prop.type] ?? TextField;
-                const value = values[prop.key] ?? prop.defaultValue;
-                return (
-                  <FieldComponent
-                    key={prop.key}
-                    prop={prop}
-                    value={value}
-                    onChange={onChange}
-                    flowList={flowList}
-                  />
-                );
-              })}
-          </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
