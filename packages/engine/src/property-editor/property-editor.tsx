@@ -11,7 +11,9 @@
 
 "use client";
 
-import { useRef, useState, useCallback } from "react";
+import { useRef, useState, useCallback, useMemo } from "react";
+import * as LucideIcons from "lucide-react";
+import { createPortal } from "react-dom";
 import type { EditableProp } from "@envelope/materials";
 
 /**
@@ -343,19 +345,145 @@ function CodeField({ prop, value, onChange }: FieldWrapperProps) {
   );
 }
 
-/** 图标字段 —— Lucide 图标名称输入，带用法提示 */
+/** Lucide 图标名称列表（缓存避免重复计算） */
+const LUCIDE_ICON_NAMES = Object.keys(LucideIcons).filter(
+  (k) => k.charAt(0) === k.charAt(0).toUpperCase() && typeof (LucideIcons as unknown as Record<string, unknown>)[k] === "function",
+);
+
+/**
+ * Lucide 图标选择器弹窗
+ *
+ * 在属性编辑器中为 IconField 提供可视化图标选择能力。
+ * 使用 createPortal 渲染到 document.body，避免 z-index 层叠问题。
+ */
+function IconPickerDialog({
+  open,
+  currentValue,
+  onSelect,
+  onClose,
+}: {
+  open: boolean;
+  currentValue: string;
+  onSelect: (name: string) => void;
+  onClose: () => void;
+}) {
+  const [search, setSearch] = useState("");
+
+  const filteredNames = useMemo(() => {
+    if (!search.trim()) return LUCIDE_ICON_NAMES.slice(0, 200);
+    const q = search.trim().toLowerCase();
+    return LUCIDE_ICON_NAMES.filter((name) => name.toLowerCase().includes(q));
+  }, [search]);
+
+  if (!open) return null;
+
+  return createPortal(
+    <div className="fixed inset-0 z-50 flex items-center justify-center">
+      <div className="fixed inset-0 bg-black/50" onClick={onClose} />
+      <div className="relative z-50 max-h-[80vh] w-[520px] max-w-[90vw] rounded-lg border bg-background shadow-xl">
+        <div className="flex items-center justify-between border-b px-4 py-3">
+          <h3 className="text-sm font-medium">选择图标</h3>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground"
+          >
+            ✕
+          </button>
+        </div>
+        <div className="border-b px-4 py-2">
+          <input
+            type="text"
+            placeholder="搜索图标..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            autoFocus
+            className="h-8 w-full rounded border bg-background px-3 text-xs outline-none focus:ring-1 focus:ring-blue-500"
+          />
+        </div>
+        <div className="overflow-y-auto p-4" style={{ maxHeight: "60vh" }}>
+          {filteredNames.length === 0 ? (
+            <p className="py-8 text-center text-xs text-muted-foreground">未找到匹配的图标</p>
+          ) : (
+            <div className="grid grid-cols-6 gap-2">
+              {filteredNames.map((name) => {
+                const IconComponent = (LucideIcons as unknown as Record<string, React.ComponentType<{ className?: string }>>)[name];
+                if (!IconComponent) return null;
+                const isSelected = currentValue === name;
+                return (
+                  <button
+                    key={name}
+                    type="button"
+                    onClick={() => {
+                      onSelect(name);
+                      onClose();
+                    }}
+                    className={cn(
+                      "flex flex-col items-center gap-1 rounded-md border p-2 transition-colors hover:bg-accent",
+                      isSelected ? "border-blue-500 bg-blue-50 ring-1 ring-blue-500" : "border-transparent",
+                    )}
+                    title={name}
+                  >
+                    <IconComponent className="h-5 w-5" />
+                    <span className="max-w-full truncate text-[8px] text-muted-foreground">{name}</span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+          {!search.trim() && LUCIDE_ICON_NAMES.length > 200 && (
+            <p className="mt-3 text-center text-[9px] text-muted-foreground">
+              显示前 200 个图标，输入关键词搜索更多
+            </p>
+          )}
+        </div>
+      </div>
+    </div>,
+    document.body,
+  );
+}
+
+/** 图标字段 —— Lucide 图标名称输入，带图标预览和可视化选择器 */
 function IconField({ prop, value, onChange }: FieldWrapperProps) {
+  const [showPicker, setShowPicker] = useState(false);
+  const iconName = typeof value === "string" ? value : "";
+
+  const PreviewIcon = iconName
+    ? (LucideIcons as unknown as Record<string, React.ComponentType<{ className?: string }>>)[iconName]
+    : null;
+
   return (
     <div>
       <FieldLabel label={prop.label} required={prop.required} comment={prop.comment} />
-      <input
-        type="text"
-        value={typeof value === "string" ? value : (prop.defaultValue as string) ?? ""}
-        placeholder={prop.placeholder ?? "e.g. Save, Trash2, User"}
-        onChange={(e) => onChange(prop.key, e.target.value)}
-        className="h-7 w-full rounded border bg-background px-2 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
-      />
+      <div className="flex items-center gap-2">
+        <input
+          type="text"
+          value={iconName}
+          placeholder={prop.placeholder ?? "e.g. Save, Trash2, User"}
+          onChange={(e) => onChange(prop.key, e.target.value)}
+          className="h-7 flex-1 rounded border bg-background px-2 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
+        />
+        <button
+          type="button"
+          onClick={() => setShowPicker(true)}
+          className="h-7 shrink-0 rounded border bg-background px-2 text-xs hover:bg-muted"
+        >
+          选择图标
+        </button>
+      </div>
       <p className="mt-0.5 text-[9px] text-muted-foreground">Lucide icon name</p>
+      {PreviewIcon && (
+        <div className="mt-1 flex items-center gap-2 rounded border bg-muted/20 px-2 py-1">
+          <PreviewIcon className="h-4 w-4 text-foreground" />
+          <span className="text-[10px] text-muted-foreground">{iconName}</span>
+        </div>
+      )}
+      <IconPickerDialog
+        open={showPicker}
+        currentValue={iconName}
+        onSelect={(name) => onChange(prop.key, name)}
+        onClose={() => setShowPicker(false)}
+      />
     </div>
   );
 }
