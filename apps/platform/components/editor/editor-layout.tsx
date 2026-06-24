@@ -16,7 +16,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, memo } from "react";
 import { useSearchParams } from "next/navigation";
 import { DndContext, useDroppable, pointerWithin, DragOverlay, type DragEndEvent, type DragMoveEvent, type DragStartEvent, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
 import { createDefaultRegistry } from "@envelope/materials";
-import { useCanvasStore, createComponentNode, CanvasRenderer, VIEWPORT_WIDTHS, CANVAS_CELL_SIZE, CANVAS_CELL_HEIGHT, COMPONENT_TYPES_THAT_SUPPORT_CHILDREN, type CanvasSnapshot } from "@envelope/engine";
+import { useCanvasStore, createComponentNode, CanvasRenderer, VIEWPORT_WIDTHS, CANVAS_CELL_SIZE, CANVAS_CELL_HEIGHT, COMPONENT_TYPES_THAT_SUPPORT_CHILDREN, type CanvasSnapshot, type ComponentNode } from "@envelope/engine";
 import { useEditorStore } from "@/stores/editor";
 import { useProjectPagesStore, componentNodesToCanvasComponents } from "@/stores/project-pages";
 import { useProjectFlowsStore } from "@/stores/project-flows";
@@ -29,6 +29,8 @@ import { RoutingEditor } from "./routing-editor";
 import { ApiEndpointEditor } from "./api-endpoint-editor";
 import { ProjectFlowEditor } from "./project-flow-editor";
 import { useFlowBindingStore } from "@envelope/flow";
+import { Input } from "@/components/ui/input";
+import { KeyboardShortcutsDialog } from "./keyboard-shortcuts-dialog";
 
 /**
  * 画布放置区域组件
@@ -38,10 +40,11 @@ import { useFlowBindingStore } from "@envelope/flow";
  */
 const CanvasDropZone = memo(function CanvasDropZone() {
   const {
-    components, selectedIds, selectComponent, clearSelection,
+    components, selectedIds, activeNodeId, selectComponent, clearSelection,
     zoom, viewport, panX, panY, gridCols, gridGap,
     pageBackground, pagePadding, pageMaxWidth,
     resizeComponent, setZoom, setPan,
+    selectNode, editScope, enterChildEdit, minRowHeight,
   } = useCanvasStore();
 
   const [hoveredId, setHoveredId] = useState<string | null>(null);
@@ -113,9 +116,14 @@ const CanvasDropZone = memo(function CanvasDropZone() {
       <CanvasRenderer
         components={components}
         selectedIds={selectedIds}
+        activeNodeId={activeNodeId}
+        editScope={editScope}
         hoveredId={hoveredId}
         onSelect={selectComponent}
         onClearSelection={clearSelection}
+        onSelectChild={(nodeId) => selectNode(nodeId)}
+        onDoubleClickComponent={(compId) => enterChildEdit(compId, [])}
+        onExitChildEdit={() => useCanvasStore.getState().exitChildEdit()}
         onResize={resizeComponent}
         onHover={setHoveredId}
         zoom={zoom}
@@ -128,6 +136,7 @@ const CanvasDropZone = memo(function CanvasDropZone() {
         pageBackground={pageBackground}
         pagePadding={pagePadding}
         pageMaxWidth={pageMaxWidth}
+        minRowHeight={minRowHeight}
       />
     </div>
   );
@@ -199,6 +208,15 @@ export function EditorLayout() {
   const zoomRef2 = useRef(zoom);
   zoomRef2.current = zoom;
 
+  const [renamingId, setRenamingId] = useState<string | null>(null);
+  const renamingIdRef = useRef<string | null>(null);
+  const [helpOpen, setHelpOpen] = useState(false);
+
+  // 同步 renamingId 到 ref，供键盘事件处理函数读取最新值
+  useEffect(() => {
+    renamingIdRef.current = renamingId;
+  }, [renamingId]);
+
   const registry = useMemo(() => createDefaultRegistry(), []);
 
   const sensors = useSensors(
@@ -256,6 +274,23 @@ export function EditorLayout() {
       const { active, over } = event;
       if (!over) return;
       const overId = String(over.id);
+
+      // G10: 页面拖拽重排
+      if (active.data.current?.type === "page") {
+        if (overId.startsWith("page-drop:")) {
+          const parts = overId.split(":");
+          const toIndex = Number(parts[1]);
+          if (!isNaN(toIndex)) {
+            const { pages, reorderPages } = useProjectPagesStore.getState();
+            const fromIndex = pages.findIndex((p) => p.path === active.data.current?.path);
+            if (fromIndex >= 0 && fromIndex !== toIndex) {
+              reorderPages(fromIndex, toIndex);
+            }
+          }
+        }
+        return;
+      }
+
       const treeTarget = parseTreeDropTarget(overId);
 
       const dragType = active.data.current?.type as string | undefined;
@@ -414,7 +449,7 @@ export function EditorLayout() {
     if (!isPageMode) return;
     function handleKeyDown(e: KeyboardEvent) {
       // 在输入框/文本域中不拦截快捷键
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement || e.target instanceof HTMLSelectElement) return;
       if (e.target instanceof HTMLElement && e.target.isContentEditable) return;
 
       // Ctrl+S（或 Cmd+S）立即保存当前页面
@@ -439,7 +474,9 @@ export function EditorLayout() {
           ArrowUp: [0, -step],
           ArrowDown: [0, step],
         };
-        const [dx, dy] = deltas[e.key];
+        const delta = deltas[e.key];
+        if (!delta) return;
+        const [dx, dy] = delta;
         const curComponents = useCanvasStore.getState().components;
         const curSelectedIds = useCanvasStore.getState().selectedIds;
         for (const id of curSelectedIds) {
@@ -472,6 +509,71 @@ export function EditorLayout() {
       if ((e.ctrlKey || e.metaKey) && e.key === "y") {
         e.preventDefault();
         redo();
+      }
+      // Ctrl+D 快速复制
+      if ((e.ctrlKey || e.metaKey) && e.key === "d") {
+        e.preventDefault();
+        copySelected();
+        pasteClipboard();
+        return;
+      }
+      // Ctrl+A 全选所有可见组件
+      if ((e.ctrlKey || e.metaKey) && e.key === "a") {
+        e.preventDefault();
+        useCanvasStore.getState().selectAll();
+        return;
+      }
+      // Ctrl+= 放大
+      if ((e.ctrlKey || e.metaKey) && (e.key === "=" || e.key === "Equal" || e.key === "NumpadAdd")) {
+        e.preventDefault();
+        const currentZoom = useCanvasStore.getState().zoom;
+        useCanvasStore.getState().setZoom(Math.min(2, currentZoom + 0.1));
+        return;
+      }
+      // Ctrl+- 缩小
+      if ((e.ctrlKey || e.metaKey) && (e.key === "-" || e.key === "Minus" || e.key === "NumpadSubtract")) {
+        e.preventDefault();
+        const currentZoom = useCanvasStore.getState().zoom;
+        useCanvasStore.getState().setZoom(Math.max(0.25, currentZoom - 0.1));
+        return;
+      }
+      // Ctrl+0 重置缩放和平移
+      if ((e.ctrlKey || e.metaKey) && (e.key === "0" || e.key === "Numpad0")) {
+        e.preventDefault();
+        useCanvasStore.getState().setZoom(1);
+        useCanvasStore.getState().setPan(0, 0);
+        return;
+      }
+      // Tab / Shift+Tab 循环切换选中
+      if (e.key === "Tab") {
+        e.preventDefault();
+        const state = useCanvasStore.getState();
+        const visible = state.components.filter((c) => !c.hidden);
+        if (visible.length === 0) return;
+        const lastSelected = state.selectedIds[state.selectedIds.length - 1];
+        const currentIndex = lastSelected ? visible.findIndex((c) => c.id === lastSelected) : -1;
+        const nextIndex = currentIndex === -1
+          ? (e.shiftKey ? visible.length - 1 : 0)
+          : e.shiftKey
+            ? (currentIndex - 1 + visible.length) % visible.length
+            : (currentIndex + 1) % visible.length;
+        const nextComp = visible[nextIndex];
+        if (nextComp) state.selectComponent(nextComp.id);
+        return;
+      }
+      // F2 内联重命名选中组件
+      if (e.key === "F2") {
+        e.preventDefault();
+        const state = useCanvasStore.getState();
+        const id = state.activeNodeId ?? state.selectedIds[0] ?? null;
+        if (id) setRenamingId(id);
+        return;
+      }
+      // ? (Shift+/) 打开快捷键帮助面板
+      if (e.key === "/" && e.shiftKey) {
+        e.preventDefault();
+        setHelpOpen(true);
+        return;
       }
       if (e.key === "Delete" || e.key === "Backspace") {
         e.preventDefault();
@@ -610,6 +712,40 @@ export function EditorLayout() {
           <RightPanel collapsed={rightPanelCollapsed} />
         </div>
       )}
+      {/* F2 内联重命名输入框 */}
+      {renamingId && (
+        <div className="fixed inset-0 z-50 flex items-start justify-center pt-[15vh]" onClick={() => setRenamingId(null)}>
+          <Input
+            autoFocus
+            defaultValue={(() => {
+              const comps = useCanvasStore.getState().components;
+              for (const comp of comps) {
+                if (comp.id === renamingId) return comp.node.name ?? "";
+              }
+              return "";
+            })()}
+            className="w-64"
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                const state = useCanvasStore.getState();
+                state.updateNode(renamingId, { name: e.currentTarget.value });
+                setRenamingId(null);
+              }
+              if (e.key === "Escape") setRenamingId(null);
+              e.stopPropagation();
+            }}
+            onBlur={(e) => {
+              if (renamingId) {
+                const state = useCanvasStore.getState();
+                state.updateNode(renamingId, { name: e.target.value });
+              }
+              setRenamingId(null);
+            }}
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
+      )}
+      <KeyboardShortcutsDialog open={helpOpen} onOpenChange={setHelpOpen} />
     </div>
   );
 }

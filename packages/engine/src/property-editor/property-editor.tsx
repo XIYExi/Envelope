@@ -11,7 +11,7 @@
 
 "use client";
 
-import { useRef, useState, useCallback, useMemo } from "react";
+import { useRef, useState, useCallback, useMemo, useEffect } from "react";
 import * as LucideIcons from "lucide-react";
 import { createPortal } from "react-dom";
 import type { EditableProp } from "@envelope/materials";
@@ -29,6 +29,10 @@ export interface PropertyEditorProps {
   values: Record<string, unknown>;
   onChange: (key: string, value: unknown) => void;
   flowList?: { id: string; name: string }[];
+  /** 数据模型表列选项，供 dataBinding 字段级联选择 */
+  tableOptions?: { name: string; columns: { name: string; type: string }[] }[];
+  /** 导航到流程编辑器的回调 */
+  onNavigateToFlows?: () => void;
 }
 
 /** 将可编辑属性按 group 字段分组，使用 Map 保证插入顺序 */
@@ -61,6 +65,10 @@ interface FieldWrapperProps {
   value: unknown;
   onChange: (key: string, value: unknown) => void;
   flowList?: { id: string; name: string }[];
+  /** 数据模型表列选项，供 dataBinding 字段级联选择 */
+  tableOptions?: { name: string; columns: { name: string; type: string }[] }[];
+  /** 导航到流程编辑器的回调 */
+  onNavigateToFlows?: () => void;
 }
 
 /** 文本字段 —— 单行文本输入 */
@@ -134,24 +142,62 @@ function SelectField({ prop, value, onChange }: FieldWrapperProps) {
   );
 }
 
-/** 颜色字段 —— 同时提供颜色选择器（type=color）和十六进制文本输入 */
+/**
+ * 颜色字段 —— 颜色选择器 + 十六进制文本输入 + 主题色预设色板
+ *
+ * 文本输入使用受控组件（内部 state）以避免输入过程中的闪烁，
+ * 只在失焦时提交最终值。
+ */
 function ColorField({ prop, value, onChange }: FieldWrapperProps) {
+  const hexValue = typeof value === "string" ? value : (prop.defaultValue as string) ?? "#000000";
+  const [inputValue, setInputValue] = useState(hexValue);
+
+  // 同步外部值变化
+  useEffect(() => { setInputValue(hexValue); }, [hexValue]);
+
+  /** 主题色预设色板（shadcn/ui 默认主题色） */
+  const themeColors = [
+    "hsl(222.2 47.4% 11.2%)",
+    "hsl(210 40% 96.1%)",
+    "hsl(210 40% 98%)",
+    "hsl(215.4 16.3% 46.9%)",
+    "hsl(215 20.2% 65.1%)",
+    "hsl(0 72.2% 50.6%)",
+    "hsl(0 0% 100%)",
+    "hsl(222.2 84% 4.9%)",
+  ];
+
   return (
     <div>
       <FieldLabel label={prop.label} required={prop.required} comment={prop.comment} />
       <div className="flex items-center gap-2">
         <input
           type="color"
-          value={typeof value === "string" ? value : (prop.defaultValue as string) ?? "#000000"}
+          value={hexValue}
           onChange={(e) => onChange(prop.key, e.target.value)}
           className="h-7 w-10 cursor-pointer rounded border p-0"
         />
         <input
           type="text"
-          value={typeof value === "string" ? value : (prop.defaultValue as string) ?? ""}
-          onChange={(e) => onChange(prop.key, e.target.value)}
-          className="h-7 flex-1 rounded border bg-background px-2 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
+          value={inputValue}
+          onChange={(e) => setInputValue(e.target.value)}
+          onBlur={() => onChange(prop.key, inputValue)}
+          placeholder="#000000"
+          className="h-7 flex-1 rounded border bg-background px-2 font-mono text-[10px] focus:outline-none focus:ring-1 focus:ring-blue-500"
         />
+      </div>
+      {/* 主题色预设色板 */}
+      <div className="mt-1 flex flex-wrap gap-1">
+        {themeColors.map((c, i) => (
+          <button
+            key={i}
+            type="button"
+            onClick={() => onChange(prop.key, c)}
+            className={`h-5 w-5 rounded-full border ${hexValue === c ? "ring-2 ring-blue-500 ring-offset-1" : ""}`}
+            style={{ backgroundColor: c }}
+            title={`主题色 ${i + 1}`}
+          />
+        ))}
       </div>
     </div>
   );
@@ -326,6 +372,69 @@ function JsonField({ prop, value, onChange }: FieldWrapperProps) {
         className={`w-full resize-y rounded border bg-background px-2 py-1 font-mono text-[10px] focus:outline-none focus:ring-1 focus:ring-blue-500 ${parseError ? "border-destructive" : ""}`}
       />
       {parseError && <p className="mt-0.5 text-[9px] text-destructive">Invalid JSON</p>}
+    </div>
+  );
+}
+
+/**
+ * JSON 表格编辑器 —— 对扁平 JSON 对象提供键值对表格编辑
+ *
+ * - 自动检测是否为扁平 JSON（值均为原始类型），扁平时渲染表格视图
+ * - 非扁平或无效 JSON 回退到 JsonField 文本编辑
+ * - 支持添加/删除行，实时构建 JSON 对象
+ */
+function JsonTableField({ prop, value, onChange }: FieldWrapperProps) {
+  const parsed = useMemo(() => {
+    if (typeof value === "object" && value !== null && !Array.isArray(value)) return value as Record<string, unknown>;
+    if (typeof value === "string") { try { return JSON.parse(value); } catch { return null; } }
+    return null;
+  }, [value]);
+
+  const isFlatObject = parsed !== null && Object.values(parsed).every(v => typeof v !== "object" || v === null);
+
+  // 非扁平对象回退到文本编辑
+  if (!isFlatObject) return <JsonField prop={prop} value={value} onChange={onChange} />;
+
+  const rows = Object.entries(parsed!).map(([key, val]) => ({ key, value: typeof val === "string" ? val : JSON.stringify(val) }));
+
+  const updateRows = (newRows: { key: string; value: string }[]) => {
+    const obj: Record<string, unknown> = {};
+    for (const r of newRows) {
+      if (r.key.trim()) {
+        try { obj[r.key] = JSON.parse(r.value); } catch { obj[r.key] = r.value; }
+      }
+    }
+    onChange(prop.key, obj);
+  };
+
+  return (
+    <div>
+      <FieldLabel label={prop.label} required={prop.required} comment={prop.comment ?? "键值对表格编辑，支持添加/删除行"} />
+      <div className="space-y-0.5 rounded border p-1">
+        {rows.map((row, i) => (
+          <div key={i} className="flex items-center gap-1">
+            <input
+              value={row.key}
+              onChange={e => { const n = [...rows]; n[i] = { key: e.target.value, value: n[i]!.value }; updateRows(n); }}
+              placeholder="key"
+              className="h-6 w-[35%] rounded border px-1 text-[10px]"
+            />
+            <input
+              value={row.value}
+              onChange={e => { const n = [...rows]; n[i] = { key: n[i]!.key, value: e.target.value }; updateRows(n); }}
+              placeholder="value"
+              className="h-6 flex-1 rounded border px-1 text-[10px]"
+            />
+            <button type="button" onClick={() => updateRows(rows.filter((_, j) => j !== i))} className="h-6 w-6 rounded text-[10px] text-destructive hover:bg-destructive/10">×</button>
+          </div>
+        ))}
+        <button type="button" onClick={() => updateRows([...rows, { key: "", value: "" }])} className="h-6 w-full rounded border border-dashed text-[10px] text-muted-foreground hover:bg-accent">
+          + 添加属性
+        </button>
+      </div>
+      <button type="button" onClick={() => onChange(prop.key, JSON.stringify(parsed, null, 2))} className="mt-1 text-[9px] text-blue-500">
+        切换为 JSON 编辑
+      </button>
     </div>
   );
 }
@@ -601,37 +710,107 @@ function TailwindField({ prop, value, onChange }: FieldWrapperProps) {
   );
 }
 
-/** 数据绑定字段 —— 绑定到 Supabase 查询列，格式 table.column */
-function DataBindField({ prop, value, onChange }: FieldWrapperProps) {
+/**
+ * 数据绑定字段 —— 双 select 级联选择表列
+ *
+ * 从 tableOptions 中选择表名，再选择对应表的列名。
+ * 无 tableOptions 时回退为文本输入（兼容旧模式）。
+ */
+function DataBindField({ prop, value, onChange, tableOptions }: FieldWrapperProps) {
+  const [table, ...colParts] = (typeof value === "string" ? value : "").split(".");
+  const col = colParts.join(".");
+  const currentTable = tableOptions?.find(t => t.name === table) ?? null;
+  const columns = currentTable?.columns ?? [];
+
+  // 无 tableOptions 时回退为文本输入
+  if (!tableOptions || tableOptions.length === 0) {
+    return (
+      <div>
+        <FieldLabel label={prop.label} required={prop.required} comment={prop.comment ?? "从数据模型选择表列"} />
+        <input
+          type="text"
+          value={typeof value === "string" ? value : ""}
+          placeholder={prop.placeholder ?? "table.column"}
+          onChange={(e) => onChange(prop.key, e.target.value)}
+          className="h-7 w-full rounded border bg-background px-2 font-mono text-[10px] focus:outline-none focus:ring-1 focus:ring-blue-500"
+        />
+        <p className="mt-0.5 text-[9px] text-muted-foreground">格式: table.column</p>
+      </div>
+    );
+  }
+
   return (
     <div>
-      <FieldLabel label={prop.label} required={prop.required} comment={prop.comment ?? "Bind this prop to a Supabase query column"} />
-      <input
-        type="text"
-        value={typeof value === "string" ? value : ""}
-        placeholder={prop.placeholder ?? "table.column"}
-        onChange={(e) => onChange(prop.key, e.target.value)}
-        className="h-7 w-full rounded border bg-background px-2 font-mono text-[10px] focus:outline-none focus:ring-1 focus:ring-blue-500"
-      />
-      <p className="mt-0.5 text-[9px] text-muted-foreground">Format: table.column</p>
+      <FieldLabel label={prop.label} required={prop.required} comment={prop.comment ?? "从数据模型选择表列"} />
+      <div className="flex items-center gap-1">
+        <select
+          value={table ?? ""}
+          onChange={(e) => onChange(prop.key, e.target.value ? `${e.target.value}.` : "")}
+          className="h-7 flex-1 rounded border bg-background px-1 text-[10px]"
+        >
+          <option value="">选择表...</option>
+          {tableOptions.map(t => <option key={t.name} value={t.name}>{t.name}</option>)}
+        </select>
+        <span className="text-[10px] text-muted-foreground">.</span>
+        <select
+          value={col ?? ""}
+          disabled={!currentTable}
+          onChange={(e) => onChange(prop.key, `${table}.${e.target.value}`)}
+          className="h-7 flex-1 rounded border bg-background px-1 text-[10px]"
+        >
+          <option value="">选择列...</option>
+          {columns.map(c => <option key={c.name} value={c.name}>{c.name}</option>)}
+        </select>
+      </div>
     </div>
   );
 }
 
 /** 事件绑定字段 —— 绑定到业务流程，有可用流程时显示下拉选择 */
-function EventBindField({ prop, value, onChange, flowList }: FieldWrapperProps) {
-  const currentValue = typeof value === "string" ? value : "";
+/**
+ * K3: 事件绑定字段 — 支持多 flow 选择
+ *
+ * eventBindings 值类型从 string 升级为 string[]。
+ * - 下拉模式（有 flowList）：按住 Ctrl 多选
+ * - 输入模式（无 flowList）：逗号分隔输入多个 flowId
+ */
+function EventBindField({ prop, value, onChange, flowList, onNavigateToFlows }: FieldWrapperProps) {
+  // K3: 兼容 string（旧数据）和 string[]（新数据）
+  const currentArray: string[] = Array.isArray(value)
+    ? value
+    : typeof value === "string" && value.trim().length > 0
+      ? [value]
+      : [];
+
+  const handleSelectChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const options = e.target.options;
+    const selected: string[] = [];
+    for (let i = 0; i < options.length; i++) {
+      const opt = options[i];
+      if (opt && opt.selected && opt.value) {
+        selected.push(opt.value);
+      }
+    }
+    onChange(prop.key, selected);
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const raw = e.target.value;
+    // K3: 逗号分隔转换为 string[]
+    const parts = raw.split(",").map((s: string) => s.trim()).filter(Boolean);
+    onChange(prop.key, parts);
+  };
 
   return (
     <div>
-      <FieldLabel label={prop.label} required={prop.required} comment={prop.comment ?? "将组件事件绑定到业务流程"} />
+      <FieldLabel label={prop.label} required={prop.required} comment={prop.comment ?? "将组件事件绑定到业务流程（可多选）"} />
       {flowList && flowList.length > 0 ? (
         <select
-          value={currentValue}
-          onChange={(e) => onChange(prop.key, e.target.value)}
-          className="h-7 w-full rounded border bg-background px-2 text-[10px] focus:outline-none focus:ring-1 focus:ring-blue-500"
+          multiple
+          value={currentArray}
+          onChange={handleSelectChange}
+          className="h-20 w-full rounded border bg-background px-1 text-[10px] focus:outline-none focus:ring-1 focus:ring-blue-500"
         >
-          <option value="">-- 不绑定 --</option>
           {flowList.map((flow) => (
             <option key={flow.id} value={flow.id}>
               {flow.name} ({flow.id})
@@ -639,18 +818,29 @@ function EventBindField({ prop, value, onChange, flowList }: FieldWrapperProps) 
           ))}
         </select>
       ) : (
-        <input
-          type="text"
-          value={currentValue}
-          placeholder={prop.placeholder ?? "flow-id"}
-          onChange={(e) => onChange(prop.key, e.target.value)}
-          className="h-7 w-full rounded border bg-background px-2 font-mono text-[10px] focus:outline-none focus:ring-1 focus:ring-blue-500"
-        />
+        <div className="space-y-1">
+          <input
+            type="text"
+            value={currentArray.join(", ")}
+            placeholder={prop.placeholder ?? "flow-id1, flow-id2"}
+            onChange={handleInputChange}
+            className="h-7 w-full rounded border bg-background px-2 font-mono text-[10px] focus:outline-none focus:ring-1 focus:ring-blue-500"
+          />
+          {onNavigateToFlows && (
+            <button
+              type="button"
+              onClick={onNavigateToFlows}
+              className="h-6 w-full rounded border border-dashed border-blue-300 bg-blue-50 text-[9px] text-blue-600 hover:bg-blue-100"
+            >
+              + 创建新流程并绑定到此事件
+            </button>
+          )}
+        </div>
       )}
       <p className="mt-0.5 text-[9px] text-muted-foreground">
         {flowList && flowList.length > 0
-          ? "选择要绑定的流程"
-          : "从 Flows 面板创建流程后，此处可选择绑定"}
+          ? "按住 Ctrl 多选流程（按序执行）"
+          : "逗号分隔输入多个 flowId，从 Flows 面板创建流程后可选择绑定"}
       </p>
     </div>
   );
@@ -667,7 +857,7 @@ const FIELD_COMPONENTS: Record<string, React.FC<FieldWrapperProps>> = {
   radio: RadioField,
   image: ImageField,
   richText: RichTextField,
-  json: JsonField,
+  json: JsonTableField,
   code: CodeField,
   icon: IconField,
   tailwind: TailwindField,
@@ -686,7 +876,7 @@ const FIELD_COMPONENTS: Record<string, React.FC<FieldWrapperProps>> = {
  * @param values - 当前属性值对象
  * @param onChange - 属性值变更回调，接收字段 key 和新值
  */
-export function PropertyEditor({ editableProps, values, onChange, flowList }: PropertyEditorProps) {
+export function PropertyEditor({ editableProps, values, onChange, flowList, tableOptions, onNavigateToFlows }: PropertyEditorProps) {
   const grouped = groupProps(editableProps);
 
   // 从 localStorage 读取分组折叠状态
@@ -695,11 +885,12 @@ export function PropertyEditor({ editableProps, values, onChange, flowList }: Pr
       const saved = localStorage.getItem("property-editor-collapsed-groups");
       if (saved) return new Set(JSON.parse(saved));
     } catch { /* ignore */ }
-    // 默认折叠：组名包含 "Advanced" 或平均 order > 80 的组
+    // 默认折叠：组名包含 "Advanced"、平均 order > 80、或包含高级属性的组
     const defaults = new Set<string>();
     for (const [groupName, groupProps] of grouped.entries()) {
       const avgOrder = groupProps.reduce((sum, p) => sum + (p.order ?? 50), 0) / groupProps.length;
-      if (groupName.includes("Advanced") || avgOrder > 80) {
+      const hasAdvanced = groupProps.some(p => p.advanced);
+      if (groupName.includes("Advanced") || avgOrder > 80 || hasAdvanced) {
         defaults.add(groupName);
       }
     }
@@ -765,6 +956,8 @@ export function PropertyEditor({ editableProps, values, onChange, flowList }: Pr
                         value={value}
                         onChange={onChange}
                         flowList={flowList}
+                        tableOptions={tableOptions}
+                        onNavigateToFlows={onNavigateToFlows}
                       />
                     );
                   })}

@@ -3,12 +3,14 @@ export type {
   MaterialRegistry,
   EditableProp,
   ComponentCategory,
+  SlotDefinition,
 } from "./types/material";
 
 export {
   materialDefinitionSchema,
   editablePropSchema,
   componentCategorySchema,
+  slotDefinitionSchema,
   getDefaultValue,
 } from "./types/material";
 

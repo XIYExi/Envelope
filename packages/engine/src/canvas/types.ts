@@ -46,22 +46,29 @@ export interface CanvasComponent {
     /** 行跨度（>= 1） */
     height: number;
   };
+  /** 是否锁定（锁定后不可拖拽/缩放） */
+  locked?: boolean;
+  /** 是否隐藏（隐藏后在画布上不可见） */
+  hidden?: boolean;
 }
 
 export interface CanvasSnapshot {
   components: CanvasComponent[];
   selectedIds: string[];
-  /** 当前“主选中”的节点 ID（用于属性面板、剪贴板等单目标操作） */
+  /** 当前"主选中"的节点 ID（用于属性面板、剪贴板等单目标操作） */
   activeNodeId: string | null;
   zoom: number;
   viewport: CanvasState["viewport"];
   gridCols: number;
   gridGap: number;
+  minRowHeight: number;
   panX: number;
   panY: number;
   pageBackground: string;
   pagePadding: number;
   pageMaxWidth: number | null;
+  /** 子组件编辑模式作用域 */
+  editScope?: { rootId: string; path: { id: string; type: string }[] } | null;
 }
 
 export type CanvasClipboardItem =
@@ -100,6 +107,8 @@ export interface CanvasState {
   gridCols: number;
   /** 网格间距（px） */
   gridGap: number;
+  /** 组件最小行高（px），设为 0 时自适应由内容撑开 */
+  minRowHeight: number;
   /** 水平平移偏移量（px） */
   panX: number;
   /** 垂直平移偏移量（px） */
@@ -113,6 +122,9 @@ export interface CanvasState {
 
   /** 内部剪贴板（用于 Cut/Copy/Paste 闭环） */
   clipboard: CanvasClipboard | null;
+
+  /** 子组件编辑模式的作用域（为空时表示正常模式） */
+  editScope: { rootId: string; path: { id: string; type: string }[] } | null;
 
   canUndo: boolean;
   canRedo: boolean;
@@ -146,12 +158,18 @@ export interface CanvasActions {
   resizeComponent: (id: string, width: number, height: number, x?: number, y?: number) => void;
   /** 设置缩放比例（自动钳制到 0.25 ~ 2.0） */
   setZoom: (zoom: number) => void;
+  /** 缩放到适配所有可见组件 */
+  zoomToFit: () => void;
+  /** 缩放到适配当前选中组件 */
+  zoomToSelection: () => void;
   /** 设置视口类型 */
   setViewport: (viewport: CanvasState["viewport"]) => void;
   /** 设置网格列数 */
   setGridCols: (cols: number) => void;
   /** 设置网格间距 */
   setGridGap: (gap: number) => void;
+  /** 设置组件最小行高（px），设为 0 表示自适应内容撑开 */
+  setMinRowHeight: (height: number) => void;
   /** 设置平移偏移量 */
   setPan: (x: number, y: number) => void;
   /** 设置页面背景色 */
@@ -178,6 +196,29 @@ export interface CanvasActions {
   clearAll: () => void;
   /** 获取当前选中的组件列表 */
   getSelectedComponents: () => CanvasComponent[];
+  /** 全选所有可见（非隐藏）组件 */
+  selectAll: () => void;
+
+  /** 切换组件的锁定状态 */
+  toggleLock: (id: string) => void;
+  /** 切换组件的隐藏状态 */
+  toggleHidden: (id: string) => void;
+  /** 批量切换多个组件的锁定状态 */
+  batchToggleLock: (ids: string[]) => void;
+  /** 批量切换多个组件的隐藏状态 */
+  batchToggleHidden: (ids: string[]) => void;
+  /** Z-Order 移动：上移/下移/置顶/置底 */
+  zIndexMove: (ids: string[], direction: "up" | "down" | "top" | "bottom") => void;
+  /** 对齐选中组件 */
+  alignSelected: (direction: "left" | "centerH" | "right" | "top" | "centerV" | "bottom") => void;
+  /** 分布选中组件 */
+  distributeSelected: (direction: "horizontal" | "vertical") => void;
+  /** 批量更新选中组件的共有属性 */
+  batchUpdateSelectedProps: (key: string, value: unknown) => void;
+  /** 进入子组件编辑模式 */
+  enterChildEdit: (rootId: string, path: { id: string; type: string }[]) => void;
+  /** 退出子组件编辑模式 */
+  exitChildEdit: () => void;
 
   undo: () => void;
   redo: () => void;

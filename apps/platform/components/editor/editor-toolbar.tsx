@@ -11,6 +11,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { toast } from "sonner";
 import { useCanvasStore } from "@envelope/engine";
 import { useEditorStore } from "@/stores/editor";
 import { useProjectPagesStore } from "@/stores/project-pages";
@@ -41,9 +42,18 @@ import {
   Upload,
   RefreshCw,
   Eye,
+  Terminal,
+  Lock,
+  LockOpen,
+  EyeOff,
+  ChevronsUp,
+  ChevronsDown,
+  ChevronUp,
+  ChevronDown,
 } from "lucide-react";
 import type { CanvasState } from "@envelope/engine";
 import { PagePreviewDialog } from "./page-preview-dialog";
+import { ApiTestPanel } from "@/components/runtime/api-test-panel";
 
 /** 视口图标映射 */
 const viewportIcons: Record<CanvasState["viewport"], React.ReactNode> = {
@@ -77,7 +87,11 @@ const viewports: CanvasState["viewport"][] = ["desktop", "tablet", "mobile", "fl
 export function EditorToolbar() {
   const searchParams = useSearchParams();
   const projectId = searchParams.get("project");
-  const { viewport, setViewport, deleteSelected, selectedIds, components, canUndo, canRedo, undo, redo } = useCanvasStore();
+  const {
+    viewport, setViewport, deleteSelected, selectedIds, components, canUndo, canRedo, undo, redo,
+    toggleLock, toggleHidden, zIndexMove, alignSelected, distributeSelected,
+    zoom, setZoom, zoomToFit, zoomToSelection,
+  } = useCanvasStore();
   const {
     toggleLeftPanel,
     toggleRightPanel,
@@ -125,6 +139,7 @@ export function EditorToolbar() {
   const archiveImportPingTimerRef = useRef<number | null>(null);
 
   const [previewOpen, setPreviewOpen] = useState(false);
+  const [apiTestOpen, setApiTestOpen] = useState(false);
 
   const wsClientIdStorageKey = "envelope_task_ws_client_id";
   const sync = useProjectLocalSync(projectId, {
@@ -259,7 +274,7 @@ export function EditorToolbar() {
           } catch (e) {
             const message = e instanceof Error ? e.message : "导出失败";
             setExportError(message);
-            window.alert(message);
+            toast.error(message);
           }
         }
 
@@ -270,7 +285,7 @@ export function EditorToolbar() {
         const err = task.error;
         const message = typeof err === "string" ? err : "导出失败";
         setExportError(message);
-        window.alert(message);
+        toast.error(message);
         exportTaskIdRef.current = null;
         exportDownloadUrlRef.current = null;
         setIsExporting(false);
@@ -385,7 +400,7 @@ export function EditorToolbar() {
           } catch (e) {
             const message = e instanceof Error ? e.message : "导出失败";
             setArchiveExportError(message);
-            window.alert(message);
+            toast.error(message);
           }
         }
         setIsArchiveExporting(false);
@@ -395,7 +410,7 @@ export function EditorToolbar() {
         const err = task.error;
         const message = typeof err === "string" ? err : "导出失败";
         setArchiveExportError(message);
-        window.alert(message);
+        toast.error(message);
         archiveExportTaskIdRef.current = null;
         archiveExportDownloadUrlRef.current = null;
         setIsArchiveExporting(false);
@@ -510,7 +525,7 @@ export function EditorToolbar() {
         const err = task.error;
         const message = typeof err === "string" ? err : "导入失败";
         setArchiveImportError(message);
-        window.alert(message);
+        toast.error(message);
         archiveImportTaskIdRef.current = null;
         setIsArchiveImporting(false);
         try {
@@ -619,7 +634,7 @@ export function EditorToolbar() {
     } catch (e) {
       const message = e instanceof Error ? e.message : "导出失败";
       setExportError(message);
-      window.alert(message);
+      toast.error(message);
       exportTaskIdRef.current = null;
       exportDownloadUrlRef.current = null;
       setExportStage(null);
@@ -671,7 +686,7 @@ export function EditorToolbar() {
     } catch (e) {
       const message = e instanceof Error ? e.message : "导出失败";
       setArchiveExportError(message);
-      window.alert(message);
+      toast.error(message);
       archiveExportTaskIdRef.current = null;
       archiveExportDownloadUrlRef.current = null;
       setArchiveExportStage(null);
@@ -723,7 +738,7 @@ export function EditorToolbar() {
     } catch (e) {
       const message = e instanceof Error ? e.message : "导入失败";
       setArchiveImportError(message);
-      window.alert(message);
+      toast.error(message);
       archiveImportTaskIdRef.current = null;
       setArchiveImportStage(null);
       setArchiveImportPercent(null);
@@ -795,6 +810,56 @@ export function EditorToolbar() {
       <span className="ml-1 text-[10px] text-muted-foreground">
         {components.length} components
       </span>
+
+      {/* 缩放控制 */}
+      <div className="ml-2 flex items-center gap-1">
+        <button
+          className="rounded p-1 text-muted-foreground hover:bg-muted"
+          onClick={() => setZoom(Math.max(0.25, zoom - 0.1))}
+          title="缩小"
+          type="button"
+        >
+          <span className="text-xs">−</span>
+        </button>
+        <input
+          type="number"
+          value={Math.round(zoom * 100)}
+          onChange={(e) => {
+            const v = Number(e.target.value);
+            if (!isNaN(v) && v >= 25 && v <= 200) setZoom(v / 100);
+          }}
+          className="h-6 w-14 rounded border bg-background px-1 text-center text-xs"
+          min={25}
+          max={200}
+        />
+        <span className="text-xs text-muted-foreground">%</span>
+        <button
+          className="rounded p-1 text-muted-foreground hover:bg-muted"
+          onClick={() => setZoom(Math.min(2, zoom + 0.1))}
+          title="放大"
+          type="button"
+        >
+          <span className="text-xs">+</span>
+        </button>
+        <button
+          className="ml-1 rounded p-1 text-muted-foreground hover:bg-muted"
+          onClick={zoomToFit}
+          title="缩放至全部组件"
+          type="button"
+        >
+          <span className="text-xs">⊞</span>
+        </button>
+        {selectedIds.length > 0 && (
+          <button
+            className="rounded p-1 text-muted-foreground hover:bg-muted"
+            onClick={zoomToSelection}
+            title="缩放至选中组件"
+            type="button"
+          >
+            <span className="text-xs">⊡</span>
+          </button>
+        )}
+      </div>
 
       <div className="flex-1" />
 
@@ -870,22 +935,6 @@ export function EditorToolbar() {
 
       {editorMode === "pages" && (
         <>
-          {pages.length > 0 && (
-            <select
-              value={currentPath ?? pages[0]?.path ?? "/"}
-              onChange={(e) => {
-                const next = e.target.value;
-                void flushAutosave().finally(() => setCurrentPath(next));
-              }}
-              className="mr-1 h-7 max-w-48 rounded border bg-background px-2 text-[10px]"
-            >
-              {pages.map((p) => (
-                <option key={p.path} value={p.path}>
-                  {p.title} ({p.path})
-                </option>
-              ))}
-            </select>
-          )}
           {error && (
             <span className="mr-1 max-w-48 truncate text-[10px] text-destructive" title={error}>
               保存失败
@@ -939,6 +988,16 @@ export function EditorToolbar() {
           >
             <Eye className="mr-1 h-3 w-3" />
             Preview
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className="mr-1 h-7 text-[10px]"
+            onClick={() => setApiTestOpen(true)}
+            title="P6/P7: API 端点测试"
+          >
+            <Terminal className="mr-1 h-3 w-3" />
+            API 测试
           </Button>
           <Button
             variant="outline"
@@ -1010,6 +1069,7 @@ export function EditorToolbar() {
       )}
 
       <PagePreviewDialog open={previewOpen} onOpenChange={setPreviewOpen} />
+      <ApiTestPanel open={apiTestOpen} onOpenChange={setApiTestOpen} />
 
       <ConfigArchiveExportDialog
         open={archiveExportDialogOpen}
@@ -1031,13 +1091,74 @@ export function EditorToolbar() {
         onSetBaseline={sync.setBaseline}
       />
 
-      {/* 删除（仅在有选中组件时显示） */}
+      {/* 选中操作区（仅在有选中组件时显示） */}
       {selectedIds.length > 0 && (
         <>
+          {/* Z-Order 按钮组 */}
+          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => zIndexMove(selectedIds, "top")} title="置顶">
+            <ChevronsUp className="h-4 w-4" />
+          </Button>
+          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => zIndexMove(selectedIds, "up")} title="上移">
+            <ChevronUp className="h-4 w-4" />
+          </Button>
+          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => zIndexMove(selectedIds, "down")} title="下移">
+            <ChevronDown className="h-4 w-4" />
+          </Button>
+          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => zIndexMove(selectedIds, "bottom")} title="置底">
+            <ChevronsDown className="h-4 w-4" />
+          </Button>
+
+          <Separator orientation="vertical" className="mx-1 h-5" />
+
+          {/* 锁定/隐藏按钮（单选时精确操作） */}
+          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => toggleLock(selectedIds[0]!)} title="锁定/解锁">
+            {components.find((c) => c.id === selectedIds[0])?.locked ? <Lock className="h-4 w-4" /> : <LockOpen className="h-4 w-4" />}
+          </Button>
+          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => toggleHidden(selectedIds[0]!)} title="隐藏/显示">
+            {components.find((c) => c.id === selectedIds[0])?.hidden ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+          </Button>
+
+          <Separator orientation="vertical" className="mx-1 h-5" />
+
+          {/* 多选对齐按钮组 */}
+          {selectedIds.length > 1 && (
+            <>
+              <div className="flex items-center rounded-md border text-[10px]">
+                <Button variant="ghost" size="sm" className="h-7 rounded-none px-1.5 first:rounded-l-md" onClick={() => alignSelected("left")} title="左对齐">
+                  ≡
+                </Button>
+                <Button variant="ghost" size="sm" className="h-7 rounded-none px-1.5 border-x" onClick={() => alignSelected("centerH")} title="水平居中">
+                  ╳
+                </Button>
+                <Button variant="ghost" size="sm" className="h-7 rounded-none px-1.5 last:rounded-r-md" onClick={() => alignSelected("right")} title="右对齐">
+                  ≡
+                </Button>
+              </div>
+              <div className="flex items-center rounded-md border text-[10px]">
+                <Button variant="ghost" size="sm" className="h-7 rounded-none px-1.5 first:rounded-l-md" onClick={() => alignSelected("top")} title="顶部对齐">
+                  ☰
+                </Button>
+                <Button variant="ghost" size="sm" className="h-7 rounded-none px-1.5 border-x" onClick={() => alignSelected("centerV")} title="垂直居中">
+                  ╳
+                </Button>
+                <Button variant="ghost" size="sm" className="h-7 rounded-none px-1.5 last:rounded-r-md" onClick={() => alignSelected("bottom")} title="底部对齐">
+                  ☰
+                </Button>
+              </div>
+              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => distributeSelected("horizontal")} title="水平分布" style={{ fontSize: 12 }}>
+                ↔
+              </Button>
+              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => distributeSelected("vertical")} title="垂直分布" style={{ fontSize: 12 }}>
+                ↕
+              </Button>
+            </>
+          )}
+
+          <Separator orientation="vertical" className="mx-1 h-5" />
+
           <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={handleDelete}>
             <Trash2 className="h-4 w-4" />
           </Button>
-          <Separator orientation="vertical" className="mx-1 h-5" />
         </>
       )}
 

@@ -34,7 +34,8 @@ export interface ComponentNode {
   /** 数据绑定配置，将组件属性绑定到 Supabase 查询结果 */
   dataBindings?: Record<string, string>;
   /** 事件绑定配置，将组件事件（onClick、onSubmit 等）绑定到业务流程 */
-  eventBindings?: Record<string, string>;
+  /** K1: 一个事件可绑定多个 flow 依次执行，值改为 string[] */
+  eventBindings?: Record<string, string[]>;
   /** 子组件列表，实现组件嵌套（如 Card > CardHeader > Button） */
   children?: ComponentNode[];
   /** 网格布局位置（12 列 CSS Grid） */
@@ -83,8 +84,8 @@ export const componentSchema: z.ZodType<ComponentNode> = z.lazy(() =>
     tailwindClasses: z.string().optional(),
     /** 数据绑定配置 */
     dataBindings: z.record(z.string()).optional(),
-    /** 事件绑定配置 */
-    eventBindings: z.record(z.string()).optional(),
+    /** 事件绑定配置 — K1: 值改为 string[] 支持多 flow 绑定 */
+    eventBindings: z.record(z.array(z.string())).optional(),
     /** 子组件列表（递归引用 componentSchema） */
     children: z.array(componentSchema).optional(),
     /** 网格布局位置 */

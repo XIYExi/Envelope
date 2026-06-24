@@ -15,6 +15,7 @@ import { Separator } from "@/components/ui/separator";
 import { useEditorStore } from "@/stores/editor";
 import type { EditorMode } from "@/stores/editor.types";
 import { FileText, Database, Workflow, Globe, Plug, Puzzle, Palette, Settings } from "lucide-react";
+import { PageTreePanel } from "./page-tree-panel";
 
 /** 左侧面板 Props */
 interface LeftPanelProps {
@@ -98,6 +99,14 @@ export function LeftPanel({ collapsed }: LeftPanelProps) {
               <span className="flex-1 truncate">Settings</span>
             </button>
           </div>
+
+          {/* G10: Pages 模式下渲染页面树面板 */}
+          {editorMode === "pages" && (
+            <>
+              <Separator className="my-3" />
+              <PageTreePanel />
+            </>
+          )}
         </div>
       </ScrollArea>
     </div>

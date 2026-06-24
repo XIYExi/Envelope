@@ -113,11 +113,11 @@ describe("PropertyEditor（React）", () => {
     // Tailwind 超过 8 个 class 时显示 “+N more”
     expect(screen.getByText("+2 more")).toBeInTheDocument();
 
-    // 事件绑定：flowList 存在时使用下拉框，选择后触发回调
-    const eventSelect = screen.getByRole("combobox");
+    // 事件绑定：flowList 存在时使用多选下拉框，选择后触发回调
+    const eventSelect = screen.getByRole("listbox");
     onChange.mockClear();
     await user.selectOptions(eventSelect, "flow-1");
-    expect(onChange).toHaveBeenLastCalledWith("onClick", "flow-1");
+    expect(onChange).toHaveBeenLastCalledWith("onClick", ["flow-1"]);
   });
 
   it("事件绑定：当 flowList 为空时回退到文本输入（关键分支）", async () => {
@@ -140,9 +140,9 @@ describe("PropertyEditor（React）", () => {
     const input = screen.getByPlaceholderText("flow-id");
     onChange.mockClear();
     await user.type(input, "flow-xyz");
-    expect(onChange).toHaveBeenLastCalledWith("onSubmit", "flow-xyz");
+    expect(onChange).toHaveBeenLastCalledWith("onSubmit", ["flow-xyz"]);
 
-    expect(screen.getByText("从 Flows 面板创建流程后，此处可选择绑定")).toBeInTheDocument();
+    expect(screen.getByText("逗号分隔输入多个 flowId，从 Flows 面板创建流程后可选择绑定")).toBeInTheDocument();
   });
 
   it("image 字段支持选择文件并上传后写回 url（关键分支）", async () => {

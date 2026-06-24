@@ -41,8 +41,8 @@ export interface ParsedEventBinding {
   event: BindableEvent;
 }
 
-/** 事件绑定映射表 */
-export type EventBindingMap = Record<string, string>;
+/** 事件绑定映射表 — K3: 值改为 string[] 支持多 flow */
+export type EventBindingMap = Record<string, string[]>;
 
 // ═══════════════════════════════════════════════════════════════════
 // 端点绑定
@@ -71,12 +71,14 @@ export interface FlowBindingActions {
   registerFlow: (id: string, name: string) => void;
   /** 注销一个流程 */
   unregisterFlow: (id: string) => void;
-  /** 绑定组件事件到流程 */
-  bindEvent: (componentId: string, event: BindableEvent, flowId: string) => void;
+  /** K3: 绑定组件事件到多个流程（依次执行） */
+  bindEvent: (componentId: string, event: BindableEvent, flowIds: string[]) => void;
   /** 解除组件事件绑定 */
   unbindEvent: (componentId: string, event: BindableEvent) => void;
-  /** 获取组件事件的绑定流程 ID */
-  getEventBinding: (componentId: string, event: BindableEvent) => string | undefined;
+  /** K3: 获取组件事件的绑定流程 ID 列表 */
+  getEventBinding: (componentId: string, event: BindableEvent) => string[] | undefined;
+  /** K3: 按事件类型查询所有组件的绑定 flow ID 列表 */
+  getEventBindings: (eventType: BindableEvent) => string[];
   /** 绑定 API 端点路由到流程 */
   bindEndpoint: (routeId: string, flowId: string) => void;
   /** 解除 API 端点路由绑定 */

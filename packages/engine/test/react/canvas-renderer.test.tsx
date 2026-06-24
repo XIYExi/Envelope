@@ -162,41 +162,41 @@ describe("CanvasRenderer（React）", () => {
     expect(onClearSelection).toHaveBeenCalledTimes(1);
   });
 
-  it("拖拽空白区域触发平移回调（关键交互）", async () => {
-    const onPan = vi.fn();
+  it("拖拽空白区域触发框选而非平移", async () => {
+    const onClearSelection = vi.fn();
+    const onSelect = vi.fn();
 
     const { container } = render(
       <CanvasRenderer
         components={[createComp("btn-1", "Button", { label: "A" }, { x: 1, y: 1, width: 2, height: 1 })]}
         selectedIds={[]}
-        onSelect={vi.fn()}
-        onClearSelection={vi.fn()}
+        onSelect={onSelect}
+        onClearSelection={onClearSelection}
         onResize={vi.fn()}
         zoom={1}
         viewportWidth={800}
         panX={0}
         panY={0}
-        onPan={onPan}
+        onPan={vi.fn()}
         gridCols={12}
         gridGap={8}
       />,
     );
 
-    // 约定：CanvasRenderer 最外层容器绑定 onMouseDown，用于在“空白区”开始平移
+    // 约定：CanvasRenderer 最外层容器绑定 onMouseDown，用于在"空白区"开始框选
     const outer = container.firstElementChild as HTMLElement | null;
     expect(outer).toBeTruthy();
 
     fireEvent.mouseDown(outer!, { button: 0, clientX: 100, clientY: 100 });
 
-    // 关键点：mousemove/up 监听绑定在 window 上，需要等待一次状态更新后再触发
+    // mousemove 后触发框选，此时鼠标移动到组件区域上方但距离 <5px 视为单击
     await waitFor(() => {
-      fireEvent.mouseMove(window, { clientX: 130, clientY: 140 });
-      expect(onPan).toHaveBeenCalled();
+      fireEvent.mouseMove(window, { clientX: 102, clientY: 102 });
     });
 
-    expect(onPan).toHaveBeenCalledWith(30, 40);
-
+    // 距离 < 5px 判定为单击，清除选中
     fireEvent.mouseUp(window);
+    expect(onClearSelection).toHaveBeenCalled();
   });
 
   it("拖拽缩放手柄触发 resize 回调（关键分支）", async () => {

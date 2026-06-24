@@ -17,7 +17,7 @@
 
 "use client";
 
-import { forwardRef, useCallback, useMemo, useRef, useState, useEffect, type CSSProperties, type MouseEvent as RMouseEvent, type PointerEvent as RPointerEvent } from "react";
+import React, { forwardRef, useCallback, useMemo, useRef, useState, useEffect, type CSSProperties, type MouseEvent as RMouseEvent, type PointerEvent as RPointerEvent } from "react";
 import { useDraggable, useDroppable } from "@dnd-kit/core";
 import { twMerge } from "tailwind-merge";
 import type { CanvasComponent } from "./types";
@@ -25,50 +25,16 @@ import { calcResizeNext, snapGridDelta, type ResizeDirection } from "./resize-ut
 import { createComponentDragItem } from "./dnd";
 import type { ComponentNode } from "../schemas/page.schema";
 
-/** Ctrl 键全局状态（DOM 级实时更新 + React 级状态同步） */
-let _globalCtrlDown = false;
-const _ctrlListeners = new Set<() => void>();
-if (typeof window !== "undefined") {
-  window.addEventListener("keydown", (e: KeyboardEvent) => {
-    if (e.key === "Control" || e.key === "Meta") {
-      if (!_globalCtrlDown) { _globalCtrlDown = true; _ctrlListeners.forEach((fn) => fn()); }
-    }
-  });
-  window.addEventListener("keyup", (e: KeyboardEvent) => {
-    if (e.key === "Control" || e.key === "Meta") {
-      if (_globalCtrlDown) { _globalCtrlDown = false; _ctrlListeners.forEach((fn) => fn()); }
-    }
-  });
-}
-function isCtrlDown(): boolean { return _globalCtrlDown; }
-function useCtrlDown(): boolean {
-  const [ctrl, setCtrl] = useState(_globalCtrlDown);
-  useEffect(() => {
-    const update = () => setCtrl(_globalCtrlDown);
-    _ctrlListeners.add(update);
-    return () => { _ctrlListeners.delete(update); };
-  }, []);
-  return ctrl;
-}
+import { useCtrlDown } from "./ctrl-context";
+import { Minimap } from "./minimap";
+import { HorizontalRuler, VerticalRuler } from "./ruler";
+import { CANVAS_CELL_HEIGHT as CELL_HEIGHT, CANVAS_CELL_WIDTH as CELL_WIDTH, isContainerType } from "../shared/canvas-utils";
 
-/** 单个网格单元格的渲染高度（px），对应 CSS Grid 的隐式行高 */
-const CELL_HEIGHT = 40;
-/** 单个网格单元格的渲染宽度（px），对应 CSS Grid 的列宽 */
-const CELL_WIDTH = 80;
 /** 缩放手柄的视觉尺寸（px） */
 const RESIZE_HANDLE_SIZE = 12;
 
-/** 可接收子组件的容器组件类型集合 */
-const CONTAINER_TYPES = new Set([
-  "Box", "Flex", "Container", "Grid",
-  "Card", "CardHeader", "CardContent", "CardFooter", "Tabs", "TabsContent",
-  "Accordion", "AccordionItem", "AccordionContent", "Table", "TableHeader",
-  "TableBody", "TableRow", "Alert", "DialogContent", "SheetContent",
-  "AlertDialogContent", "ScrollArea", "AspectRatio", "ResizablePanelGroup",
-  "ResizablePanel", "Breadcrumb", "TabsList", "Pagination", "DrawerContent",
-  "PopoverContent", "HoverCardContent", "CollapsibleContent",
-  "DropdownMenuContent", "ContextMenuContent",
-]);
+/** 标尺的宽/高（px） */
+const RULER_SIZE = 20;
 
 /**
  * 条件类名合并工具函数
@@ -151,7 +117,15 @@ function parr<T = unknown>(props: Record<string, unknown> | undefined, key: stri
  * @param props - 组件属性
  * @param props.comp - 画布组件数据
  */
-function SimulatedContent({ comp }: { comp: CanvasComponent }) {
+/**
+ * 子节点选中回调上下文
+ *
+ * 用于在 SimulatedContent → ChildrenSlot → SimulatedChildContent 之间传递
+ * 嵌套子组件点击选中回调，避免逐层透传 props 修改大量调用点。
+ */
+const SelectChildContext = React.createContext<((nodeId: string) => void) | null>(null);
+
+function SimulatedContent({ comp, onSelectChild }: { comp: CanvasComponent; onSelectChild?: (nodeId: string) => void }) {
   const { type, props } = comp.node;
 
   switch (type) {
@@ -852,12 +826,15 @@ function SimulatedContent({ comp }: { comp: CanvasComponent }) {
  * @date 2026-06-22
  * @since 3.0.0
  */
-function ChildrenSlot({ components }: { components: ComponentNode[] }) {
+function ChildrenSlot({ components, onSelectChild: explicitOnSelectChild }: { components: ComponentNode[]; onSelectChild?: (nodeId: string) => void }) {
+  const contextOnSelectChild = React.useContext(SelectChildContext);
+  const resolvedOnSelectChild = explicitOnSelectChild ?? contextOnSelectChild;
+
   if (!components || components.length === 0) return null;
   return (
     <div className="space-y-1">
       {components.map((child) => (
-        <SimulatedChildContent key={child.id} node={child} />
+        <SimulatedChildContent key={child.id} node={child} onSelectChild={resolvedOnSelectChild ?? undefined} />
       ))}
     </div>
   );
@@ -873,7 +850,7 @@ function ChildrenSlot({ components }: { components: ComponentNode[] }) {
  * @param props.type - 组件类型名称
  * @param props.props - 组件属性对象（可选）
  */
-function SimulatedChildContent({ node }: { node: ComponentNode }) {
+function SimulatedChildContent({ node, onSelectChild }: { node: ComponentNode; onSelectChild?: (nodeId: string) => void }) {
   const { type, props } = node;
   const children = node.children ?? [];
   const childText = (() => {
@@ -884,7 +861,13 @@ function SimulatedChildContent({ node }: { node: ComponentNode }) {
     return typeof t === "string" ? t : "";
   })();
 
-  switch (type) {
+  const handleChildClick = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    onSelectChild?.(node.id);
+  }, [node.id, onSelectChild]);
+
+  const inner = (() => {
+    switch (type) {
     case "Button":
       return (
         <button className="inline-flex items-center rounded bg-primary px-2 py-0.5 text-[10px] text-primary-foreground" tabIndex={-1}>
@@ -955,12 +938,6 @@ function SimulatedChildContent({ node }: { node: ComponentNode }) {
       );
     case "TabsTrigger":
       return <span className="inline-flex rounded px-1 py-0.5 text-[10px] font-medium">{childText || "Tab"}</span>;
-    case "BreadcrumbItem":
-      return <span className="text-[10px] text-muted-foreground">{childText || "/ Page"}</span>;
-    case "BreadcrumbLink":
-      return <span className="text-[10px] text-primary underline">{childText || "Link"}</span>;
-    case "DropdownMenuItem":
-      return <div className="rounded px-1 py-0.5 text-[10px] hover:bg-muted">Action</div>;
     case "TableHeader":
       return (
         <div className="rounded border bg-muted/20 p-1 text-[10px] font-medium">
@@ -1104,7 +1081,14 @@ function SimulatedChildContent({ node }: { node: ComponentNode }) {
           ) : null}
         </div>
       );
-  }
+    }
+  })();
+
+  return (
+    <div data-child-node-id={node.id} onClick={handleChildClick} className="cursor-pointer">
+      {inner}
+    </div>
+  );
 }
 
 // ===== 画布组件项（包装 useDraggable / useDroppable） =====
@@ -1115,9 +1099,10 @@ function SimulatedChildContent({ node }: { node: ComponentNode }) {
  * 为每个组件绑定 useDraggable（可拖拽）和 useDroppable（容器可接收拖入），
  * 同时保留原有选中、缩放手柄等功能。
  */
-function CanvasComponentItem({
+const CanvasComponentItem = React.memo(function CanvasComponentItem({
   comp, x, y, width, height, isSelected, isHovered, previewTailwind,
   gridCols, zoom, onSelect, onHover, onResize, activeResizeCleanupRef,
+  isPrimary, onSelectChild, onDoubleClick, isDimmed, minRowHeight,
 }: {
   comp: CanvasComponent;
   x: number; y: number; width: number; height: number;
@@ -1127,16 +1112,24 @@ function CanvasComponentItem({
   onHover: (id: string | null) => void;
   onResize: (id: string, width: number, height: number, x?: number, y?: number) => void;
   activeResizeCleanupRef: React.MutableRefObject<(() => void) | null>;
+  isPrimary?: boolean;
+  onSelectChild?: (nodeId: string) => void;
+  onDoubleClick?: (e: React.MouseEvent) => void;
+  isDimmed?: boolean;
+  minRowHeight?: number;
 }) {
+  const isLocked = comp.locked === true;
+
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: `canvas-comp:${comp.id}`,
     data: createComponentDragItem(comp.id),
+    disabled: isLocked,
   });
 
   const { setNodeRef: setDropRef, isOver } = useDroppable({
     id: `canvas-container:${comp.id}`,
     data: { parentId: comp.id, type: comp.node.type },
-    disabled: !CONTAINER_TYPES.has(comp.node.type),
+    disabled: !isContainerType(comp.node.type),
   });
 
   const ctrlDown = useCtrlDown();
@@ -1163,26 +1156,30 @@ function CanvasComponentItem({
       className={cn(
         previewTailwind,
         "group relative rounded-md border transition-all duration-100",
-        isSelected
+        isSelected && isPrimary
           ? "border-blue-500 ring-2 ring-blue-200 shadow-md z-20"
-          : isHovered
-            ? "border-blue-400 ring-1 ring-blue-100 shadow-sm z-10"
-            : "border-transparent",
+          : isSelected && !isPrimary
+            ? "border-blue-300 border-dashed ring-1 ring-blue-100/50 z-20"
+            : isHovered
+              ? "border-blue-400 ring-1 ring-blue-100 shadow-sm z-10"
+              : "border-transparent",
         isDragging && "opacity-50",
         isOver && "ring-2 ring-blue-400/50",
+        isDimmed && "opacity-30 pointer-events-none",
       )}
       style={{
         gridColumn: `${x} / span ${width}`,
         gridRow: `${y} / span ${height}`,
-        minHeight: `${height * CELL_HEIGHT}px`,
-      }}
+        minHeight: (minRowHeight ?? CELL_HEIGHT) > 0 ? `${height * (minRowHeight ?? CELL_HEIGHT)}px` : undefined,
+      } as CSSProperties}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
       onClick={handleClick}
+      onDoubleClick={onDoubleClick}
       {...listeners}
       {...attributes}
     >
-      {CONTAINER_TYPES.has(comp.node.type) && (
+      {isContainerType(comp.node.type) && (
         <div className={cn(
           "absolute left-1 top-1 z-30 rounded px-1.5 py-0.5 text-[9px] font-medium text-white",
           isSelected ? "bg-blue-500" : isHovered ? "bg-blue-400/80" : "bg-blue-500/80",
@@ -1197,7 +1194,9 @@ function CanvasComponentItem({
         style={{ pointerEvents: ctrlDown ? "auto" : "none" } as CSSProperties}
         data-ctrl-gate="true"
       >
-        <SimulatedContent comp={comp} />
+        <SelectChildContext.Provider value={onSelectChild ?? null}>
+          <SimulatedContent comp={comp} />
+        </SelectChildContext.Provider>
       </div>
 
       {/* 选中标记 */}
@@ -1207,8 +1206,8 @@ function CanvasComponentItem({
         </div>
       )}
 
-      {/* 缩放手柄 */}
-      {isSelected && allResizeDirections.map((dir) => (
+      {/* 缩放手柄（锁定状态下不显示） */}
+      {isSelected && !isLocked && allResizeDirections.map((dir) => (
         <div
           key={dir}
           data-canvas-resize-handle={dir}
@@ -1289,7 +1288,7 @@ function CanvasComponentItem({
       ))}
     </div>
   );
-}
+});
 
 // ===== 缩放手柄 =====
 
@@ -1313,6 +1312,84 @@ const resizeHandleStyles: Record<ResizeDirection, CSSProperties> = {
 /** 所有缩放手柄方向的数组，用于遍历渲染 */
 const allResizeDirections: ResizeDirection[] = ["n", "s", "e", "w", "ne", "nw", "se", "sw"];
 
+// ===== 多选包围盒覆盖层 =====
+
+/**
+ * 多选包围盒覆盖层组件
+ *
+ * 当选中多个组件时，渲染一个包围所有选中组件的最小外接矩形，
+ * 帮助用户直观了解当前多选的范围。
+ *
+ * @param props.components - 被选中的组件列表（CanvasComponent[]）
+ * @param props.columnWidth - 每列的像素宽度
+ * @param props.gridGap - 网格间距（px）
+ * @param props.gridCols - 网格列数
+ */
+function BoundingBoxOverlay({ components, columnWidth, gridGap, gridCols }: {
+  components: CanvasComponent[];
+  columnWidth: number;
+  gridGap: number;
+  gridCols: number;
+}) {
+  if (components.length < 2) return null;
+
+  const cellW = columnWidth + gridGap;
+  const cellH = CELL_HEIGHT + gridGap;
+
+  const minX = Math.min(...components.map((c) => c.position.x));
+  const minY = Math.min(...components.map((c) => c.position.y));
+  const maxRight = Math.max(...components.map((c) => c.position.x + c.position.width));
+  const maxBottom = Math.max(...components.map((c) => c.position.y + c.position.height));
+
+  const leftPx = (minX - 1) * cellW;
+  const topPx = (minY - 1) * cellH;
+  const widthPx = (maxRight - minX) * cellW - gridGap;
+  const heightPx = (maxBottom - minY) * cellH - gridGap;
+
+  return (
+    <div
+      className="pointer-events-none absolute border-2 border-dashed border-blue-400 bg-blue-100/20"
+      style={{
+        left: `${leftPx}px`,
+        top: `${topPx}px`,
+        width: `${widthPx}px`,
+        height: `${heightPx}px`,
+      }}
+    />
+  );
+}
+
+// ===== 面包屑导航栏（子编辑模式） =====
+
+/**
+ * 子组件编辑模式下的面包屑导航栏
+ *
+ * 显示当前编辑路径，点击可逐级退出回到对应层级。
+ */
+function BreadcrumbBar({ editScope, onNavigate }: {
+  editScope: { rootId: string; path: { id: string; type: string }[] };
+  onNavigate: (index: number) => void;
+}) {
+  const crumbs = editScope.path;
+  return (
+    <div className="flex items-center gap-1 border-b bg-muted/30 px-3 py-1 text-[10px]">
+      <span className="text-muted-foreground">Edit:</span>
+      <button className="rounded px-1.5 py-0.5 font-medium text-blue-600 hover:bg-blue-50" onClick={() => onNavigate(-1)}>Root</button>
+      {crumbs.map((crumb, idx) => (
+        <React.Fragment key={crumb.id}>
+          <span className="text-muted-foreground">/</span>
+          <button
+            className="rounded px-1.5 py-0.5 text-blue-600 hover:bg-blue-50"
+            onClick={() => onNavigate(idx)}
+          >
+            {crumb.type}
+          </button>
+        </React.Fragment>
+      ))}
+    </div>
+  );
+}
+
 // ===== 主画布渲染器 =====
 
 /**
@@ -1326,12 +1403,22 @@ interface CanvasRendererProps {
   components: CanvasComponent[];
   /** 当前选中的组件 ID 列表 */
   selectedIds: string[];
+  /** 当前"主选中"的节点 ID */
+  activeNodeId?: string | null;
+  /** 子组件编辑模式作用域（为空时表示正常模式） */
+  editScope?: { rootId: string; path: { id: string; type: string }[] } | null;
   /** 当前 hover 的组件 ID（鼠标移入时高亮） */
   hoveredId: string | null;
   /** 选中组件回调（id: 组件ID, multi: 是否多选模式） */
   onSelect: (id: string, multi?: boolean) => void;
   /** 清除所有选中状态回调 */
   onClearSelection: () => void;
+  /** 选中嵌套子节点回调（用于点击 children 中的子组件） */
+  onSelectChild?: (nodeId: string) => void;
+  /** 双击组件回调（容器组件双击进入子编辑模式） */
+  onDoubleClickComponent?: (compId: string) => void;
+  /** 退出子组件编辑模式回调 */
+  onExitChildEdit?: () => void;
   /** 调整组件尺寸回调（width, height: 列/行跨度；x, y 可选用于 w/n 把手） */
   onResize: (id: string, width: number, height: number, x?: number, y?: number) => void;
   /** Hover 状态回调 */
@@ -1353,6 +1440,36 @@ interface CanvasRendererProps {
   pageBackground?: string;
   pagePadding?: number;
   pageMaxWidth?: number | null;
+  /** 组件最小行高（px），设为 0 时自适应由内容撑开 */
+  minRowHeight?: number;
+}
+
+// ===== 框选覆盖层 =====
+
+/**
+ * 框选矩形覆盖层组件
+ *
+ * 在画布空白区拖拽时显示蓝色半透明矩形，表示框选范围。
+ */
+function MarqueeOverlay({ marquee }: { marquee: { startX: number; startY: number; currentX: number; currentY: number } }) {
+  const left = Math.min(marquee.startX, marquee.currentX);
+  const top = Math.min(marquee.startY, marquee.currentY);
+  const width = Math.abs(marquee.currentX - marquee.startX);
+  const height = Math.abs(marquee.currentY - marquee.startY);
+
+  if (width < 1 && height < 1) return null;
+
+  return (
+    <div
+      className="pointer-events-none absolute z-50 border-2 border-blue-400 bg-blue-100/30"
+      style={{
+        left: `${left}px`,
+        top: `${top}px`,
+        width: `${width}px`,
+        height: `${height}px`,
+      }}
+    />
+  );
 }
 
 /**
@@ -1371,19 +1488,31 @@ interface CanvasRendererProps {
  */
 export const CanvasRenderer = forwardRef<HTMLDivElement, CanvasRendererProps>(
   function CanvasRenderer({
-    components, selectedIds, hoveredId, onSelect, onClearSelection, onResize, onHover,
+    components, selectedIds, activeNodeId: activeNodeIdProp, editScope, hoveredId, onSelect, onClearSelection, onSelectChild, onDoubleClickComponent, onExitChildEdit, onResize, onHover,
     zoom, viewportWidth, panX, panY, onPan, gridCols, gridGap,
-    pageBackground, pagePadding, pageMaxWidth,
+    pageBackground, pagePadding, pageMaxWidth, minRowHeight,
   }, ref) {
+    const activeNodeId = activeNodeIdProp ?? null;
     const containerRef = useRef<HTMLDivElement>(null);
     const [isPanning, setIsPanning] = useState(false);
     const panStart = useRef({ x: 0, y: 0 });
     /** 当前正在进行的缩放交互清理函数（用于组件卸载/下一次缩放前强制收尾） */
     const activeResizeCleanupRef = useRef<(() => void) | null>(null);
+    /** 框选状态 */
+    const [marquee, setMarquee] = useState<{ startX: number; startY: number; currentX: number; currentY: number } | null>(null);
+    const marqueeStartRef = useRef<{ x: number; y: number; clientX: number; clientY: number } | null>(null);
+    const marqueeRef = useRef<{ startX: number; startY: number; currentX: number; currentY: number } | null>(null);
 
     // 存储 onPan 的最新引用以避免 useCallback 依赖变化
     const onPanRef = useRef(onPan);
     onPanRef.current = onPan;
+
+    const componentsRef = useRef(components);
+    componentsRef.current = components;
+    const onSelectRef = useRef(onSelect);
+    onSelectRef.current = onSelect;
+    const onClearSelectionRef = useRef(onClearSelection);
+    onClearSelectionRef.current = onClearSelection;
 
     const columnWidth = useMemo(() => {
       const maxW = typeof pageMaxWidth === "number" && pageMaxWidth > 0 ? pageMaxWidth : viewportWidth;
@@ -1398,48 +1527,112 @@ export const CanvasRenderer = forwardRef<HTMLDivElement, CanvasRendererProps>(
       if (e.button !== 0) return;
       if (!(e.target instanceof HTMLElement)) return;
 
-      // 关键：只有点在“非组件区域”的空白处才允许开始平移；组件区域交由选中/缩放等交互处理
+      // 关键：只有点在"非组件区域"的空白处才允许开始框选；组件区域交由选中/缩放等交互处理
       if (e.target.closest('[data-canvas-comp="true"]')) return;
 
-      // 允许两种空白区开始平移：
+      // 允许两种空白区开始框选：
       // 1) 外层容器的空白（e.target === e.currentTarget）
       // 2) 画布内部的空白（目标在 data-canvas-bg 容器内，但不在组件内）
       const inCanvas = !!e.target.closest('[data-canvas-bg="true"]');
       const isBlankArea = e.target === e.currentTarget || inCanvas;
       if (!isBlankArea) return;
 
-      setIsPanning(true);
-      panStart.current = { x: e.clientX - panX, y: e.clientY - panY };
-    }, [panX, panY]);
+      const canvasEl = containerRef.current?.querySelector('[data-canvas-bg="true"]') as HTMLElement | null;
+      if (canvasEl) {
+        const rect = canvasEl.getBoundingClientRect();
+        const x = (e.clientX - rect.left) / zoom;
+        const y = (e.clientY - rect.top) / zoom;
+        marqueeStartRef.current = { x, y, clientX: e.clientX, clientY: e.clientY };
+        setMarquee({ startX: x, startY: y, currentX: x, currentY: y });
+      }
+    }, [zoom]);
 
-    /**
-     * 平移过程的 mousemove 处理函数（绑定到 window）
-     *
-     * 关键点：
-     * - 使用 window 监听，避免光标移出容器后丢失 mousemove 导致“拖拽断开/卡住”
-     * - 不依赖 React 合成事件体系，确保在全局范围内稳定收到事件
-     *
-     * @param e - 原生 MouseEvent
-     */
-    const handlePanMouseMove = useCallback((e: MouseEvent) => {
-      const dx = e.clientX - panStart.current.x;
-      const dy = e.clientY - panStart.current.y;
-      onPanRef.current(dx, dy);
-    }, []);
+    /** 框选鼠标移动处理 */
+    const handleMarqueeMove = useCallback((e: MouseEvent) => {
+      if (!marqueeStartRef.current) return;
+      const start = marqueeStartRef.current;
+      const canvasEl = containerRef.current?.querySelector('[data-canvas-bg="true"]') as HTMLElement | null;
+      if (!canvasEl) return;
+      const rect = canvasEl.getBoundingClientRect();
+      const cx = (e.clientX - rect.left) / zoom;
+      const cy = (e.clientY - rect.top) / zoom;
+      const nextMarquee = { startX: start.x, startY: start.y, currentX: cx, currentY: cy };
+      marqueeRef.current = nextMarquee;
+      setMarquee(nextMarquee);
+    }, [zoom]);
 
-    const handleMouseUp = useCallback(() => {
-      setIsPanning(false);
-    }, []);
+    /** 框选完成处理 */
+    const handleMarqueeUp = useCallback((e: MouseEvent) => {
+      const start = marqueeStartRef.current;
+      marqueeStartRef.current = null;
+      setMarquee(null);
+
+      if (!start) return;
+
+      // 距离 < 5px 判定为单击，清除选中
+      const dist = Math.hypot(e.clientX - start.clientX, e.clientY - start.clientY);
+      if (dist < 5) {
+        onClearSelectionRef.current();
+        return;
+      }
+
+      // 计算框选矩形（像素坐标）
+      const endX = marqueeRef.current?.currentX ?? start.x;
+      const endY = marqueeRef.current?.currentY ?? start.y;
+      const left = Math.min(start.x, endX);
+      const top = Math.min(start.y, endY);
+      const right = Math.max(start.x, endX);
+      const bottom = Math.max(start.y, endY);
+
+      // 将像素坐标转换为网格单位
+      const columnWidth = columnWidthRef.current;
+      const gap = gridGapRef.current;
+      const cellW = columnWidth + gap;
+      const cellH = CELL_HEIGHT + gap;
+
+      const gridLeft = Math.max(1, Math.floor(left / cellW) + 1);
+      const gridRight = Math.max(1, Math.ceil(right / cellW));
+      const gridTop = Math.max(1, Math.floor(top / cellH) + 1);
+      const gridBottom = Math.max(1, Math.ceil(bottom / cellH));
+
+      // 碰撞检测：组件的网格矩形与框选矩形有交集
+      const hitIds: string[] = [];
+      for (const comp of componentsRef.current) {
+        if (comp.hidden) continue;
+        const cx = comp.position.x;
+        const cy = comp.position.y;
+        const cw = cx + comp.position.width - 1;
+        const ch = cy + comp.position.height - 1;
+        const overlap = cx <= gridRight && cw >= gridLeft && cy <= gridBottom && ch >= gridTop;
+        if (overlap) hitIds.push(comp.id);
+      }
+
+      if (hitIds.length > 0) {
+        // 框选到的第一个组件设为主选中
+        const first = hitIds[0]!;
+        onSelectRef.current(first, false);
+        for (let i = 1; i < hitIds.length; i++) {
+          onSelectRef.current(hitIds[i]!, true);
+        }
+      } else {
+        onClearSelectionRef.current();
+      }
+    }, [zoom]);
+
+    const columnWidthRef = useRef(columnWidth);
+    columnWidthRef.current = columnWidth;
+    const gridGapRef = useRef(gridGap);
+    gridGapRef.current = gridGap;
 
     useEffect(() => {
-      if (!isPanning) return;
-      window.addEventListener("mousemove", handlePanMouseMove);
-      window.addEventListener("mouseup", handleMouseUp);
+      if (!marquee) return;
+      window.addEventListener("mousemove", handleMarqueeMove);
+      window.addEventListener("mouseup", handleMarqueeUp);
       return () => {
-        window.removeEventListener("mousemove", handlePanMouseMove);
-        window.removeEventListener("mouseup", handleMouseUp);
+        window.removeEventListener("mousemove", handleMarqueeMove);
+        window.removeEventListener("mouseup", handleMarqueeUp);
       };
-    }, [isPanning, handleMouseUp, handlePanMouseMove]);
+    }, [marquee, handleMarqueeUp, handleMarqueeMove]);
 
     useEffect(() => {
       return () => {
@@ -1476,67 +1669,137 @@ export const CanvasRenderer = forwardRef<HTMLDivElement, CanvasRendererProps>(
             onClearSelection();
           }}
         >
-          {/* 组件网格 */}
-          <div
-            data-testid="canvas-grid"
-            className="relative grid"
-            style={{
-              gridTemplateColumns: `repeat(${gridCols}, 1fr)`,
-              gap: `${gridGap}px`,
-              padding: typeof pagePadding === "number" ? `${pagePadding}px` : undefined,
-              width: "100%",
-              marginLeft: "auto",
-              marginRight: "auto",
-              maxWidth: typeof pageMaxWidth === "number" && pageMaxWidth > 0 ? `${pageMaxWidth}px` : undefined,
-              backgroundImage: `linear-gradient(rgba(128,128,128,0.12) 1px, transparent 1px), linear-gradient(90deg, rgba(128,128,128,0.12) 1px, transparent 1px)`,
-              backgroundSize: `${columnWidth}px ${CELL_HEIGHT}px`,
-            }}
-          >
-            {components.length === 0 && (
-              <div className="col-span-full flex flex-col items-center justify-center py-20 text-center">
-                <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl border-2 border-dashed border-muted-foreground/30 bg-muted/10">
-                  <span className="text-2xl text-muted-foreground/40">+</span>
-                </div>
-                <p className="text-sm font-medium text-muted-foreground">拖拽组件到此处</p>
-                <p className="mt-1 text-xs text-muted-foreground/60">从左侧组件面板拖拽组件到画布上</p>
+          {/* 子编辑模式面包屑 */}
+          {editScope && (
+            <BreadcrumbBar
+              editScope={editScope}
+              onNavigate={(idx) => {
+                if (idx === -1) onExitChildEdit?.();
+              }}
+            />
+          )}
+          {/* 框选覆盖层 */}
+          {marquee && <MarqueeOverlay marquee={marquee} />}
+          {/* 标尺 + 组件网格区域 */}
+          <div className="flex">
+            <VerticalRuler
+              width={RULER_SIZE}
+              height={600}
+              zoom={zoom}
+              panY={panY}
+            />
+            <div className="flex-1 min-w-0">
+              <HorizontalRuler
+                width={viewportWidth}
+                height={RULER_SIZE}
+                zoom={zoom}
+                panX={panX}
+              />
+              {/* 组件网格 */}
+              <div
+                data-testid="canvas-grid"
+                className="relative grid"
+                style={{
+                  gridTemplateColumns: `repeat(${gridCols}, 1fr)`,
+                  gap: `${gridGap}px`,
+                  padding: typeof pagePadding === "number" ? `${pagePadding}px` : undefined,
+                  width: "100%",
+                  marginLeft: "auto",
+                  marginRight: "auto",
+                  maxWidth: typeof pageMaxWidth === "number" && pageMaxWidth > 0 ? `${pageMaxWidth}px` : undefined,
+                  backgroundImage: `linear-gradient(rgba(128,128,128,0.12) 1px, transparent 1px), linear-gradient(90deg, rgba(128,128,128,0.12) 1px, transparent 1px)`,
+                  backgroundSize: `${columnWidth}px ${CELL_HEIGHT}px`,
+                }}
+              >
+                {components.length === 0 && (
+                  <div className="col-span-full flex flex-col items-center justify-center py-20 text-center">
+                    <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl border-2 border-dashed border-muted-foreground/30 bg-muted/10">
+                      <span className="text-2xl text-muted-foreground/40">+</span>
+                    </div>
+                    <p className="text-sm font-medium text-muted-foreground">拖拽组件到此处</p>
+                    <p className="mt-1 text-xs text-muted-foreground/60">从左侧组件面板拖拽组件到画布上</p>
+                  </div>
+                )}
+                {components.length > 0 && components.every((c) => c.hidden) && (
+                  <div className="col-span-full flex flex-col items-center justify-center py-20 text-center">
+                    <p className="text-sm font-medium text-muted-foreground">所有组件已隐藏</p>
+                    <p className="mt-1 text-xs text-muted-foreground/60">在工具栏中取消隐藏以显示组件</p>
+                  </div>
+                )}
+
+                {/* 多选包围盒（仅当选中两个及以上组件时显示） */}
+                {components.filter((c) => !c.hidden && selectedIds.includes(c.id)).length > 1 && (
+                  <BoundingBoxOverlay
+                    components={components.filter((c) => !c.hidden && selectedIds.includes(c.id))}
+                    columnWidth={columnWidth}
+                    gridGap={gridGap}
+                    gridCols={gridCols}
+                  />
+                )}
+
+                {components.filter((c) => !c.hidden).map((comp) => {
+                  const { x: rawX, y: rawY, width: rawW, height: rawH } = comp.position;
+                  if (rawX < 1 || rawY < 1 || rawW < 1 || rawH < 1) return null;
+
+                  const x = Math.max(1, Math.min(gridCols, rawX));
+                  const y = Math.max(1, rawY);
+                  const width = Math.max(1, Math.min(gridCols - x + 1, rawW));
+                  const height = Math.max(1, rawH);
+                  const isSelected = selectedIds.includes(comp.id);
+                  const isPrimary = activeNodeId
+                    ? activeNodeId === comp.id
+                    : selectedIds.length > 0 && selectedIds[0] === comp.id;
+                  const isDimmed = editScope != null && comp.id !== editScope.rootId;
+                  const previewTailwind = getPreviewTailwindClasses(comp.node);
+
+                  const isHovered = hoveredId === comp.id;
+
+                  return (
+                    <CanvasComponentItem
+                      key={comp.id}
+                      comp={comp}
+                      x={x}
+                      y={y}
+                      width={width}
+                      height={height}
+                      isSelected={isSelected}
+                      isPrimary={isPrimary}
+                      isDimmed={isDimmed}
+                      isHovered={isHovered}
+                      previewTailwind={previewTailwind}
+                      gridCols={gridCols}
+                      zoom={zoom}
+                      onSelect={onSelect}
+                      onSelectChild={onSelectChild}
+                      onDoubleClick={isContainerType(comp.node.type) ? () => onDoubleClickComponent?.(comp.id) : undefined}
+                      onHover={onHover}
+                      onResize={onResize}
+                      activeResizeCleanupRef={activeResizeCleanupRef}
+                      minRowHeight={minRowHeight}
+                    />
+                  );
+                })}
               </div>
-            )}
-
-            {components.map((comp) => {
-              const { x: rawX, y: rawY, width: rawW, height: rawH } = comp.position;
-              if (rawX < 1 || rawY < 1 || rawW < 1 || rawH < 1) return null;
-
-              const x = Math.max(1, Math.min(gridCols, rawX));
-              const y = Math.max(1, rawY);
-              const width = Math.max(1, Math.min(gridCols - x + 1, rawW));
-              const height = Math.max(1, rawH);
-              const isSelected = selectedIds.includes(comp.id);
-              const previewTailwind = getPreviewTailwindClasses(comp.node);
-
-              const isHovered = hoveredId === comp.id;
-
-              return (
-                <CanvasComponentItem
-                  key={comp.id}
-                  comp={comp}
-                  x={x}
-                  y={y}
-                  width={width}
-                  height={height}
-                  isSelected={isSelected}
-                  isHovered={isHovered}
-                  previewTailwind={previewTailwind}
-                  gridCols={gridCols}
-                  zoom={zoom}
-                  onSelect={onSelect}
-                  onHover={onHover}
-                  onResize={onResize}
-                  activeResizeCleanupRef={activeResizeCleanupRef}
-                />
-              );
-            })}
+            </div>
           </div>
         </div>
+        {/* 小地图：仅在存在组件时显示 */}
+        {components.length > 0 && (
+          <Minimap
+            components={components}
+            zoom={zoom}
+            panX={panX}
+            panY={panY}
+            viewportWidth={viewportWidth}
+            viewportHeight={600}
+            columnWidth={columnWidth}
+            gridCols={gridCols}
+            gridGap={gridGap}
+            cellHeight={CELL_HEIGHT}
+            onPan={onPan}
+            onZoom={(z) => {}}
+          />
+        )}
       </div>
     );
   },

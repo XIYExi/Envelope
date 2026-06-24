@@ -109,8 +109,4 @@ export const CANVAS_GRID_COLS = 12;
 /** 画布默认网格间距（4px） */
 export const CANVAS_GRID_GAP = 4;
 
-/** 单个网格单元格的像素宽度（80px，配合 12 列 = 960px 总宽） */
-export const CANVAS_CELL_SIZE = 80;
-
-/** 单个网格单元格的像素高度（40px，与渲染器 CELL_HEIGHT 保持一致） */
-export const CANVAS_CELL_HEIGHT = 40;
+export { CANVAS_CELL_WIDTH as CANVAS_CELL_SIZE, CANVAS_CELL_HEIGHT } from "../shared/canvas-utils";

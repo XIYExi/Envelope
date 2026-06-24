@@ -38,6 +38,16 @@ interface ProjectPagesActions {
   markClean: () => void;
   markDirty: () => void;
   getCurrentPage: () => EditorProjectPage | null;
+  /** G10: 新增页面 */
+  addPage: () => void;
+  /** G10: 删除指定路径的页面 */
+  removePage: (path: string) => void;
+  /** G10: 重命名页面的 title */
+  renamePage: (path: string, newTitle: string) => void;
+  /** G10: 重新排序页面（fromIndex → toIndex） */
+  reorderPages: (fromIndex: number, toIndex: number) => void;
+  /** G10: 复制页面 */
+  duplicatePage: (path: string) => void;
 }
 
 function createDefaultPage(path: string): EditorProjectPage {
@@ -198,6 +208,90 @@ export const useProjectPagesStore = create<ProjectPagesState & ProjectPagesActio
     const { pages, currentPath } = get();
     if (!currentPath) return null;
     return pages.find((p) => p.path === currentPath) ?? null;
+  },
+
+  /** G10: 新建页面 */
+  addPage: () => {
+    set((state) => {
+      const basePath = `/page-${state.pages.length}`;
+      const newPage = createDefaultPage(basePath);
+      return {
+        pages: [...state.pages, newPage],
+        currentPath: newPage.path,
+        dirty: true,
+        changeSeq: state.changeSeq + 1,
+      };
+    });
+  },
+
+  /** G10: 删除指定路径的页面 */
+  removePage: (path) => {
+    set((state) => {
+      const nextPages = state.pages.filter((p) => p.path !== path);
+      if (nextPages.length === 0) return {};
+      const nextPath = state.currentPath === path
+        ? (nextPages[0]?.path ?? null)
+        : state.currentPath;
+      return {
+        pages: nextPages,
+        currentPath: nextPath,
+        dirty: true,
+        changeSeq: state.changeSeq + 1,
+      };
+    });
+  },
+
+  /** G10: 重命名页面的 title */
+  renamePage: (path, newTitle) => {
+    set((state) => ({
+      pages: state.pages.map((p) =>
+        p.path === path ? { ...p, title: newTitle } : p,
+      ),
+      dirty: true,
+      changeSeq: state.changeSeq + 1,
+    }));
+  },
+
+  /** G10: 重新排序页面（fromIndex → toIndex，splice 兼容前移/后移） */
+  reorderPages: (fromIndex, toIndex) => {
+    set((state) => {
+      const nextPages = state.pages.slice();
+      const [moved] = nextPages.splice(fromIndex, 1);
+      if (moved) {
+        // 如果目标索引在原位置之后，移除前元素会导致数组收缩 1，需补偿
+        const adjustedTo = fromIndex < toIndex ? toIndex - 1 : toIndex;
+        nextPages.splice(adjustedTo, 0, moved);
+      }
+      return {
+        pages: nextPages,
+        dirty: true,
+        changeSeq: state.changeSeq + 1,
+      };
+    });
+  },
+
+  /** G10: 复制页面（含 schema 和元数据） */
+  duplicatePage: (path) => {
+    set((state) => {
+      const source = state.pages.find((p) => p.path === path);
+      if (!source) return {};
+      const newPath = `${path}-copy`;
+      const newPage: EditorProjectPage = {
+        ...structuredClone(source),
+        path: newPath,
+        title: `${source.title} (副本)`,
+        schema: {
+          ...structuredClone(source.schema),
+          path: newPath,
+        },
+      };
+      return {
+        pages: [...state.pages, newPage],
+        currentPath: newPath,
+        dirty: true,
+        changeSeq: state.changeSeq + 1,
+      };
+    });
   },
 
   loadByProjectId: async (projectId: string) => {

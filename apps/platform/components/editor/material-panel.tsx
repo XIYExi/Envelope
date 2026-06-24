@@ -9,18 +9,21 @@
  */
 "use client";
 
-import { useState, useMemo, memo, useCallback } from "react";
+import { useState, useMemo, memo, useCallback, useRef, useEffect } from "react";
 import type { ComponentType } from "react";
 import { useDraggable } from "@dnd-kit/core";
 import { createDefaultRegistry } from "@envelope/materials";
 import { createMaterialDragItem } from "@envelope/engine";
-import type { ComponentCategory } from "@envelope/materials";
+import type { ComponentCategory, MaterialDefinition } from "@envelope/materials";
 import * as LucideIcons from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { ComponentTreePanel } from "./component-tree-panel";
+import { MaterialThumbnail } from "./material-thumbnail";
+import { useRecentMaterialsStore } from "@/stores/recent-materials-store";
+import { useFavoriteMaterialsStore } from "@/stores/favorite-materials-store";
 
 /** 分类配置 */
 const CATEGORIES: { key: ComponentCategory; label: string }[] = [
@@ -44,46 +47,71 @@ function MaterialIcon({ icon }: { icon?: string }) {
  *
  * 使用 @dnd-kit/core 的 useDraggable hook 注册为可拖拽源。
  * data 负载包含 createMaterialDragItem 返回的 { type, materialName }。
+ * 支持缩略图预览、复合物料标记、拖拽/点击记录使用。
  */
 const MaterialItem = memo(function MaterialItem({
-  name,
-  displayName,
-  description,
-  icon,
+  material,
   onAdd,
+  onDragStart,
 }: {
-  name: string;
-  displayName: string;
-  description?: string;
-  icon?: string;
+  material: MaterialDefinition;
   onAdd?: (name: string) => void;
+  onDragStart?: (name: string) => void;
 }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
-    id: `material-${name}`,
-    data: createMaterialDragItem(name),
+    id: `material-${material.name}`,
+    data: createMaterialDragItem(material.name),
   });
+
+  // 拖拽开始时记录使用
+  const prevDragging = useRef(false);
+  useEffect(() => {
+    if (isDragging && !prevDragging.current) {
+      onDragStart?.(material.name);
+    }
+    prevDragging.current = isDragging;
+  }, [isDragging, onDragStart, material.name]);
+
+  // 判断是否为复合物料（有 expandTo 或 slots 配置）
+  const isComposite = (material.expandTo && material.expandTo.length > 0)
+    || (material.slots && material.slots.length > 0);
 
   return (
     <div
       ref={setNodeRef}
       {...listeners}
       {...attributes}
-      onClick={() => onAdd?.(name)}
-      data-testid={`material-item-${name}`}
+      onClick={() => {
+        onAdd?.(material.name);
+        onDragStart?.(material.name);
+      }}
+      data-testid={`material-item-${material.name}`}
       className={cn(
-        "flex cursor-grab items-start gap-2 rounded-md border px-3 py-2 text-sm transition-colors hover:bg-accent hover:text-accent-foreground touch-none",
+        "relative flex cursor-grab items-start gap-2 rounded-md border px-3 py-2 text-sm transition-colors hover:bg-accent hover:text-accent-foreground touch-none",
         isDragging && "opacity-50",
       )}
     >
-      <MaterialIcon icon={icon} />
+      {/* 缩略图预览：有 thumbnail 配置时渲染，否则回退到 Lucide icon */}
+      {material.thumbnail ? (
+        <MaterialThumbnail material={material} />
+      ) : (
+        <MaterialIcon icon={material.icon} />
+      )}
       <div className="min-w-0 flex-1">
-        <div className="truncate leading-5">{displayName}</div>
-        {description && (
+        <div className="truncate leading-5">{material.displayName}</div>
+        {material.description && (
           <div className="line-clamp-2 text-xs leading-4 text-muted-foreground">
-            {description}
+            {material.description}
           </div>
         )}
       </div>
+
+      {/* 复合物料标记：右下角蓝色 C 徽标 */}
+      {isComposite && (
+        <span className="absolute -bottom-0.5 -right-0.5 rounded-sm bg-blue-500 px-0.5 text-[7px] leading-3 text-white">
+          C
+        </span>
+      )}
     </div>
   );
 });
@@ -111,6 +139,18 @@ export function MaterialPanel({ collapsed, onAddMaterial }: MaterialPanelProps) 
   const registry = useMemo(() => createDefaultRegistry(), []);
 
   const [searchQuery, setSearchQuery] = useState("");
+
+  // 最近使用和收藏数据
+  const recentNames = useRecentMaterialsStore((s) => s.recentNames);
+  const favoriteNames = useFavoriteMaterialsStore((s) => s.favoriteNames);
+  // 反转最近使用列表，最新在前
+  const recentList = useMemo(() => [...recentNames].reverse(), [recentNames]);
+
+  // 拖拽开始时记录使用
+  const handleDragStart = useCallback((name: string) => {
+    useRecentMaterialsStore.getState().recordUse(name);
+  }, []);
+
   const allMaterials = useMemo(() => registry.getAll(), [registry]);
   const filteredMaterials = useMemo(() => {
     if (!searchQuery.trim()) return null;
@@ -181,19 +221,50 @@ export function MaterialPanel({ collapsed, onAddMaterial }: MaterialPanelProps) 
                   filteredMaterials.map((mat) => (
                     <MaterialItem
                       key={mat.name}
-                      name={mat.name}
-                      displayName={mat.displayName}
-                      description={mat.description}
-                      icon={mat.icon}
+                      material={mat}
                       onAdd={onAddMaterial}
+                      onDragStart={handleDragStart}
                     />
                   ))
                 )}
               </div>
             </ScrollArea>
           ) : (
-            /* 分类浏览模式：分类 Tab 固定在顶部不滚动，仅内容区可滚动 */
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-1 flex-col min-h-0">
+            /* 分类浏览模式：收藏 + 最近使用 + 分类 Tab */
+            <>
+              {/* 收藏物料分区：仅在有收藏且非搜索时显示 */}
+              {favoriteNames.length > 0 && (
+                <div className="flex-shrink-0 border-b px-3 py-2">
+                  <div className="mb-1 text-[10px] font-medium text-muted-foreground">⭐ 收藏</div>
+                  <div className="grid grid-cols-5 gap-1">
+                    {favoriteNames.slice(0, 10).map((name) => {
+                      const m = registry.get(name);
+                      if (!m) return null;
+                      return (
+                        <MaterialItem key={name} material={m} onDragStart={handleDragStart} />
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* 最近使用分区：仅在有使用时且非搜索时显示 */}
+              {recentList.length > 0 && (
+                <div className="flex-shrink-0 border-b px-3 py-2">
+                  <div className="mb-1 text-[10px] font-medium text-muted-foreground">🕐 最近使用</div>
+                  <div className="grid grid-cols-5 gap-1">
+                    {recentList.slice(0, 5).map((name) => {
+                      const m = registry.get(name);
+                      if (!m) return null;
+                      return (
+                        <MaterialItem key={name} material={m} onDragStart={handleDragStart} />
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-1 flex-col min-h-0">
               {/* 分类 Tab 列表 — 固定在搜索框下方，不随内容滚动 */}
               <div className="flex-shrink-0 border-b px-1">
                 <TabsList className="flex h-auto w-full flex-wrap justify-start gap-0.5 rounded-none bg-transparent p-1">
@@ -232,11 +303,9 @@ export function MaterialPanel({ collapsed, onAddMaterial }: MaterialPanelProps) 
                         materials.map((mat) => (
                           <MaterialItem
                             key={mat.name}
-                            name={mat.name}
-                            displayName={mat.displayName}
-                            description={mat.description}
-                            icon={mat.icon}
+                            material={mat}
                             onAdd={onAddMaterial}
+                            onDragStart={handleDragStart}
                           />
                         ))
                       )}
@@ -245,6 +314,7 @@ export function MaterialPanel({ collapsed, onAddMaterial }: MaterialPanelProps) 
                 })}
               </ScrollArea>
             </Tabs>
+            </>
           )}
         </TabsContent>
 

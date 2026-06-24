@@ -84,6 +84,8 @@ export const editablePropSchema = z.object({
   group: z.string().optional(),
   /** 属性排序权重（数字越小越靠前） */
   order: z.number().optional(),
+  /** 是否为高级属性（默认折叠） */
+  advanced: z.boolean().optional(),
 });
 
 /**
@@ -126,6 +128,44 @@ export const componentCategorySchema = z.enum([
 export type ComponentCategory = z.infer<typeof componentCategorySchema>;
 
 /**
+ * Slot 插槽定义
+ *
+ * 描述了一个聚合组件可接受子组件的插槽配置：
+ * - name: 插槽名称（如 "header"、"content"、"trigger"）
+ * - label: 显示名称
+ * - allowedChildTypes: 允许的子组件类型列表
+ * - max: 最大子组件数量
+ * - defaultText: 默认文本内容
+ * - toggleKey: 控制显示/隐藏的 prop key
+ * - textKey: 文本内容的 prop key
+ * - propKey: 数组数据的 prop key（ArraySlot 模式）
+ * - mode: 插槽模式（simple / array / count）
+ */
+export interface SlotDefinition {
+  name: string;
+  label?: string;
+  allowedChildTypes: string[];
+  max?: number;
+  defaultText?: string;
+  toggleKey?: string;
+  textKey?: string;
+  propKey?: string;
+  mode?: "simple" | "array" | "count";
+}
+
+export const slotDefinitionSchema: z.ZodType<SlotDefinition> = z.object({
+  name: z.string(),
+  label: z.string().optional(),
+  allowedChildTypes: z.array(z.string()),
+  max: z.number().optional(),
+  defaultText: z.string().optional(),
+  toggleKey: z.string().optional(),
+  textKey: z.string().optional(),
+  propKey: z.string().optional(),
+  mode: z.enum(["simple", "array", "count"]).optional(),
+});
+
+/**
  * 物料定义 Schema
  *
  * 描述了一个组件物料的完整信息：
@@ -139,6 +179,7 @@ export type ComponentCategory = z.infer<typeof componentCategorySchema>;
  * - supportsChildren: 是否支持子组件
  * - maxChildren: 最大子组件数量
  * - isContainer: 是否是容器组件
+ * - slots: 插槽配置
  * - documentation: 文档链接或说明
  */
 export const materialDefinitionSchema = z.object({
@@ -164,6 +205,14 @@ export const materialDefinitionSchema = z.object({
   maxChildren: z.number().optional(),
   /** 是否是容器组件（容器组件可以包裹其他组件） */
   isContainer: z.boolean().optional(),
+  /** 展开子组件模板（复合物料使用时自动展开的子组件列表） */
+  expandTo: z.array(z.object({ type: z.string(), props: z.record(z.unknown()).optional() })).optional(),
+  /** 插槽配置（聚合组件通过 slots 声明子组件结构） */
+  slots: z.array(slotDefinitionSchema).optional(),
+  /** 物料导入路径与组件名（生成器使用） */
+  shadcnImport: z.object({ path: z.string(), components: z.array(z.string()) }).optional(),
+  /** 缩略图预设配置（物料面板显示） */
+  thumbnail: z.object({ preset: z.string() }).optional(),
   /** 文档链接或说明（可选） */
   documentation: z.string().optional(),
 });

@@ -116,15 +116,37 @@ function needsUseClient(componentTypes: Set<string>): boolean {
 }
 
 /**
- * 生成页面组件的数据绑定代码（占位）
+ * L1~L2, L4~L5: 生成可运行的 Supabase + TanStack Query 数据绑定代码
+ *
+ * 遍历组件树收集 dataBinding 配置，按表名去重，
+ * 为每张表生成 useMemo Supabase 客户端和 useQuery 查询。
+ *
+ * L4: 支持 table.column / table.* 绑定——查询使用 select("*")，
+ *      单列过滤在 dataBindingAttrs 层处理（组件级）。
+ * L5: 支持 {{searchParams.xxx}} 绑定到 URL 查询参数。
  */
 function generateDataBindings(components: ComponentNode[]): string {
-  const bindings: string[] = [];
+  // 收集唯一的表名
+  const tables = new Set<string>();
+  let needsSearchParams = false;
+
   const walk = (comps: ComponentNode[]) => {
     for (const comp of comps) {
       if (comp.dataBindings && Object.keys(comp.dataBindings).length > 0) {
-        for (const [prop, binding] of Object.entries(comp.dataBindings)) {
-          bindings.push(`  // TODO: TanStack Query — ${comp.type}(${comp.id}) — ${prop} → ${binding}`);
+        for (const binding of Object.values(comp.dataBindings)) {
+          // 搜索参数绑定: {{searchParams.xxx}} / {{params.xxx}}
+          if (binding.startsWith("{{") && binding.endsWith("}}")) {
+            const inner = binding.slice(2, -2).trim();
+            if (inner.startsWith("searchParams") || inner.startsWith("params")) {
+              needsSearchParams = true;
+            }
+            continue;
+          }
+          // 表.列 绑定: users.name 或 users.*
+          const dot = binding.indexOf(".");
+          if (dot !== -1) {
+            tables.add(binding.slice(0, dot));
+          }
         }
       }
       if (comp.children && comp.children.length > 0) {
@@ -133,25 +155,86 @@ function generateDataBindings(components: ComponentNode[]): string {
     }
   };
   walk(components);
-  return bindings.length > 0 ? bindings.join("\n") : "";
+
+  if (tables.size === 0 && !needsSearchParams) {
+    return "";
+  }
+
+  const lines: string[] = [];
+
+  // L1: Supabase 客户端 — 通过 useMemo 缓存单例
+  lines.push(`  // L1: Supabase 客户端 — useMemo 缓存单例`);
+  lines.push(`  const supabase = useMemo(() => createClient(`);
+  lines.push(`    process.env.NEXT_PUBLIC_SUPABASE_URL!,`);
+  lines.push(`    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,`);
+  lines.push(`  ), []);`);
+  lines.push(``);
+
+  // L5: URL 搜索参数绑定
+  if (needsSearchParams) {
+    lines.push(`  // L5: URL 查询参数绑定`);
+    lines.push(`  const searchParams = useSearchParams();`);
+    lines.push(``);
+  }
+
+  // L1~L2: 每张表生成 useQuery
+  for (const table of tables) {
+    const dataVar = `${table}Data`;
+    lines.push(`  // L1: 从 ${table} 表查询数据 — L2: useQuery 包装`);
+    lines.push(`  const { data: ${dataVar} } = useQuery({`);
+    lines.push(`    queryKey: [${tsStringLiteral(table)}],`);
+    lines.push(`    queryFn: async () => {`);
+    lines.push(`      const { data, error } = await supabase`);
+    lines.push(`        .from(${tsStringLiteral(table)})`);
+    lines.push(`        .select("*");`);
+    lines.push(`      if (error) throw new Error(error.message);`);
+    lines.push(`      return data as unknown[];`);
+    lines.push(`    },`);
+    lines.push(`  });`);
+    lines.push(``);
+  }
+
+  return lines.join("\n");
 }
 
 /**
- * 生成页面组件的事件绑定代码（占位）
+ * K4+K1: 生成页面组件的事件绑定代码
+ *
+ * - K1: 一个事件可绑定多个 flow 依次执行（eventBindings 值为 string[]）
+ * - K4: 保留 callFlow 返回值到 flowResult 变量
+ * - K7: onPageLoad 生成 useEffect 正确注入依赖（已在上游实现）
  */
 function generateEventBindings(components: ComponentNode[]): string {
   const bindings: string[] = [];
   const walk = (comps: ComponentNode[]) => {
     for (const comp of comps) {
       if (comp.eventBindings && Object.keys(comp.eventBindings).length > 0) {
-        for (const [event, handler] of Object.entries(comp.eventBindings)) {
+        for (const [event, rawFlowIds] of Object.entries(comp.eventBindings)) {
+          // K1: handler 现在是 string[]，兼容旧数据（单个 string）也做转换
+          const ids: string[] = Array.isArray(rawFlowIds) ? rawFlowIds : [String(rawFlowIds)];
+          if (ids.length === 0) continue;
+
+          // 为每个 fid 生成 callFlow 调用片段
+          const callFlowLines: string[] = [];
+          for (const fid of ids) {
+            const safeFid = tsStringLiteral(fid);
+            const safeCompId = tsStringLiteral(comp.id);
+            const safeEvent = tsStringLiteral(event);
+            callFlowLines.push(
+              `      const flowResult = await callFlow(${safeFid}, {`,
+              `        componentId: ${safeCompId},`,
+              `        event: ${safeEvent},`,
+              `      });`,
+            );
+          }
+          const callFlowStr = callFlowLines.join("\n");
+
           if (event === "onPageLoad") {
             bindings.push(
               `  useEffect(() => {`,
-              `    void callFlow(${tsStringLiteral(handler)}, {`,
-              `      componentId: ${tsStringLiteral(comp.id)},`,
-              `      event: ${tsStringLiteral(event)},`,
-              `    });`,
+              `    (async () => {`,
+              callFlowStr,
+              `    })();`,
               `  }, []);`,
             );
             continue;
@@ -160,10 +243,9 @@ function generateEventBindings(components: ComponentNode[]): string {
             bindings.push(
               `  useEffect(() => {`,
               `    return () => {`,
-              `      void callFlow(${tsStringLiteral(handler)}, {`,
-              `        componentId: ${tsStringLiteral(comp.id)},`,
-              `        event: ${tsStringLiteral(event)},`,
-              `      });`,
+              `      (async () => {`,
+              callFlowStr,
+              `      })();`,
               `    };`,
               `  }, []);`,
             );
@@ -171,13 +253,29 @@ function generateEventBindings(components: ComponentNode[]): string {
           }
 
           const fn = makeEventHandlerName(comp.id, event);
+          // 带 args 的 callFlow 调用（含 flowResults 收集）
+          const callFlowArgsLines: string[] = [];
+          for (const fid of ids) {
+            const safeFid = tsStringLiteral(fid);
+            const safeCompId = tsStringLiteral(comp.id);
+            const safeEvent = tsStringLiteral(event);
+            callFlowArgsLines.push(
+              `    const flowResult = await callFlow(${safeFid}, {`,
+              `      componentId: ${safeCompId},`,
+              `      event: ${safeEvent},`,
+              `      args: eventArgs,`,
+              `    });`,
+              `    flowResults.push(flowResult);`,
+            );
+          }
+          const callFlowArgsStr = callFlowArgsLines.join("\n");
+
           bindings.push(
             `  const ${fn} = useCallback(async (...args: unknown[]) => {`,
-            `    return callFlow(${tsStringLiteral(handler)}, {`,
-            `      componentId: ${tsStringLiteral(comp.id)},`,
-            `      event: ${tsStringLiteral(event)},`,
-            `      args,`,
-            `    });`,
+            `    const eventArgs = args;`,
+            `    const flowResults: unknown[] = [];`,
+            callFlowArgsStr,
+            `    return flowResults;`,
             `  }, []);`,
           );
         }
@@ -228,10 +326,26 @@ export function generatePageCode(
     (c) => Boolean(c.eventBindings && Object.keys(c.eventBindings).length > 0),
   );
 
+  const hasDataBindings = hasDeepComponents(
+    components,
+    (c) => Boolean(c.dataBindings && Object.keys(c.dataBindings).length > 0),
+  );
+
+  // 检查是否有搜索参数绑定（在 import 阶段之前需要知道）
+  const needsSearchParams = hasDeepComponents(
+    components,
+    (c) => {
+      if (!c.dataBindings) return false;
+      return Object.values(c.dataBindings).some(
+        (v) => (v.startsWith("{{searchParams") || v.startsWith("{{params")) && v.endsWith("}}"),
+      );
+    },
+  );
+
   // 决定是否 use client
   const useClient = options.forceUseClient === true
     ? true
-    : needsUseClient(componentTypes) || hasEventBindings;
+    : needsUseClient(componentTypes) || hasEventBindings || hasDataBindings;
 
   // 生成 imports
   const imports = generateImports(componentTypes);
@@ -243,18 +357,22 @@ export function generatePageCode(
 
   if (hasEventBindings) {
     imports.push(`import { callFlow } from "@/lib/flows/client";`);
+    imports.push(`import { useAppStore } from "@/lib/store/app-store";`);
+  }
+
+  if (hasDataBindings) {
+    imports.push(`import { useQuery } from "@tanstack/react-query";`);
+    imports.push(`import { createClient } from "@supabase/supabase-js";`);
+  }
+
+  if (needsSearchParams) {
+    imports.push(`import { useSearchParams } from "next/navigation";`);
   }
 
   // 检测是否需要 Link (next/link)
   if (componentTypes.has("Link") && !imports.some((i) => i.includes("next/link"))) {
     imports.push(`import Link from "next/link";`);
   }
-
-  // 收集 React hooks 需求
-  const hasDataBindings = hasDeepComponents(
-    components,
-    (c) => Boolean(c.dataBindings && Object.keys(c.dataBindings).length > 0),
-  );
 
   const lines: string[] = [];
 
@@ -271,6 +389,9 @@ export function generatePageCode(
   }
   if (useClient && hasEventBindings) {
     reactImports.push("useCallback");
+  }
+  if (useClient && hasDataBindings) {
+    reactImports.push("useMemo");
   }
   if (reactImports.length > 0) {
     lines.push(`import { ${reactImports.join(", ")} } from "react";`);

@@ -20,6 +20,7 @@ import { create } from "zustand";
 import type { CanvasState, CanvasActions, CanvasComponent, CanvasSnapshot, CanvasClipboard, CanvasClipboardItem } from "./types";
 import { syncAggregateSlots } from "../slots";
 import type { ComponentNode } from "../schemas/page.schema";
+import { isContainerType } from "../shared/canvas-utils";
 
 /**
  * 生成唯一 ID
@@ -106,21 +107,14 @@ function findNodeLocation(components: CanvasComponent[], nodeId: string): NodeLo
   return null;
 }
 
-export const COMPONENT_TYPES_THAT_SUPPORT_CHILDREN = new Set([
-  "Box", "Flex", "Container", "Grid",
-  "Card", "CardHeader", "CardContent", "CardFooter",
-  "Tabs", "TabsContent", "Accordion", "AccordionItem", "AccordionContent",
-  "Table", "TableHeader", "TableBody", "TableRow",
-  "Alert", "DialogContent", "SheetContent", "AlertDialogContent",
-  "ScrollArea", "AspectRatio", "ResizablePanelGroup", "ResizablePanel",
-  "Breadcrumb", "TabsList", "Pagination", "DrawerContent",
-  "PopoverContent", "HoverCardContent", "CollapsibleContent",
-  "DropdownMenuContent", "ContextMenuContent",
-]);
-
 function canNodeHaveChildren(type: string): boolean {
-  return COMPONENT_TYPES_THAT_SUPPORT_CHILDREN.has(type);
+  return isContainerType(type);
 }
+
+// Backward-compatible re-export for external consumers
+export const COMPONENT_TYPES_THAT_SUPPORT_CHILDREN = {
+  has: (type: string) => isContainerType(type),
+} as const;
 
 function findNodeInComponents(components: CanvasComponent[], nodeId: string): ComponentNode | null {
   for (const comp of components) {
@@ -364,6 +358,7 @@ function takeSnapshot(state: CanvasState): CanvasSnapshot {
     viewport: state.viewport,
     gridCols: state.gridCols,
     gridGap: state.gridGap,
+    minRowHeight: state.minRowHeight,
     panX: state.panX,
     panY: state.panY,
     pageBackground: state.pageBackground,
@@ -400,12 +395,14 @@ export const useCanvasStore = create<CanvasState & CanvasActions>((set, get) => 
   viewport: "desktop",
   gridCols: 12,
   gridGap: 4,
+  minRowHeight: 40,
   panX: 0,
   panY: 0,
   pageBackground: "#ffffff",
   pagePadding: 16,
   pageMaxWidth: null,
   clipboard: null,
+  editScope: null,
   canUndo: false,
   canRedo: false,
   historyPast: [],
@@ -714,6 +711,92 @@ export const useCanvasStore = create<CanvasState & CanvasActions>((set, get) => 
       const limitedPast = past.length > state.historyLimit ? past.slice(past.length - state.historyLimit) : past;
       lastCoalesceKey = null;
       return { ...partial, historyPast: limitedPast, historyFuture: [], canUndo: limitedPast.length > 0, canRedo: false };
+    });
+  },
+  /**
+   * 设置组件最小行高（px）
+   *
+   * 设为 0 时表示自适应：不设置 minHeight，由内容撑开行高。
+   *
+   * @param height - 最小行高值（>= 0）
+   */
+  setMinRowHeight: (height) => {
+    set((state) => {
+      const partial = { minRowHeight: Math.max(0, Math.round(height)) };
+      if (batching) return partial;
+      const prev = takeSnapshot(state);
+      const next = takeSnapshot({ ...(state as CanvasState), ...partial });
+      if (snapshotEquals(prev, next)) return partial;
+      const past = [...state.historyPast, prev];
+      const limitedPast = past.length > state.historyLimit ? past.slice(past.length - state.historyLimit) : past;
+      lastCoalesceKey = null;
+      return { ...partial, historyPast: limitedPast, historyFuture: [], canUndo: limitedPast.length > 0, canRedo: false };
+    });
+  },
+  /**
+   * 缩放到适配所有可见组件
+   *
+   * 计算所有非隐藏组件的外包围盒，将缩放和平移调整为刚好容纳全部组件。
+   * 使用默认网格尺寸估算像素值。
+   */
+  zoomToFit: () => {
+    set((state) => {
+      if (state.components.length === 0) return {};
+      const visible = state.components.filter((c) => !c.hidden);
+      if (visible.length === 0) return {};
+      const minX = Math.min(...visible.map((c) => c.position.x));
+      const maxX = Math.max(...visible.map((c) => c.position.x + c.position.width));
+      const minY = Math.min(...visible.map((c) => c.position.y));
+      const maxY = Math.max(...visible.map((c) => c.position.y + c.position.height));
+      const colW = 80;
+      const rowH = 40;
+      const gap = state.gridGap;
+      const contentW = (maxX - minX + 1) * (colW + gap);
+      const contentH = (maxY - minY + 1) * (rowH + gap);
+      const vpW = 800;
+      const vpH = 600;
+      const fitZoom = Math.min(vpW / contentW, vpH / contentH, 2) * 0.9;
+      const zoomVal = Math.max(0.25, fitZoom);
+      const cx = ((minX + maxX) / 2) * (colW + gap);
+      const cy = ((minY + maxY) / 2) * (rowH + gap);
+      const newPanX = -cx * zoomVal + vpW / 2 - 16;
+      const newPanY = -cy * zoomVal + vpH / 2 - 16;
+      if (batching) return { zoom: zoomVal, panX: newPanX, panY: newPanY };
+      return { zoom: zoomVal, panX: newPanX, panY: newPanY };
+    });
+  },
+  /**
+   * 缩放到适配当前选中组件
+   *
+   * 计算选中组件的外包围盒，将缩放和平移调整为选中的组件区域。
+   * 无选中时静默调用 zoomToFit。
+   */
+  zoomToSelection: () => {
+    set((state) => {
+      if (state.selectedIds.length === 0) {
+        return {};
+      }
+      const selected = state.components.filter((c) => state.selectedIds.includes(c.id) && !c.hidden);
+      if (selected.length === 0) return {};
+      const minX = Math.min(...selected.map((c) => c.position.x));
+      const maxX = Math.max(...selected.map((c) => c.position.x + c.position.width));
+      const minY = Math.min(...selected.map((c) => c.position.y));
+      const maxY = Math.max(...selected.map((c) => c.position.y + c.position.height));
+      const colW = 80;
+      const rowH = 40;
+      const gap = state.gridGap;
+      const contentW = (maxX - minX + 1) * (colW + gap);
+      const contentH = (maxY - minY + 1) * (rowH + gap);
+      const vpW = 800;
+      const vpH = 600;
+      const fitZoom = Math.min(vpW / contentW, vpH / contentH, 2) * 0.9;
+      const zoomVal = Math.max(0.25, fitZoom);
+      const cx = ((minX + maxX) / 2) * (colW + gap);
+      const cy = ((minY + maxY) / 2) * (rowH + gap);
+      const newPanX = -cx * zoomVal + vpW / 2 - 16;
+      const newPanY = -cy * zoomVal + vpH / 2 - 16;
+      if (batching) return { zoom: zoomVal, panX: newPanX, panY: newPanY };
+      return { zoom: zoomVal, panX: newPanX, panY: newPanY };
     });
   },
   setPan: (panX, panY) => {
@@ -1175,9 +1258,294 @@ export const useCanvasStore = create<CanvasState & CanvasActions>((set, get) => 
     });
   },
 
+  selectAll: () => {
+    set((state) => {
+      const visibleIds = state.components
+        .filter((c) => !c.hidden)
+        .map((c) => c.id);
+      const firstId = visibleIds[0] ?? null;
+      const partial = { selectedIds: visibleIds, activeNodeId: firstId };
+      if (batching) return partial;
+      const prev = takeSnapshot(state);
+      const next = takeSnapshot({ ...(state as CanvasState), ...partial });
+      if (snapshotEquals(prev, next)) return partial;
+      const past = [...state.historyPast, prev];
+      const limitedPast = past.length > state.historyLimit ? past.slice(past.length - state.historyLimit) : past;
+      lastCoalesceKey = null;
+      return { ...partial, historyPast: limitedPast, historyFuture: [], canUndo: limitedPast.length > 0, canRedo: false };
+    });
+  },
+
   getSelectedComponents: () => {
     const { components, selectedIds } = get();
     return components.filter((c) => selectedIds.includes(c.id));
+  },
+
+  // ========== Lock & Hide ==========
+
+  toggleLock: (id) => {
+    set((state) => {
+      const partial = {
+        components: state.components.map((c) =>
+          c.id === id ? { ...c, locked: !c.locked } : c,
+        ),
+      };
+      if (batching) return partial;
+      const prev = takeSnapshot(state);
+      const next = takeSnapshot({ ...(state as CanvasState), ...partial });
+      if (snapshotEquals(prev, next)) return partial;
+      const past = [...state.historyPast, prev];
+      const limitedPast = past.length > state.historyLimit ? past.slice(past.length - state.historyLimit) : past;
+      lastCoalesceKey = null;
+      return { ...partial, historyPast: limitedPast, historyFuture: [], canUndo: limitedPast.length > 0, canRedo: false };
+    });
+  },
+
+  toggleHidden: (id) => {
+    set((state) => {
+      const partial = {
+        components: state.components.map((c) =>
+          c.id === id ? { ...c, hidden: !c.hidden } : c,
+        ),
+      };
+      if (batching) return partial;
+      const prev = takeSnapshot(state);
+      const next = takeSnapshot({ ...(state as CanvasState), ...partial });
+      if (snapshotEquals(prev, next)) return partial;
+      const past = [...state.historyPast, prev];
+      const limitedPast = past.length > state.historyLimit ? past.slice(past.length - state.historyLimit) : past;
+      lastCoalesceKey = null;
+      return { ...partial, historyPast: limitedPast, historyFuture: [], canUndo: limitedPast.length > 0, canRedo: false };
+    });
+  },
+
+  batchToggleLock: (ids) => {
+    set((state) => {
+      const partial = {
+        components: state.components.map((c) =>
+          ids.includes(c.id) ? { ...c, locked: !c.locked } : c,
+        ),
+      };
+      if (batching) return partial;
+      const prev = takeSnapshot(state);
+      const next = takeSnapshot({ ...(state as CanvasState), ...partial });
+      if (snapshotEquals(prev, next)) return partial;
+      const past = [...state.historyPast, prev];
+      const limitedPast = past.length > state.historyLimit ? past.slice(past.length - state.historyLimit) : past;
+      lastCoalesceKey = null;
+      return { ...partial, historyPast: limitedPast, historyFuture: [], canUndo: limitedPast.length > 0, canRedo: false };
+    });
+  },
+
+  batchToggleHidden: (ids) => {
+    set((state) => {
+      const partial = {
+        components: state.components.map((c) =>
+          ids.includes(c.id) ? { ...c, hidden: !c.hidden } : c,
+        ),
+      };
+      if (batching) return partial;
+      const prev = takeSnapshot(state);
+      const next = takeSnapshot({ ...(state as CanvasState), ...partial });
+      if (snapshotEquals(prev, next)) return partial;
+      const past = [...state.historyPast, prev];
+      const limitedPast = past.length > state.historyLimit ? past.slice(past.length - state.historyLimit) : past;
+      lastCoalesceKey = null;
+      return { ...partial, historyPast: limitedPast, historyFuture: [], canUndo: limitedPast.length > 0, canRedo: false };
+    });
+  },
+
+  // ========== Z-Order ==========
+
+  zIndexMove: (ids, direction) => {
+    set((state) => {
+      const next = state.components.slice();
+      const indices = ids
+        .map((id) => next.findIndex((c) => c.id === id))
+        .filter((i) => i >= 0)
+        .sort((a, b) => a - b);
+
+      if (indices.length === 0) return {};
+
+      if (direction === "top") {
+        const moved = indices.map((i) => next[i]!);
+        const remaining = next.filter((_, i) => !indices.includes(i));
+        const partial = { components: [...remaining, ...moved] };
+        if (batching) return partial;
+        const prev = takeSnapshot(state);
+        const nextSnap = takeSnapshot({ ...(state as CanvasState), ...partial });
+        if (snapshotEquals(prev, nextSnap)) return partial;
+        const past = [...state.historyPast, prev];
+        const limitedPast = past.length > state.historyLimit ? past.slice(past.length - state.historyLimit) : past;
+        lastCoalesceKey = null;
+        return { ...partial, historyPast: limitedPast, historyFuture: [], canUndo: limitedPast.length > 0, canRedo: false };
+      }
+
+      if (direction === "bottom") {
+        const moved = indices.map((i) => next[i]!);
+        const remaining = next.filter((_, i) => !indices.includes(i));
+        const partial = { components: [...moved, ...remaining] };
+        if (batching) return partial;
+        const prev = takeSnapshot(state);
+        const nextSnap = takeSnapshot({ ...(state as CanvasState), ...partial });
+        if (snapshotEquals(prev, nextSnap)) return partial;
+        const past = [...state.historyPast, prev];
+        const limitedPast = past.length > state.historyLimit ? past.slice(past.length - state.historyLimit) : past;
+        lastCoalesceKey = null;
+        return { ...partial, historyPast: limitedPast, historyFuture: [], canUndo: limitedPast.length > 0, canRedo: false };
+      }
+
+      if (direction === "up") {
+        for (let i = indices.length - 1; i >= 0; i--) {
+          const idx = indices[i]!;
+          if (idx < next.length - 1 && !indices.includes(idx + 1)) {
+            [next[idx], next[idx + 1]] = [next[idx + 1]!, next[idx]!];
+          }
+        }
+      }
+
+      if (direction === "down") {
+        for (let i = 0; i < indices.length; i++) {
+          const idx = indices[i]!;
+          if (idx > 0 && !indices.includes(idx - 1)) {
+            [next[idx], next[idx - 1]] = [next[idx - 1]!, next[idx]!];
+          }
+        }
+      }
+
+      const partial = { components: next };
+      if (batching) return partial;
+      const prev = takeSnapshot(state);
+      const nextSnap = takeSnapshot({ ...(state as CanvasState), ...partial });
+      if (snapshotEquals(prev, nextSnap)) return partial;
+      const past = [...state.historyPast, prev];
+      const limitedPast = past.length > state.historyLimit ? past.slice(past.length - state.historyLimit) : past;
+      lastCoalesceKey = null;
+      return { ...partial, historyPast: limitedPast, historyFuture: [], canUndo: limitedPast.length > 0, canRedo: false };
+    });
+  },
+
+  // ========== Align & Distribute ==========
+
+  alignSelected: (direction) => {
+    const state = get();
+    const comps = state.components.filter((c) => state.selectedIds.includes(c.id));
+    if (comps.length < 2) return;
+
+    const minX = Math.min(...comps.map((c) => c.position.x));
+    const maxRight = Math.max(...comps.map((c) => c.position.x + c.position.width - 1));
+    const minY = Math.min(...comps.map((c) => c.position.y));
+    const maxBottom = Math.max(...comps.map((c) => c.position.y + c.position.height - 1));
+
+    const moves: { id: string; x: number; y: number }[] = [];
+
+    for (const c of comps) {
+      let nx = c.position.x;
+      let ny = c.position.y;
+      switch (direction) {
+        case "left": nx = minX; break;
+        case "right": nx = maxRight - c.position.width + 1; break;
+        case "centerH": nx = Math.round((minX + maxRight) / 2 - c.position.width / 2); break;
+        case "top": ny = minY; break;
+        case "bottom": ny = maxBottom - c.position.height + 1; break;
+        case "centerV": ny = Math.round((minY + maxBottom) / 2 - c.position.height / 2); break;
+      }
+      if (nx !== c.position.x || ny !== c.position.y) {
+        moves.push({ id: c.id, x: nx, y: ny });
+      }
+    }
+
+    if (moves.length === 0) return;
+    state.batch(() => {
+      for (const m of moves) {
+        state.moveComponent(m.id, m.x, m.y);
+      }
+    });
+  },
+
+  distributeSelected: (direction) => {
+    const state = get();
+    const comps = state.components.filter((c) => state.selectedIds.includes(c.id));
+    if (comps.length < 3) return;
+
+    const sorted = [...comps].sort((a, b) =>
+      direction === "horizontal" ? a.position.x - b.position.x : a.position.y - b.position.y,
+    );
+    const moves: { id: string; x?: number; y?: number }[] = [];
+
+    if (direction === "horizontal") {
+      const first = sorted[0]!;
+      const last = sorted[sorted.length - 1]!;
+      const start = first.position.x;
+      const end = last.position.x + last.position.width - 1;
+      const totalWidth = sorted.reduce((sum, c) => sum + c.position.width, 0);
+      const gap = (end - start + 1 - totalWidth) / (sorted.length - 1);
+      let cursor = start;
+      for (const c of sorted) {
+        const newX = Math.round(cursor);
+        if (c.id !== first.id && c.id !== last.id) {
+          moves.push({ id: c.id, x: newX });
+        }
+        cursor += c.position.width + gap;
+      }
+    } else {
+      const first = sorted[0]!;
+      const last = sorted[sorted.length - 1]!;
+      const start = first.position.y;
+      const end = last.position.y + last.position.height - 1;
+      const totalHeight = sorted.reduce((sum, c) => sum + c.position.height, 0);
+      const gap = (end - start + 1 - totalHeight) / (sorted.length - 1);
+      let cursor = start;
+      for (const c of sorted) {
+        const newY = Math.round(cursor);
+        if (c.id !== first.id && c.id !== last.id) {
+          moves.push({ id: c.id, y: newY });
+        }
+        cursor += c.position.height + gap;
+      }
+    }
+
+    if (moves.length === 0) return;
+    state.batch(() => {
+      for (const m of moves) {
+        const comp = state.components.find((c) => c.id === m.id);
+        if (!comp) continue;
+        state.moveComponent(m.id, m.x ?? comp.position.x, m.y ?? comp.position.y);
+      }
+    });
+  },
+
+  // ========== Batch Edit ==========
+
+  batchUpdateSelectedProps: (key, value) => {
+    const state = get();
+    const ids = state.selectedIds;
+    if (ids.length === 0) return;
+    state.batch(() => {
+      for (const id of ids) {
+        const loc = findNodeLocation(state.components, id);
+        if (!loc) continue;
+        const node = loc.node;
+        const currentProps = node.props ?? {};
+        const nextProps = { ...currentProps };
+        if (value === undefined) {
+          delete nextProps[key];
+        } else {
+          nextProps[key] = value;
+        }
+        state.updateNode(node.id, { props: Object.keys(nextProps).length > 0 ? nextProps : undefined });
+      }
+    });
+  },
+
+  // ========== Child Edit Mode ==========
+
+  enterChildEdit: (rootId, path) => {
+    set({ editScope: { rootId, path } });
+  },
+
+  exitChildEdit: () => {
+    set({ editScope: null });
   },
 
   undo: () => {
@@ -1233,6 +1601,7 @@ export const useCanvasStore = create<CanvasState & CanvasActions>((set, get) => 
       selectedIds: partial.selectedIds ?? [],
       activeNodeId: partial.activeNodeId ?? null,
       pageMaxWidth: partial.pageMaxWidth ?? null,
+      minRowHeight: partial.minRowHeight ?? 40,
       historyPast: [],
       historyFuture: [],
       canUndo: false,

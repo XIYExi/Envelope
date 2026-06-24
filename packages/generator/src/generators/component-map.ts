@@ -96,12 +96,76 @@ function cx(comp: ComponentNode, extra = ""): string {
   return [legacy, tw, extra].filter(Boolean).join(" ");
 }
 
+/**
+ * L3~L4: 从组件的 dataBindings 生成 JSX 属性列表
+ *
+ * 根据绑定格式生成对应的响应式 props：
+ * - table.*        → prop={tableData}
+ * - table.column   → prop={tableData?.[0]?.column}
+ * - {{searchParams.param}} → prop={searchParams?.get("param")}
+ *
+ * 返回的 attrs 会在生成器中注入到组件 JSX 属性中，
+ * 实现数据查询结果回填组件 props 的响应式更新（L3）。
+ */
+function dataBindingAttrs(comp: ComponentNode): string[] {
+  if (!comp.dataBindings) return [];
+  const attrs: string[] = [];
+  for (const [prop, binding] of Object.entries(comp.dataBindings)) {
+    // L5: 搜索参数绑定 — prop={searchParams?.get("name")}
+    if (binding.startsWith("{{") && binding.endsWith("}}")) {
+      const inner = binding.slice(2, -2).trim();
+      const parts = inner.split(".");
+      if (parts[0] === "searchParams" || parts[0] === "params") {
+        const paramName = parts.slice(1).join(".");
+        attrs.push(`${prop}={searchParams?.get(${tsStringLiteral(paramName)})}`);
+      }
+      continue;
+    }
+    // L4: 表.列 绑定 — prop={tableData?.[0]?.column}
+    const dot = binding.indexOf(".");
+    if (dot === -1) {
+      attrs.push(`${prop}={${binding}Data}`);
+    } else {
+      const table = binding.slice(0, dot);
+      const column = binding.slice(dot + 1);
+      if (column === "*") {
+        // L4: table.* 绑定 — 绑定整张表数据
+        attrs.push(`${prop}={${table}Data}`);
+      } else {
+        // L4: table.column 绑定 — 取首行单列
+        attrs.push(`${prop}={${table}Data?.[0]?.${column}}`);
+      }
+    }
+  }
+  return attrs;
+}
+
 function eventAttrs(comp: ComponentNode): string[] {
   if (!comp.eventBindings) return [];
   const attrs: string[] = [];
   for (const event of Object.keys(comp.eventBindings)) {
     if (event === "onPageLoad" || event === "onPageUnload") continue;
     attrs.push(`${event}={${makeEventHandlerName(comp.id, event)}}`);
+  }
+  return attrs;
+}
+
+/**
+ * K6: 生成 data-flow-output 响应式属性，驱动组件订阅 Zustand store
+ *
+ * 每个绑定 flow 生成一条 data-flow-output-{index} 属性，
+ * 组件通过 useAppStore 订阅对应 flowId 的执行结果。
+ */
+function flowOutputAttrs(comp: ComponentNode): string[] {
+  if (!comp.eventBindings) return [];
+  const attrs: string[] = [];
+  let idx = 0;
+  for (const raw of Object.values(comp.eventBindings)) {
+    const ids: string[] = Array.isArray(raw) ? raw : [String(raw)];
+    for (const fid of ids) {
+      attrs.push(`data-flow-output-${idx}={useAppStore((s) => s.flowResults[${tsStringLiteral(fid)}])}`);
+      idx++;
+    }
   }
   return attrs;
 }
@@ -205,70 +269,107 @@ export const COMPONENT_MAP: Record<string, ComponentGenerator> = {
 
   "Container": (comp, childrenJSX, indent) => {
     const tw = cx(comp);
-    return `${comment(comp, indent)}${indent}<div${tw ? ` ${jsxAttrString("className", tw)}` : ""}>\n${childrenJSX}${indent}</div>`;
+    const attrs: string[] = [...dataBindingAttrs(comp)];
+    if (tw) attrs.push(`className={${tsStringLiteral(tw)}}`);
+    const attrStr = attrs.length > 0 ? " " + attrs.join(" ") : "";
+    return `${comment(comp, indent)}${indent}<div${attrStr}>\n${childrenJSX}${indent}</div>`;
   },
 
   "Card": (comp, childrenJSX, indent) => {
     const tw = cx(comp);
-    return `${comment(comp, indent)}${indent}<Card${tw ? ` ${jsxAttrString("className", tw)}` : ""}>\n${childrenJSX}${indent}</Card>`;
+    const attrs: string[] = [...dataBindingAttrs(comp)];
+    if (tw) attrs.push(`className={${tsStringLiteral(tw)}}`);
+    const attrStr = attrs.length > 0 ? " " + attrs.join(" ") : "";
+    return `${comment(comp, indent)}${indent}<Card${attrStr}>\n${childrenJSX}${indent}</Card>`;
   },
 
   "CardHeader": (comp, childrenJSX, indent) => {
     const tw = cx(comp);
+    const attrs: string[] = [...dataBindingAttrs(comp)];
+    if (tw) attrs.push(`className={${tsStringLiteral(tw)}}`);
+    const attrStr = attrs.length > 0 ? " " + attrs.join(" ") : "";
     if (!childrenJSX) {
       const title = propStr(comp.props, "title");
       const description = propStr(comp.props, "description");
-      return `${comment(comp, indent)}${indent}<CardHeader${tw ? ` ${jsxAttrString("className", tw)}` : ""}>\n${indent}  <CardTitle>${jsxText(title || "Title")}</CardTitle>\n${description ? `${indent}  <CardDescription>${jsxText(description)}</CardDescription>\n` : ""}${indent}</CardHeader>`;
+      return `${comment(comp, indent)}${indent}<CardHeader${attrStr}>\n${indent}  <CardTitle>${jsxText(title || "Title")}</CardTitle>\n${description ? `${indent}  <CardDescription>${jsxText(description)}</CardDescription>\n` : ""}${indent}</CardHeader>`;
     }
-    return `${comment(comp, indent)}${indent}<CardHeader${tw ? ` ${jsxAttrString("className", tw)}` : ""}>\n${childrenJSX}${indent}</CardHeader>`;
+    return `${comment(comp, indent)}${indent}<CardHeader${attrStr}>\n${childrenJSX}${indent}</CardHeader>`;
   },
 
   "CardContent": (comp, childrenJSX, indent) => {
     const tw = cx(comp);
-    return `${comment(comp, indent)}${indent}<CardContent${tw ? ` ${jsxAttrString("className", tw)}` : ""}>\n${childrenJSX}${indent}</CardContent>`;
+    const attrs: string[] = [...dataBindingAttrs(comp)];
+    if (tw) attrs.push(`className={${tsStringLiteral(tw)}}`);
+    const attrStr = attrs.length > 0 ? " " + attrs.join(" ") : "";
+    return `${comment(comp, indent)}${indent}<CardContent${attrStr}>\n${childrenJSX}${indent}</CardContent>`;
   },
 
   "CardFooter": (comp, childrenJSX, indent) => {
     const tw = cx(comp);
-    return `${comment(comp, indent)}${indent}<CardFooter${tw ? ` ${jsxAttrString("className", tw)}` : ""}>\n${childrenJSX}${indent}</CardFooter>`;
+    const attrs: string[] = [...dataBindingAttrs(comp)];
+    if (tw) attrs.push(`className={${tsStringLiteral(tw)}}`);
+    const attrStr = attrs.length > 0 ? " " + attrs.join(" ") : "";
+    return `${comment(comp, indent)}${indent}<CardFooter${attrStr}>\n${childrenJSX}${indent}</CardFooter>`;
   },
 
   "CardTitle": (comp, _childrenJSX, indent) => {
     const tw = cx(comp);
     const text = propStr(comp.props, "text", "Card Title");
-    return `${comment(comp, indent)}${indent}<CardTitle${tw ? ` ${jsxAttrString("className", tw)}` : ""}>${jsxText(text)}</CardTitle>`;
+    const attrs: string[] = [...dataBindingAttrs(comp)];
+    if (tw) attrs.push(`className={${tsStringLiteral(tw)}}`);
+    const attrStr = attrs.length > 0 ? " " + attrs.join(" ") : "";
+    return `${comment(comp, indent)}${indent}<CardTitle${attrStr}>${jsxText(text)}</CardTitle>`;
   },
 
   "CardDescription": (comp, _childrenJSX, indent) => {
     const tw = cx(comp);
     const text = propStr(comp.props, "text", "");
-    return `${comment(comp, indent)}${indent}<CardDescription${tw ? ` ${jsxAttrString("className", tw)}` : ""}>${jsxText(text)}</CardDescription>`;
+    const attrs: string[] = [...dataBindingAttrs(comp)];
+    if (tw) attrs.push(`className={${tsStringLiteral(tw)}}`);
+    const attrStr = attrs.length > 0 ? " " + attrs.join(" ") : "";
+    return `${comment(comp, indent)}${indent}<CardDescription${attrStr}>${jsxText(text)}</CardDescription>`;
   },
 
   "FlexCol": (comp, childrenJSX, indent) => {
     const tw = cx(comp, "flex flex-col");
-    return `${comment(comp, indent)}${indent}<div ${jsxAttrString("className", tw)}>\n${childrenJSX}${indent}</div>`;
+    const attrs: string[] = [...dataBindingAttrs(comp)];
+    attrs.push(`className={${tsStringLiteral(tw)}}`);
+    const attrStr = attrs.length > 0 ? " " + attrs.join(" ") : "";
+    return `${comment(comp, indent)}${indent}<div${attrStr}>\n${childrenJSX}${indent}</div>`;
   },
 
   "FlexRow": (comp, childrenJSX, indent) => {
     const tw = cx(comp, "flex flex-row");
-    return `${comment(comp, indent)}${indent}<div ${jsxAttrString("className", tw)}>\n${childrenJSX}${indent}</div>`;
+    const attrs: string[] = [...dataBindingAttrs(comp)];
+    attrs.push(`className={${tsStringLiteral(tw)}}`);
+    const attrStr = attrs.length > 0 ? " " + attrs.join(" ") : "";
+    return `${comment(comp, indent)}${indent}<div${attrStr}>\n${childrenJSX}${indent}</div>`;
   },
 
   "GridContainer": (comp, childrenJSX, indent) => {
     const tw = cx(comp, "grid");
-    return `${comment(comp, indent)}${indent}<div ${jsxAttrString("className", tw)}>\n${childrenJSX}${indent}</div>`;
+    const attrs: string[] = [...dataBindingAttrs(comp)];
+    attrs.push(`className={${tsStringLiteral(tw)}}`);
+    const attrStr = attrs.length > 0 ? " " + attrs.join(" ") : "";
+    return `${comment(comp, indent)}${indent}<div${attrStr}>\n${childrenJSX}${indent}</div>`;
   },
 
   "Section": (comp, childrenJSX, indent) => {
     const tw = cx(comp);
-    return `${comment(comp, indent)}${indent}<section${tw ? ` ${jsxAttrString("className", tw)}` : ""}>\n${childrenJSX}${indent}</section>`;
+    const attrs: string[] = [...dataBindingAttrs(comp)];
+    if (tw) attrs.push(`className={${tsStringLiteral(tw)}}`);
+    const attrStr = attrs.length > 0 ? " " + attrs.join(" ") : "";
+    return `${comment(comp, indent)}${indent}<section${attrStr}>\n${childrenJSX}${indent}</section>`;
   },
 
   "Separator": (comp, _childrenJSX, indent) => {
     const tw = cx(comp);
     const orientation = propStr(comp.props, "orientation", "horizontal");
-    return `${comment(comp, indent)}${indent}<Separator${tw ? ` ${jsxAttrString("className", tw)}` : ""}${orientation !== "horizontal" ? ` ${jsxAttrString("orientation", orientation)}` : ""} />`;
+    const attrs: string[] = [...dataBindingAttrs(comp)];
+    if (tw) attrs.push(`className={${tsStringLiteral(tw)}}`);
+    if (orientation !== "horizontal") attrs.push(jsxAttrString("orientation", orientation));
+    const attrStr = attrs.length > 0 ? " " + attrs.join(" ") : "";
+    return `${comment(comp, indent)}${indent}<Separator${attrStr} />`;
   },
 
   /* ──────────────────────────────────────────────
@@ -282,7 +383,9 @@ export const COMPONENT_MAP: Record<string, ComponentGenerator> = {
     const disabled = propBool(p, "disabled");
     const tw = cx(comp);
     const attrs = [`variant={${tsStringLiteral(variant)}}`, `size={${tsStringLiteral(size)}}`];
+    attrs.push(...dataBindingAttrs(comp));
     attrs.push(...eventAttrs(comp));
+    attrs.push(...flowOutputAttrs(comp));
     if (disabled) attrs.push("disabled");
     if (tw) attrs.push(`className={${tsStringLiteral(tw)}}`);
     const label = childrenJSX ? `\n${childrenJSX}\n${indent}` : jsxText(propStr(p, "text", "Button"));
@@ -297,7 +400,9 @@ export const COMPONENT_MAP: Record<string, ComponentGenerator> = {
     const disabled = propBool(p, "disabled");
     const tw = cx(comp);
     const attrs: string[] = [jsxAttrString("type", inputType)];
+    attrs.push(...dataBindingAttrs(comp));
     attrs.push(...eventAttrs(comp));
+    attrs.push(...flowOutputAttrs(comp));
     if (placeholder) attrs.push(jsxAttrString("placeholder", placeholder));
     if (defaultValue) attrs.push(jsxAttrString("defaultValue", defaultValue));
     if (disabled) attrs.push("disabled");
@@ -312,7 +417,9 @@ export const COMPONENT_MAP: Record<string, ComponentGenerator> = {
     const disabled = propBool(p, "disabled");
     const tw = cx(comp);
     const attrs: string[] = [];
+    attrs.push(...dataBindingAttrs(comp));
     attrs.push(...eventAttrs(comp));
+    attrs.push(...flowOutputAttrs(comp));
     if (placeholder) attrs.push(jsxAttrString("placeholder", placeholder));
     if (rows) attrs.push(`rows={${rows}}`);
     if (disabled) attrs.push("disabled");
@@ -330,7 +437,9 @@ export const COMPONENT_MAP: Record<string, ComponentGenerator> = {
       .map((opt) => `${indent}  <SelectItem ${jsxAttrString("value", opt.value)}>${jsxText(opt.label)}</SelectItem>`)
       .join("\n");
     const attrs: string[] = [];
+    attrs.push(...dataBindingAttrs(comp));
     attrs.push(...eventAttrs(comp));
+    attrs.push(...flowOutputAttrs(comp));
     if (defaultValue) attrs.push(jsxAttrString("defaultValue", defaultValue));
     return `${comment(comp, indent)}${indent}<Select${attrs.length ? " " + attrs.join(" ") : ""}>\n${indent}  <SelectTrigger${tw ? ` ${jsxAttrString("className", tw)}` : ""}>\n${indent}    <SelectValue ${jsxAttrString("placeholder", placeholder)} />\n${indent}  </SelectTrigger>\n${indent}  <SelectContent>\n${optionsJSX || `${indent}    ${childrenJSX}`}\n${indent}  </SelectContent>\n${indent}</Select>`;
   },
@@ -342,7 +451,9 @@ export const COMPONENT_MAP: Record<string, ComponentGenerator> = {
     const tw = cx(comp);
     const label = propStr(p, "label", "");
     const attrs: string[] = [];
+    attrs.push(...dataBindingAttrs(comp));
     attrs.push(...eventAttrs(comp));
+    attrs.push(...flowOutputAttrs(comp));
     if (checked) attrs.push("defaultChecked");
     if (disabled) attrs.push("disabled");
     if (tw) attrs.push(jsxAttrString("className", tw));
@@ -358,7 +469,9 @@ export const COMPONENT_MAP: Record<string, ComponentGenerator> = {
     const disabled = propBool(p, "disabled");
     const tw = cx(comp);
     const attrs: string[] = [];
+    attrs.push(...dataBindingAttrs(comp));
     attrs.push(...eventAttrs(comp));
+    attrs.push(...flowOutputAttrs(comp));
     if (checked) attrs.push("defaultChecked");
     if (disabled) attrs.push("disabled");
     if (tw) attrs.push(jsxAttrString("className", tw));
@@ -374,7 +487,9 @@ export const COMPONENT_MAP: Record<string, ComponentGenerator> = {
       .map((opt) => `${indent}  <div className="flex items-center gap-2">\n${indent}    <RadioGroupItem ${jsxAttrString("value", opt.value)} ${jsxAttrString("id", opt.value)} />\n${indent}    <Label ${jsxAttrString("htmlFor", opt.value)}>${jsxText(opt.label)}</Label>\n${indent}  </div>`)
       .join("\n");
     const attrs: string[] = [];
+    attrs.push(...dataBindingAttrs(comp));
     attrs.push(...eventAttrs(comp));
+    attrs.push(...flowOutputAttrs(comp));
     if (defaultValue) attrs.push(jsxAttrString("defaultValue", defaultValue));
     if (tw) attrs.push(jsxAttrString("className", tw));
     return `${comment(comp, indent)}${indent}<RadioGroup${attrs.length ? " " + attrs.join(" ") : ""}>\n${optionsJSX || childrenJSX}\n${indent}</RadioGroup>`;
@@ -417,7 +532,10 @@ export const COMPONENT_MAP: Record<string, ComponentGenerator> = {
     const p = comp.props as Record<string, unknown> | undefined;
     const placeholder = propStr(p, "placeholder", "Pick a date");
     const tw = cx(comp);
-    return `${comment(comp, indent)}${indent}<DatePicker${tw ? ` ${jsxAttrString("className", tw)}` : ""} ${jsxAttrString("placeholder", placeholder)} />`;
+    const attrs: string[] = [...dataBindingAttrs(comp), jsxAttrString("placeholder", placeholder)];
+    if (tw) attrs.push(`className={${tsStringLiteral(tw)}}`);
+    const attrStr = attrs.length > 0 ? " " + attrs.join(" ") : "";
+    return `${comment(comp, indent)}${indent}<DatePicker${attrStr} />`;
   },
 
   /* ──────────────────────────────────────────────
@@ -429,7 +547,10 @@ export const COMPONENT_MAP: Record<string, ComponentGenerator> = {
     const variant = propStr(p, "variant", "default");
     const tw = cx(comp);
     const text = childrenJSX || jsxText(propStr(p, "text", "Badge"));
-    return `${comment(comp, indent)}${indent}<Badge ${jsxAttrString("variant", variant)}${tw ? ` ${jsxAttrString("className", tw)}` : ""}>${text}</Badge>`;
+    const attrs: string[] = [...dataBindingAttrs(comp), jsxAttrString("variant", variant)];
+    if (tw) attrs.push(`className={${tsStringLiteral(tw)}}`);
+    const attrStr = attrs.length > 0 ? " " + attrs.join(" ") : "";
+    return `${comment(comp, indent)}${indent}<Badge${attrStr}>${text}</Badge>`;
   },
 
   "Avatar": (comp, _childrenJSX, indent) => {
@@ -437,7 +558,10 @@ export const COMPONENT_MAP: Record<string, ComponentGenerator> = {
     const src = propStr(p, "src", "");
     const fallback = propStr(p, "fallback", "U");
     const tw = cx(comp);
-    return `${comment(comp, indent)}${indent}<Avatar${tw ? ` ${jsxAttrString("className", tw)}` : ""}>\n${indent}  <AvatarImage ${jsxAttrString("src", src)} />\n${indent}  <AvatarFallback>${jsxText(fallback)}</AvatarFallback>\n${indent}</Avatar>`;
+    const attrs: string[] = [...dataBindingAttrs(comp)];
+    if (tw) attrs.push(`className={${tsStringLiteral(tw)}}`);
+    const attrStr = attrs.length > 0 ? " " + attrs.join(" ") : "";
+    return `${comment(comp, indent)}${indent}<Avatar${attrStr}>\n${indent}  <AvatarImage ${jsxAttrString("src", src)} />\n${indent}  <AvatarFallback>${jsxText(fallback)}</AvatarFallback>\n${indent}</Avatar>`;
   },
 
   "Skeleton": (comp, childrenJSX, indent) => {
@@ -460,7 +584,10 @@ export const COMPONENT_MAP: Record<string, ComponentGenerator> = {
     const p = comp.props as Record<string, unknown> | undefined;
     const value = propNum(p, "value", 0);
     const tw = cx(comp);
-    return `${comment(comp, indent)}${indent}<Progress value={${value}}${tw ? ` ${jsxAttrString("className", tw)}` : ""} />`;
+    const attrs: string[] = [...dataBindingAttrs(comp), `value={${value}}`];
+    if (tw) attrs.push(`className={${tsStringLiteral(tw)}}`);
+    const attrStr = attrs.length > 0 ? " " + attrs.join(" ") : "";
+    return `${comment(comp, indent)}${indent}<Progress${attrStr} />`;
   },
 
   "HoverCard": (comp, childrenJSX, indent) => {
@@ -574,7 +701,9 @@ export const COMPONENT_MAP: Record<string, ComponentGenerator> = {
     const tw = cx(comp);
     const text = childrenJSX || jsxText(propStr(p, "text", "Link"));
     const attrs: string[] = [jsxAttrString("href", href)];
+    attrs.push(...dataBindingAttrs(comp));
     attrs.push(...eventAttrs(comp));
+    attrs.push(...flowOutputAttrs(comp));
     if (tw) attrs.push(jsxAttrString("className", tw));
     return `${comment(comp, indent)}${indent}<Link${attrs.length ? " " + attrs.join(" ") : ""}>${text}</Link>`;
   },
@@ -585,7 +714,10 @@ export const COMPONENT_MAP: Record<string, ComponentGenerator> = {
 
   "Table": (comp, childrenJSX, indent) => {
     const tw = cx(comp);
-    return `${comment(comp, indent)}${indent}<Table${tw ? ` ${jsxAttrString("className", tw)}` : ""}>\n${childrenJSX}${indent}</Table>`;
+    const attrs: string[] = [...dataBindingAttrs(comp)];
+    if (tw) attrs.push(`className={${tsStringLiteral(tw)}}`);
+    const attrStr = attrs.length > 0 ? " " + attrs.join(" ") : "";
+    return `${comment(comp, indent)}${indent}<Table${attrStr}>\n${childrenJSX}${indent}</Table>`;
   },
 
   "DataTable": (comp, _childrenJSX, indent) => {
@@ -609,7 +741,10 @@ export const COMPONENT_MAP: Record<string, ComponentGenerator> = {
 
   "TableHead": (comp, childrenJSX, indent) => {
     const tw = cx(comp);
-    return `${comment(comp, indent)}${indent}<TableHead${tw ? ` ${jsxAttrString("className", tw)}` : ""}>${childrenJSX || jsxText(propStr(comp.props, "text", "Head"))}</TableHead>`;
+    const attrs: string[] = [...dataBindingAttrs(comp)];
+    if (tw) attrs.push(`className={${tsStringLiteral(tw)}}`);
+    const attrStr = attrs.length > 0 ? " " + attrs.join(" ") : "";
+    return `${comment(comp, indent)}${indent}<TableHead${attrStr}>${childrenJSX || jsxText(propStr(comp.props, "text", "Head"))}</TableHead>`;
   },
 
   "TableBody": (comp, childrenJSX, indent) => {
@@ -624,13 +759,19 @@ export const COMPONENT_MAP: Record<string, ComponentGenerator> = {
 
   "TableCell": (comp, childrenJSX, indent) => {
     const tw = cx(comp);
-    return `${comment(comp, indent)}${indent}<TableCell${tw ? ` ${jsxAttrString("className", tw)}` : ""}>${childrenJSX || jsxText(propStr(comp.props, "text", "Cell"))}</TableCell>`;
+    const attrs: string[] = [...dataBindingAttrs(comp)];
+    if (tw) attrs.push(`className={${tsStringLiteral(tw)}}`);
+    const attrStr = attrs.length > 0 ? " " + attrs.join(" ") : "";
+    return `${comment(comp, indent)}${indent}<TableCell${attrStr}>${childrenJSX || jsxText(propStr(comp.props, "text", "Cell"))}</TableCell>`;
   },
 
   "TableCaption": (comp, _childrenJSX, indent) => {
     const tw = cx(comp);
     const text = propStr(comp.props, "text", "");
-    return `${comment(comp, indent)}${indent}<TableCaption${tw ? ` ${jsxAttrString("className", tw)}` : ""}>${jsxText(text)}</TableCaption>`;
+    const attrs: string[] = [...dataBindingAttrs(comp)];
+    if (tw) attrs.push(`className={${tsStringLiteral(tw)}}`);
+    const attrStr = attrs.length > 0 ? " " + attrs.join(" ") : "";
+    return `${comment(comp, indent)}${indent}<TableCaption${attrStr}>${jsxText(text)}</TableCaption>`;
   },
 
   /* ──────────────────────────────────────────────

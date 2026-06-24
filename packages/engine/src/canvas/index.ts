@@ -15,3 +15,6 @@ export * from "./types";
 export * from "./store";
 export * from "./dnd";
 export * from "./renderer";
+export * from "./ctrl-context";
+export * from "./minimap";
+export * from "./ruler";

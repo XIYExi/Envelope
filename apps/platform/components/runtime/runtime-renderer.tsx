@@ -1,11 +1,14 @@
 /**
  * Runtime Renderer（ISC-35 Preview）
  *
- * 将编辑器中的 ComponentNode 渲染为“真实的 shadcn/ui 组件”，用于 Preview 模式：
+ * 将编辑器中的 ComponentNode 渲染为"真实的 shadcn/ui 组件"，用于 Preview 模式：
  * - 根节点使用与编辑器一致的 12 列 Grid 布局（来自 CanvasComponent.position）
  * - 子节点按组件结构递归渲染（来自 ComponentNode.children）
  * - 应用页面级样式：pageBackground / pagePadding / pageMaxWidth
  * - 应用节点级样式：tailwindClasses（兼容 props.className 回退）
+ *
+ * P1/P2: 预览模式消费 eventBindings 实现事件交互
+ * P3: 预览模式消费 dataBindings 显示模拟数据
  *
  * @author xiye
  * @date 2026-06-22
@@ -13,10 +16,11 @@
  */
 "use client";
 
-import type { ReactNode } from "react";
+import type { ReactNode, MouseEvent, ChangeEvent } from "react";
 import { cn } from "@/lib/utils";
 import type { CanvasComponent, CanvasState } from "@envelope/engine";
 import type { ComponentNode } from "@envelope/engine";
+import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -172,6 +176,200 @@ function renderChildren(children: ComponentNode[] | undefined): ReactNode {
   return children.map((c) => <RuntimeNodeRenderer key={c.id} node={c} />);
 }
 
+/* =========================================================================
+ * P1/P2: 预览模式事件交互 — 在预览中调用绑定的 flow 或显示模拟 toast
+ * ========================================================================= */
+
+/**
+ * P1: 预览模式中模拟调用 flow 的函数
+ * 当 flow 后端可用时发送真实请求，否则显示 toast 提示
+ *
+ * @param flowId - 绑定的 flow ID
+ * @param eventName - 触发的事件名称
+ */
+async function previewCallFlow(flowId: string, eventName: string): Promise<void> {
+  try {
+    // P2: 尝试发送真实请求至 flow API
+    const res = await fetch(`/api/flows/${encodeURIComponent(flowId)}`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ input: { source: "preview", event: eventName } }),
+    });
+    if (res.ok) {
+      const result = await res.json();
+      toast.success(`Flow ${flowId} 执行成功`, {
+        description: `耗时: ${JSON.stringify(result).length} bytes 响应`,
+      });
+      return;
+    }
+  } catch {
+    // 后端不可用时降级为 toast 提示
+  }
+  toast(`Flow ${flowId} triggered (simulated)`, {
+    description: `事件: ${eventName} | 预览模式 — 无后端响应`,
+    icon: "⚡",
+  });
+}
+
+/**
+ * 获取节点指定事件的 flow ID 列表（K1: 支持 string[]）
+ * eventBindings 结构: Record<string, string[]>
+ */
+function getBoundFlows(node: ComponentNode, eventName: string): string[] {
+  if (!node.eventBindings) return [];
+  const raw = node.eventBindings[eventName];
+  if (!raw) return [];
+  if (Array.isArray(raw)) return raw.filter((f) => typeof f === "string");
+  return [String(raw)];
+}
+
+/**
+ * P1: 为交互组件生成 onClick 处理器，触发绑定的 flow 链
+ * 支持多个 flow 依次执行（K1 兼容）
+ */
+function createEventHandler(node: ComponentNode, eventName = "onClick") {
+  const flowIds = getBoundFlows(node, eventName);
+  if (flowIds.length === 0) return undefined;
+  return (e: MouseEvent | ChangeEvent) => {
+    e.stopPropagation?.();
+    // P1/P2: 依次调用绑定的 flow
+    for (const fid of flowIds) {
+      void previewCallFlow(fid, eventName);
+    }
+  };
+}
+
+/**
+ * P3: 获取第一个 dataBinding 键名，用于判断组件是否绑定了数据
+ * 用于在 Table 等组件中显示模拟数据
+ */
+function getFirstBindingKey(node: ComponentNode): string | null {
+  if (!node.dataBindings) return null;
+  const keys = Object.keys(node.dataBindings);
+  if (keys.length === 0) return null;
+  return keys[0] ?? null;
+}
+
+/**
+ * P3: 根据 dataBindings 生成模拟数据值
+ * 支持 table.column 格式 — 生成占位文本
+ */
+function getMockDataValue(node: ComponentNode, propKey?: string): string | undefined {
+  if (!node.dataBindings) return undefined;
+  const db = node.dataBindings;
+  // 如果传入了特定 prop，查找它的绑定
+  if (propKey && db[propKey]) {
+    return mockFromBinding(db[propKey]);
+  }
+  // 取第一个绑定生成示例值
+  const first = Object.values(db)[0];
+  if (!first) return undefined;
+  return mockFromBinding(first);
+}
+
+/**
+ * P3: 根据绑定表达式生成模拟数据
+ */
+function mockFromBinding(binding: string): string {
+  // L5: 搜索参数绑定
+  if (binding.startsWith("{{") && binding.endsWith("}}")) {
+    return `[${binding}]`;
+  }
+  // L4: table.column 类型
+  const dot = binding.indexOf(".");
+  if (dot === -1) return `[${binding} data]`;
+  const column = binding.slice(dot + 1);
+  if (column === "*") return `[table data]`;
+  // 为常见列名生成有意义的模拟值
+  const mocks: Record<string, string> = {
+    name: "张三",
+    title: "示例标题",
+    email: "user@example.com",
+    status: "活跃",
+    amount: "¥1,200.00",
+    date: "2026-06-23",
+    phone: "138-0000-0000",
+    address: "北京市朝阳区",
+    description: "这是一段模拟的描述文本...",
+    content: "模拟内容占位符",
+  };
+  return mocks[column] ?? `[${column}]`;
+}
+
+/**
+ * P3: Table 组件的 dataBindings 模拟 — 生成 mock 行数据
+ */
+function getMockTableData(node: ComponentNode, columns: string[], rowCount: number): Record<string, string>[] {
+  if (!node.dataBindings) {
+    return Array.from({ length: rowCount }).map((_, r) =>
+      Object.fromEntries(columns.map((c) => [c, `${c}-${r + 1}`])),
+    );
+  }
+  // 优先使用 dataBindings 中绑定了 table.* 的列
+  const boundColumns = Object.entries(node.dataBindings).filter(
+    ([, v]) => v.includes(".") && !v.endsWith(".*"),
+  );
+  if (boundColumns.length === 0) {
+    return Array.from({ length: rowCount }).map((_, r) =>
+      Object.fromEntries(columns.map((c) => [c, mockFromBinding(`${c}.${c}`)])),
+    );
+  }
+  return Array.from({ length: rowCount }).map((_, r) =>
+    Object.fromEntries(
+      columns.map((c) => {
+        const bound = boundColumns.find(([prop]) => prop === c);
+        return [c, bound ? mockFromBinding(bound[1]) : `${c}-${r + 1}`];
+      }),
+    ),
+  );
+}
+
+/**
+ * P3: 在具有 dataBindings 的组件上显示数据绑定标记
+ */
+function DataBindingBadge({ node, className }: { node: ComponentNode; className?: string }) {
+  if (!node.dataBindings) return null;
+  const count = Object.keys(node.dataBindings).length;
+  return (
+    <span
+      className={cn(
+        "ml-1 inline-flex items-center rounded bg-yellow-100 px-1 text-[10px] text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400",
+        className,
+      )}
+      title={`已绑定 ${count} 个数据源: ${Object.values(node.dataBindings).join(", ")}`}
+    >
+      ⚡{count}
+    </span>
+  );
+}
+
+/**
+ * 为具有 dataBindings 的组件包裹 DataBindingBadge 标记
+ * 消除各组件的重复条件渲染模版
+ */
+function WithDataBadge({ node, children, className, position = "inline" }: {
+  node: ComponentNode;
+  children: ReactNode;
+  className?: string;
+  position?: "inline" | "top-right" | "absolute-top-right";
+}) {
+  if (!node.dataBindings) return <>{children}</>;
+  if (position === "inline") return <>{children}<DataBindingBadge node={node} className={className} /></>;
+  if (position === "absolute-top-right") return (
+    <div className="relative">
+      {children}
+      <span className="absolute -right-1 -top-1"><DataBindingBadge node={node} /></span>
+    </div>
+  );
+  if (position === "top-right") return (
+    <div className="relative">
+      {children}
+      <span className="absolute right-2 top-2"><DataBindingBadge node={node} /></span>
+    </div>
+  );
+  return <>{children}</>;
+}
+
 function RuntimeNodeRenderer({ node }: { node: ComponentNode }) {
   const className = getNodeClassName(node);
   const props = node.props as Record<string, unknown> | undefined;
@@ -187,9 +385,12 @@ function RuntimeNodeRenderer({ node }: { node: ComponentNode }) {
       const size = str(props, "size") as "default" | "sm" | "lg" | "icon" | undefined;
       const label = str(props, "label") ?? str(props, "text") ?? getFirstTextChild(node) ?? "Button";
       const disabled = bool(props, "disabled") ?? false;
+      const onClick = createEventHandler(node, "onClick");
+      const hasData = getFirstBindingKey(node);
       return (
-        <Button variant={variant} size={size} className={className} disabled={disabled}>
+        <Button variant={variant} size={size} className={className} disabled={disabled} onClick={onClick}>
           {node.children && node.children.length > 0 ? renderChildren(node.children) : label}
+          {hasData ? <DataBindingBadge node={node} /> : null}
         </Button>
       );
     }
@@ -197,13 +398,37 @@ function RuntimeNodeRenderer({ node }: { node: ComponentNode }) {
     case "Input": {
       const placeholder = str(props, "placeholder");
       const disabled = bool(props, "disabled") ?? false;
-      return <Input className={className} placeholder={placeholder} disabled={disabled} />;
+      const onChange = createEventHandler(node, "onChange");
+      const mockValue = getMockDataValue(node, "defaultValue") ?? getMockDataValue(node);
+      return (
+        <WithDataBadge node={node} position="absolute-top-right">
+          <Input
+            className={className}
+            placeholder={placeholder}
+            disabled={disabled}
+            defaultValue={mockValue}
+            onChange={onChange}
+          />
+        </WithDataBadge>
+      );
     }
 
     case "Textarea": {
       const placeholder = str(props, "placeholder");
       const disabled = bool(props, "disabled") ?? false;
-      return <Textarea className={className} placeholder={placeholder} disabled={disabled} />;
+      const onChange = createEventHandler(node, "onChange");
+      const mockValue = getMockDataValue(node);
+      return (
+        <WithDataBadge node={node} position="absolute-top-right">
+          <Textarea
+            className={className}
+            placeholder={placeholder}
+            disabled={disabled}
+            defaultValue={mockValue}
+            onChange={onChange}
+          />
+        </WithDataBadge>
+      );
     }
 
     case "Label": {
@@ -214,10 +439,12 @@ function RuntimeNodeRenderer({ node }: { node: ComponentNode }) {
     case "Checkbox": {
       const defaultChecked = bool(props, "defaultChecked");
       const disabled = bool(props, "disabled") ?? false;
+      const onClick = createEventHandler(node, "onChange");
       return (
         <span className={cn("inline-flex items-center gap-2", className)}>
-          <Checkbox defaultChecked={defaultChecked} disabled={disabled} />
+          <Checkbox defaultChecked={defaultChecked} disabled={disabled} onClick={onClick} />
           {str(props, "label") ?? getFirstTextChild(node)}
+          {node.dataBindings ? <DataBindingBadge node={node} /> : null}
         </span>
       );
     }
@@ -226,14 +453,22 @@ function RuntimeNodeRenderer({ node }: { node: ComponentNode }) {
       const options = (arr<string>(props, "options") ?? []).filter((v) => typeof v === "string");
       const safeOptions = options.length > 0 ? options : ["Option 1", "Option 2"];
       const defaultValue = str(props, "defaultValue") ?? "0";
+      const onValueChange = node.eventBindings?.onChange
+        ? (value: string) => {
+            for (const fid of getBoundFlows(node, "onChange")) {
+              void previewCallFlow(fid, `onChange:${value}`);
+            }
+          }
+        : undefined;
       return (
-        <RadioGroup className={className} defaultValue={defaultValue}>
+        <RadioGroup className={className} defaultValue={defaultValue} onValueChange={onValueChange}>
           {safeOptions.map((opt, idx) => (
             <span key={idx} className="inline-flex items-center gap-2">
               <RadioGroupItem value={String(idx)} />
               <span>{opt}</span>
             </span>
           ))}
+          {node.dataBindings ? <DataBindingBadge node={node} /> : null}
         </RadioGroup>
       );
     }
@@ -251,18 +486,28 @@ function RuntimeNodeRenderer({ node }: { node: ComponentNode }) {
         category: node.category,
         props: { value: o, label: o },
       })) satisfies ComponentNode[];
+      const onValueChange = node.eventBindings?.onChange
+        ? (value: string) => {
+            const flowIds = getBoundFlows(node, "onChange");
+            for (const fid of flowIds) {
+              void previewCallFlow(fid, `onChange:${value}`);
+            }
+          }
+        : undefined;
 
       return (
-        <Select defaultValue={selected} disabled={disabled}>
-          <SelectTrigger className={className}>
-            <SelectValue placeholder={placeholder} />
-          </SelectTrigger>
-          <SelectContent>
-            {items.map((it) => (
-              <RuntimeNodeRenderer key={it.id} node={it} />
-            ))}
-          </SelectContent>
-        </Select>
+        <WithDataBadge node={node} position="absolute-top-right">
+          <Select defaultValue={selected} disabled={disabled} onValueChange={onValueChange}>
+            <SelectTrigger className={className}>
+              <SelectValue placeholder={placeholder} />
+            </SelectTrigger>
+            <SelectContent>
+              {items.map((it) => (
+                <RuntimeNodeRenderer key={it.id} node={it} />
+              ))}
+            </SelectContent>
+          </Select>
+        </WithDataBadge>
       );
     }
 
@@ -280,29 +525,58 @@ function RuntimeNodeRenderer({ node }: { node: ComponentNode }) {
     case "Switch": {
       const defaultChecked = bool(props, "defaultChecked");
       const disabled = bool(props, "disabled") ?? false;
+      const onClick = createEventHandler(node, "onChange");
       return (
         <span className={cn("inline-flex items-center gap-2", className)}>
-          <Switch defaultChecked={defaultChecked} disabled={disabled} />
+          <Switch defaultChecked={defaultChecked} disabled={disabled} onClick={onClick} />
           {str(props, "label") ?? getFirstTextChild(node)}
+          {node.dataBindings ? <DataBindingBadge node={node} /> : null}
         </span>
       );
     }
 
     case "Toggle": {
       const disabled = bool(props, "disabled") ?? false;
+      const onClick = createEventHandler(node, "onClick");
       return (
-        <Toggle className={className} disabled={disabled}>
+        <Toggle className={className} disabled={disabled} onClick={onClick}>
           {node.children && node.children.length > 0 ? renderChildren(node.children) : str(props, "label") ?? "Toggle"}
+          {node.dataBindings ? <DataBindingBadge node={node} /> : null}
         </Toggle>
       );
     }
 
     case "ToggleGroup": {
-      const type = (str(props, "type") as "single" | "multiple" | undefined) ?? "single";
+      const tgType = (str(props, "type") ?? "single") as "single" | "multiple";
       const disabled = bool(props, "disabled") ?? false;
       const options = (arr<string>(props, "options") ?? ["A", "B", "C"]).filter((v) => typeof v === "string");
+      const isSingle = tgType !== "multiple";
+      const onValueChange = node.eventBindings?.onChange
+        ? isSingle
+          ? (value: string) => {
+              for (const fid of getBoundFlows(node, "onChange")) {
+                void previewCallFlow(fid, `onChange:${value}`);
+              }
+            }
+          : (values: string[]) => {
+              for (const fid of getBoundFlows(node, "onChange")) {
+                void previewCallFlow(fid, `onChange:${values.join(",")}`);
+              }
+            }
+        : undefined;
+      if (isSingle) {
+        return (
+          <ToggleGroup className={className} type="single" disabled={disabled} onValueChange={onValueChange as (value: string) => void}>
+            {options.map((o) => (
+              <ToggleGroupItem key={o} value={o}>
+                {o}
+              </ToggleGroupItem>
+            ))}
+          </ToggleGroup>
+        );
+      }
       return (
-        <ToggleGroup className={className} type={type} disabled={disabled}>
+        <ToggleGroup className={className} type="multiple" disabled={disabled} onValueChange={onValueChange as (values: string[]) => void}>
           {options.map((o) => (
             <ToggleGroupItem key={o} value={o}>
               {o}
@@ -315,7 +589,15 @@ function RuntimeNodeRenderer({ node }: { node: ComponentNode }) {
     case "Slider": {
       const defaultValue = num(props, "defaultValue");
       const disabled = bool(props, "disabled") ?? false;
-      return <Slider className={className} defaultValue={typeof defaultValue === "number" ? [defaultValue] : undefined} disabled={disabled} />;
+      const onValueChange = node.eventBindings?.onChange
+        ? (value: number[]) => {
+            const flowIds = getBoundFlows(node, "onChange");
+            for (const fid of flowIds) {
+              void previewCallFlow(fid, `onChange:${value.join(",")}`);
+            }
+          }
+        : undefined;
+      return <Slider className={className} defaultValue={typeof defaultValue === "number" ? [defaultValue] : undefined} disabled={disabled} onValueChange={onValueChange} />;
     }
 
     case "Badge": {
@@ -468,27 +750,31 @@ function RuntimeNodeRenderer({ node }: { node: ComponentNode }) {
       const safeCols = columns.length > 0 ? columns : ["Col 1", "Col 2"];
       const rowCount = Math.max(0, Math.floor(num(props, "rowCount") ?? 2));
       const showHeader = bool(props, "showHeader") ?? true;
+      // P3: 从 dataBindings 生成模拟数据
+      const mockRows = getMockTableData(node, safeCols, rowCount);
       return (
-        <Table className={className}>
-          {showHeader && (
-            <TableHeader>
-              <TableRow>
-                {safeCols.map((c) => (
-                  <TableHead key={c}>{c}</TableHead>
-                ))}
-              </TableRow>
-            </TableHeader>
-          )}
-          <TableBody>
-            {Array.from({ length: rowCount }).map((_, r) => (
-              <TableRow key={r}>
-                {safeCols.map((c) => (
-                  <TableCell key={c}>...</TableCell>
-                ))}
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+        <WithDataBadge node={node} position="top-right">
+          <Table className={className}>
+            {showHeader && (
+              <TableHeader>
+                <TableRow>
+                  {safeCols.map((c) => (
+                    <TableHead key={c}>{c}</TableHead>
+                  ))}
+                </TableRow>
+              </TableHeader>
+            )}
+            <TableBody>
+              {mockRows.map((row, r) => (
+                <TableRow key={r}>
+                  {safeCols.map((c) => (
+                    <TableCell key={c}>{row[c] ?? "..."}</TableCell>
+                  ))}
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </WithDataBadge>
       );
     }
 

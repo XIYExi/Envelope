@@ -64,8 +64,17 @@ export const useFlowBindingStore = create<FlowBindingStore>((set, get) => ({
     set((state) => {
       const eventBindings = { ...state.eventBindings };
       const endpointBindings = { ...state.endpointBindings };
+      // K3: eventBindings 值改为 string[]，需遍历数组移除
       for (const key of Object.keys(eventBindings)) {
-        if (eventBindings[key] === id) delete eventBindings[key];
+        const arr = eventBindings[key];
+        if (Array.isArray(arr)) {
+          const filtered = arr.filter((fid) => fid !== id);
+          if (filtered.length === 0) {
+            delete eventBindings[key];
+          } else {
+            eventBindings[key] = filtered;
+          }
+        }
       }
       for (const key of Object.keys(endpointBindings)) {
         if (endpointBindings[key] === id) delete endpointBindings[key];
@@ -83,17 +92,24 @@ export const useFlowBindingStore = create<FlowBindingStore>((set, get) => ({
   // ═══════════════════════════════════════════════════════════════
 
   /**
-   * 绑定组件事件到流程
+   * K3: 绑定组件事件到多个流程（依次执行）
    *
    * @param componentId - 画布组件 ID
    * @param event - 可绑定事件名称
-   * @param flowId - 流程 ID
+   * @param flowIds - 流程 ID 列表，空数组则清除绑定
    */
-  bindEvent(componentId: string, event: BindableEvent, flowId: string) {
+  bindEvent(componentId: string, event: BindableEvent, flowIds: string[]) {
     const key = makeEventBindingKey(componentId, event);
-    set((state) => ({
-      eventBindings: { ...state.eventBindings, [key]: flowId },
-    }));
+    set((state) => {
+      if (!flowIds || flowIds.length === 0) {
+        const next = { ...state.eventBindings };
+        delete next[key];
+        return { eventBindings: next };
+      }
+      return {
+        eventBindings: { ...state.eventBindings, [key]: flowIds },
+      };
+    });
   },
 
   /**
@@ -112,15 +128,34 @@ export const useFlowBindingStore = create<FlowBindingStore>((set, get) => ({
   },
 
   /**
-   * 查询组件事件绑定的流程 ID
+   * K3: 查询组件事件绑定的流程 ID 列表
    *
    * @param componentId - 画布组件 ID
    * @param event - 可绑定事件名称
-   * @returns 绑定的流程 ID，未绑定时返回 undefined
+   * @returns 绑定的流程 ID 数组，未绑定时返回 undefined
    */
-  getEventBinding(componentId: string, event: BindableEvent): string | undefined {
+  getEventBinding(componentId: string, event: BindableEvent): string[] | undefined {
     const key = makeEventBindingKey(componentId, event);
     return get().eventBindings[key];
+  },
+
+  /**
+   * K3: 按事件类型查询所有组件的绑定 flow ID 列表（去重合并）
+   *
+   * @param eventType - 事件类型
+   * @returns 所有绑定了该事件的 flow ID 列表
+   */
+  getEventBindings(eventType: BindableEvent): string[] {
+    const all = get().eventBindings;
+    const result = new Set<string>();
+    for (const [key, flowIds] of Object.entries(all)) {
+      if (key.endsWith(`::${eventType}`)) {
+        for (const id of flowIds) {
+          result.add(id);
+        }
+      }
+    }
+    return Array.from(result);
   },
 
   // ═══════════════════════════════════════════════════════════════

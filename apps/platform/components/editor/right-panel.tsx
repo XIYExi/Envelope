@@ -12,7 +12,10 @@
 import { useMemo, useCallback, useRef } from "react";
 import { useCanvasStore, PropertyEditor } from "@envelope/engine";
 import { createDefaultRegistry } from "@envelope/materials";
+import type { EditableProp } from "@envelope/materials";
 import { useFlowBindingStore } from "@envelope/flow";
+import { useEditorStore } from "@/stores/editor";
+import { useProjectModelsStore } from "@/stores/project-models";
 import { cn } from "@/lib/utils";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -26,6 +29,188 @@ function findNodeById(root: ComponentNode, targetId: string): ComponentNode | nu
     if (found) return found;
   }
   return null;
+}
+
+/**
+ * 批量编辑多选组件的共有属性
+ *
+ * 收集所有选中组件的类型，取其 editableProps 的交集，显示共有属性编辑器。
+ * 值混合时显示 "Mixed" 占位符；修改时调用 batchUpdateSelectedProps 批量更新。
+ * 支持根据属性类型分发对应控件：text/number/select/switch/color/textarea 等。
+ */
+function BatchPropertyEditor({ components, registry, onBatchChange }: {
+  components: CanvasComponent[];
+  registry: ReturnType<typeof createDefaultRegistry>;
+  onBatchChange: (key: string, value: unknown) => void;
+}) {
+  const types = [...new Set(components.map((c) => c.node.type))];
+
+  const sharedProps = useMemo(() => {
+    if (types.length === 0) return [];
+    const allPropsList = types.map((t) => registry.get(t)?.editableProps ?? []);
+    let intersection: EditableProp[] = allPropsList[0]!;
+    for (let i = 1; i < allPropsList.length; i++) {
+      const keys = new Set(allPropsList[i]!.map((p) => p.key));
+      intersection = intersection.filter((p) => keys.has(p.key));
+    }
+    return intersection;
+  }, [types, registry]);
+
+  /**
+   * 获取多选组件的混合值
+   * 所有组件值相同时返回该值，不同时返回 "Mixed" 标记
+   */
+  const getMixedValue = useCallback((key: string): unknown => {
+    const vals = components.map((c) => {
+      const p = c.node.props as Record<string, unknown> | undefined;
+      return p?.[key];
+    });
+    const first = vals[0];
+    if (first === undefined) return undefined;
+    return vals.every((v) => v === first) ? first : "Mixed";
+  }, [components]);
+
+  const handleChange = useCallback((key: string, value: unknown) => {
+    onBatchChange(key, value);
+  }, [onBatchChange]);
+
+  if (sharedProps.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center p-3 text-center text-xs text-muted-foreground">
+        <p className="font-medium">{components.length} components selected</p>
+        <p className="mt-1 text-[10px]">
+          Types: {types.join(", ")}
+        </p>
+        <p className="mt-1 text-[10px]">No shared editable properties</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3 p-3">
+      <div className="mb-1 text-[10px] font-medium text-muted-foreground">
+        Batch Edit — {components.length} components ({types.join(", ")})
+      </div>
+      {sharedProps.map((prop) => {
+        const mixedValue = getMixedValue(prop.key);
+        const isMixed = mixedValue === "Mixed";
+
+        switch (prop.type) {
+          case "select": {
+            const options = prop.options ?? [];
+            return (
+              <div key={prop.key}>
+                <label className="mb-1 block text-[10px] font-medium text-muted-foreground">{prop.label}</label>
+                <select
+                  value={isMixed ? "" : (typeof mixedValue === "string" ? mixedValue : "")}
+                  onChange={(e) => handleChange(prop.key, e.target.value)}
+                  className="h-7 w-full rounded border bg-background px-2 text-xs"
+                >
+                  {isMixed && <option value="">Mixed</option>}
+                  {options.map((opt) => (
+                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  ))}
+                </select>
+              </div>
+            );
+          }
+          case "switch": {
+            const checked = !isMixed && typeof mixedValue === "boolean" ? mixedValue : false;
+            return (
+              <div key={prop.key} className="flex items-center justify-between">
+                <label className="text-[10px] font-medium text-muted-foreground">{prop.label}</label>
+                <div className="flex items-center gap-2">
+                  {isMixed && <span className="text-[9px] text-muted-foreground">Mixed</span>}
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={checked}
+                    disabled={isMixed}
+                    onClick={() => handleChange(prop.key, !checked)}
+                    className={`relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors ${
+                      checked ? "bg-blue-500" : "bg-muted"
+                    } disabled:opacity-50`}
+                  >
+                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
+                      checked ? "translate-x-[18px]" : "translate-x-[2px]"
+                    }`} />
+                  </button>
+                </div>
+              </div>
+            );
+          }
+          case "color": {
+            const hexValue = !isMixed && typeof mixedValue === "string" ? mixedValue : "#000000";
+            return (
+              <div key={prop.key}>
+                <label className="mb-1 block text-[10px] font-medium text-muted-foreground">{prop.label}</label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="color"
+                    value={hexValue}
+                    onChange={(e) => handleChange(prop.key, e.target.value)}
+                    className="h-7 w-10 cursor-pointer rounded border p-0"
+                  />
+                  <input
+                    type="text"
+                    value={isMixed ? "" : hexValue}
+                    placeholder={isMixed ? "Mixed" : "#000000"}
+                    onChange={(e) => handleChange(prop.key, e.target.value)}
+                    className="h-7 flex-1 rounded border bg-background px-2 font-mono text-[10px]"
+                  />
+                </div>
+              </div>
+            );
+          }
+          case "number": {
+            const numValue = !isMixed && typeof mixedValue === "number" ? mixedValue : 0;
+            return (
+              <div key={prop.key}>
+                <label className="mb-1 block text-[10px] font-medium text-muted-foreground">{prop.label}</label>
+                <input
+                  type="number"
+                  value={isMixed ? "" : numValue}
+                  placeholder={isMixed ? "Mixed" : String(prop.placeholder ?? "")}
+                  min={prop.min}
+                  max={prop.max}
+                  onChange={(e) => handleChange(prop.key, e.target.value === "" ? undefined : Number(e.target.value))}
+                  className="h-7 w-full rounded border bg-background px-2 text-xs"
+                />
+              </div>
+            );
+          }
+          case "textarea": {
+            return (
+              <div key={prop.key}>
+                <label className="mb-1 block text-[10px] font-medium text-muted-foreground">{prop.label}</label>
+                <textarea
+                  value={isMixed ? "" : (typeof mixedValue === "string" ? mixedValue : "")}
+                  placeholder={isMixed ? "Mixed" : (prop.placeholder ?? "")}
+                  rows={3}
+                  onChange={(e) => handleChange(prop.key, e.target.value)}
+                  className="w-full resize-y rounded border bg-background px-2 py-1 text-xs"
+                />
+              </div>
+            );
+          }
+          default: {
+            return (
+              <div key={prop.key}>
+                <label className="mb-1 block text-[10px] font-medium text-muted-foreground">{prop.label}</label>
+                <input
+                  type="text"
+                  value={isMixed ? "" : (typeof mixedValue === "string" ? mixedValue : "")}
+                  placeholder={isMixed ? "Mixed" : (prop.placeholder ?? `Enter ${prop.label}...`)}
+                  onChange={(e) => handleChange(prop.key, e.target.value)}
+                  className="h-7 w-full rounded border bg-background px-2 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
+                />
+              </div>
+            );
+          }
+        }
+      })}
+    </div>
+  );
 }
 
 /** 右侧面板 Props */
@@ -46,10 +231,12 @@ export function RightPanel({ collapsed }: RightPanelProps) {
   const {
     zoom, setZoom, components, selectedIds, activeNodeId,
     setPageBackground, pageBackground, pagePadding, setPagePadding, pageMaxWidth, setPageMaxWidth,
-    updateNode,
+    setMinRowHeight, minRowHeight,
+    updateNode, batchUpdateSelectedProps,
   } = useCanvasStore();
 
   const flowList = useFlowBindingStore((s) => s.flowList);
+  const tableOptions = useProjectModelsStore((s) => s.tables);
 
   const selected = components.filter((c) => selectedIds.includes(c.id));
   const selectedRoot = selected.length >= 1 ? selected[0] : null;
@@ -155,10 +342,14 @@ export function RightPanel({ collapsed }: RightPanelProps) {
         return;
       }
 
+      // K1+K3: eventBindings 值改为 string[]，支持多 flow 绑定
       if (type === "eventBinding") {
         const current = node.eventBindings ?? {};
         const next = { ...current };
         if (typeof value === "string" && value.trim().length > 0) {
+          // K3: 将单值包装为数组，多个 flowId 用逗号分隔
+          next[key] = value.split(",").map((s: string) => s.trim()).filter(Boolean);
+        } else if (Array.isArray(value) && value.length > 0) {
           next[key] = value;
         } else {
           delete next[key];
@@ -267,6 +458,8 @@ export function RightPanel({ collapsed }: RightPanelProps) {
                 values={editorValues}
                 onChange={handlePropChange}
                 flowList={flowList}
+                tableOptions={tableOptions}
+                onNavigateToFlows={() => useEditorStore.getState().setEditorMode("flows")}
               />
             ) : (
               <div className="py-2 text-center text-[10px] text-muted-foreground">
@@ -275,9 +468,11 @@ export function RightPanel({ collapsed }: RightPanelProps) {
             )}
           </div>
         ) : selected.length > 1 ? (
-          <div className="flex h-full items-center justify-center p-3 text-center text-xs text-muted-foreground">
-            {selected.length} components selected
-          </div>
+          <BatchPropertyEditor
+            components={selected}
+            registry={registry}
+            onBatchChange={batchUpdateSelectedProps}
+          />
         ) : (
           <div className="flex h-full items-center justify-center p-3 text-center text-xs text-muted-foreground">
             Select a component to view properties
@@ -345,6 +540,21 @@ export function RightPanel({ collapsed }: RightPanelProps) {
             <option value="1024">1024px</option>
             <option value="1280">1280px</option>
             <option value="1440">1440px</option>
+          </select>
+        </div>
+
+        <div>
+          <label className="mb-1 block text-[10px] font-medium text-muted-foreground">Min Row Height</label>
+          <select
+            value={minRowHeight}
+            onChange={(e) => setMinRowHeight(Number(e.target.value))}
+            className="h-7 w-full rounded border bg-background px-2 text-xs"
+          >
+            <option value={0}>Auto (content)</option>
+            <option value={20}>20px</option>
+            <option value={40}>40px</option>
+            <option value={60}>60px</option>
+            <option value={80}>80px</option>
           </select>
         </div>
       </div>

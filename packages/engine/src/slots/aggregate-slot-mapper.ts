@@ -17,74 +17,19 @@
  * @since 3.0.0
  */
 import type { ComponentNode } from "../schemas/page.schema";
+import {
+  newId,
+  isRecord,
+  propBool,
+  propStr,
+  propNum,
+  ensureProps,
+  cloneNode,
+  pickTextFromNode,
+  makeTextNode,
+} from "../shared/canvas-utils";
 
 export type AggregateSlotSyncSource = "props" | "children";
-
-function newId(): string {
-  return crypto.randomUUID();
-}
-
-function isRecord(v: unknown): v is Record<string, unknown> {
-  return typeof v === "object" && v !== null && !Array.isArray(v);
-}
-
-function propBool(props: Record<string, unknown> | undefined, key: string, fallback: boolean): boolean {
-  const v = props?.[key];
-  if (typeof v === "boolean") return v;
-  if (v === undefined) return fallback;
-  return Boolean(v);
-}
-
-function propStr(props: Record<string, unknown> | undefined, key: string, fallback: string): string {
-  const v = props?.[key];
-  if (typeof v === "string") return v;
-  if (v === undefined || v === null) return fallback;
-  return String(v);
-}
-
-function propNum(props: Record<string, unknown> | undefined, key: string, fallback: number): number {
-  const v = props?.[key];
-  if (typeof v === "number" && Number.isFinite(v)) return v;
-  if (typeof v === "string" && v.trim() && Number.isFinite(Number(v))) return Number(v);
-  return fallback;
-}
-
-function ensureProps(node: ComponentNode): Record<string, unknown> {
-  return (node.props ?? {}) as Record<string, unknown>;
-}
-
-function cloneNode(node: ComponentNode): ComponentNode {
-  return {
-    ...node,
-    props: node.props ? { ...(node.props as Record<string, unknown>) } : undefined,
-    children: node.children ? node.children.map(cloneNode) : undefined,
-  };
-}
-
-function pickTextFromNode(node: ComponentNode | undefined): string | null {
-  if (!node) return null;
-  const p = node.props as Record<string, unknown> | undefined;
-  if (node.type === "Text") {
-    const t = p?.text;
-    if (typeof t === "string") return t;
-    if (t === undefined || t === null) return "";
-    return String(t);
-  }
-  if (typeof p?.text === "string") return p.text;
-  if (typeof p?.label === "string") return p.label;
-  return null;
-}
-
-function makeTextNode(text: string, category: string, reuse?: ComponentNode): ComponentNode {
-  const id = reuse?.type === "Text" ? reuse.id : newId();
-  return {
-    id,
-    type: "Text",
-    name: `Text-${id}`,
-    category,
-    props: { text },
-  };
-}
 
 function upsertChildByType(
   children: ComponentNode[],

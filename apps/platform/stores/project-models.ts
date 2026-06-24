@@ -1,17 +1,37 @@
 import { create } from "zustand";
 import type { ProjectModel } from "@/lib/supabase/types";
 
+/**
+ * 数据模型表列信息
+ */
+export interface TableColumn {
+  name: string;
+  type: string;
+}
+
+/**
+ * 数据模型表信息
+ */
+export interface TableInfo {
+  name: string;
+  columns: TableColumn[];
+}
+
 interface ProjectModelsState {
   projectId: string | null;
   initializedProjectId: string | null;
   models: ProjectModel[];
   isLoading: boolean;
   error: string | null;
+  /** 数据表列表，供 dataBinding 字段级联选择 */
+  tables: TableInfo[];
 }
 
 interface ProjectModelsActions {
   setInitializedProjectId: (projectId: string | null) => void;
   loadByProjectId: (projectId: string) => Promise<void>;
+  /** 设置数据表列表 */
+  setTables: (tables: TableInfo[]) => void;
 }
 
 async function getApiErrorMessage(res: Response, fallback: string): Promise<string> {
@@ -43,6 +63,7 @@ export const useProjectModelsStore = create<ProjectModelsState & ProjectModelsAc
   models: [],
   isLoading: false,
   error: null,
+  tables: [],
 
   setInitializedProjectId: (projectId) => set({ initializedProjectId: projectId }),
 
@@ -60,5 +81,8 @@ export const useProjectModelsStore = create<ProjectModelsState & ProjectModelsAc
       set({ isLoading: false });
     }
   },
+
+  /** 设置数据表列表（供 dataBinding 字段级联选择使用） */
+  setTables: (tables) => set({ tables }),
 }));
 

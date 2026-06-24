@@ -4,7 +4,7 @@
  * 目标：
  * - 展示页面的 Component Tree（root 组件 + children 递归）
  * - 支持选中节点并联动右侧属性面板
- * - 支持“落点 +”插入（ISC-25/26）与拖拽重排（尽量）
+ * - 支持"落点 +"插入（ISC-25/26）与拖拽重排（尽量）
  * - 支持嵌套插入（ISC-32）：将组件/物料拖入任意节点作为 children
  *
  * 约定：
@@ -20,7 +20,7 @@
 "use client";
 
 import { memo, useMemo, useState, useCallback, useRef, useEffect, type ReactNode } from "react";
-import { useDroppable, useDraggable } from "@dnd-kit/core";
+import { useDroppable, useDraggable, useDndMonitor } from "@dnd-kit/core";
 import { createDefaultRegistry } from "@envelope/materials";
 import { createComponentDragItem, useCanvasStore } from "@envelope/engine";
 import type { CanvasComponent, ComponentNode } from "@envelope/engine";
@@ -42,14 +42,31 @@ function nodeLabel(node: ComponentNode, displayNameMap: Map<string, string>): st
   return display ? `${display} · ${name}` : name;
 }
 
+/**
+ * 在递归树中按 ID 查找节点
+ */
+function findNodeById(nodes: ComponentNode[], id: string): ComponentNode | null {
+  for (const n of nodes) {
+    if (n.id === id) return n;
+    if (n.children) {
+      const found = findNodeById(n.children, id);
+      if (found) return found;
+    }
+  }
+  return null;
+}
+
 const TreeDropSlot = memo(function TreeDropSlot({
   parentKey,
   index,
   depth,
+  isDragging,
 }: {
   parentKey: string;
   index: number;
   depth: number;
+  /** 是否处于拖拽活跃状态——仅在拖拽中显示落点槽位 */
+  isDragging?: boolean;
 }) {
   const { setNodeRef, isOver } = useDroppable({
     id: `tree-drop:${parentKey}:${index}`,
@@ -58,11 +75,11 @@ const TreeDropSlot = memo(function TreeDropSlot({
   return (
     <div
       ref={setNodeRef}
+      style={{ display: isDragging ? undefined : "none", paddingLeft: `${depth * 12 + 12}px` }}
       className={cn(
         "flex h-5 items-center gap-2 rounded px-2 text-[10px] text-muted-foreground",
         isOver ? "bg-blue-50 text-blue-700" : "hover:bg-accent/40",
       )}
-      style={{ paddingLeft: `${depth * 12 + 12}px` }}
     >
       <Plus className="h-3 w-3" />
       <span>插入</span>
@@ -83,6 +100,7 @@ const TreeNodeRow = memo(function TreeNodeRow({
   onStartRename,
   onRenameSubmit,
   onRenameCancel,
+  onNodeFocus,
 }: {
   node: ComponentNode;
   depth: number;
@@ -96,6 +114,8 @@ const TreeNodeRow = memo(function TreeNodeRow({
   onStartRename: (id: string) => void;
   onRenameSubmit: (id: string, name: string) => void;
   onRenameCancel: () => void;
+  /** 选中/聚焦此节点时的回调（G6 键盘导航用） */
+  onNodeFocus: (id: string) => void;
 }) {
   const activeNodeId = useCanvasStore((s) => s.activeNodeId);
   const selectNode = useCanvasStore((s) => s.selectNode);
@@ -137,14 +157,34 @@ const TreeNodeRow = memo(function TreeNodeRow({
     data: createComponentDragItem(node.id),
   });
 
+  /**
+   * 合并 draggable + droppable ref，使整行同时支持拖拽和放置（G7）
+   */
+  const rowRef = useCallback((el: HTMLDivElement | null) => {
+    setDragRef(el);
+    setDropRef(el);
+  }, []);
+
   const hasChildren = (node.children?.length ?? 0) > 0;
   const isActive = activeNodeId === node.id;
+
+  const handleClick = useCallback((e: React.MouseEvent) => {
+    selectNode(node.id);
+    onNodeFocus(node.id);
+  }, [node.id, selectNode, onNodeFocus]);
+
+  const handleContextMenu = useCallback(() => {
+    selectNode(node.id);
+    onNodeFocus(node.id);
+  }, [node.id, selectNode, onNodeFocus]);
 
   return (
     <ContextMenu>
       <ContextMenuTrigger asChild>
         <div
-          ref={setDropRef}
+          ref={rowRef}
+          {...listeners}
+          {...attributes}
           className={cn(
             "flex h-7 items-center gap-1 rounded px-2 text-xs transition-colors",
             isActive ? "bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300" : "hover:bg-accent",
@@ -152,8 +192,8 @@ const TreeNodeRow = memo(function TreeNodeRow({
             isDragging && "opacity-50",
           )}
           style={{ paddingLeft: `${depth * 12 + 8}px` }}
-          onClick={() => selectNode(node.id)}
-          onContextMenu={() => selectNode(node.id)}
+          onClick={handleClick}
+          onContextMenu={handleContextMenu}
           data-testid={`component-tree-node-${node.id}`}
         >
           <button
@@ -168,12 +208,9 @@ const TreeNodeRow = memo(function TreeNodeRow({
             {hasChildren ? (expanded ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />) : <ChevronRight className="h-3.5 w-3.5" />}
           </button>
 
+          {/* GripVertical 仅作为视觉拖拽提示，不再携带 drag listeners（G7） */}
           <span
-            ref={setDragRef}
-            {...listeners}
-            {...attributes}
             className="inline-flex h-5 w-5 items-center justify-center rounded text-muted-foreground hover:bg-accent"
-            onClick={(e) => e.stopPropagation()}
             aria-label="drag"
           >
             <GripVertical className="h-4 w-4" />
@@ -237,13 +274,17 @@ function renderNodeGroup(args: {
   onStartRename: (id: string) => void;
   onRenameSubmit: (id: string, name: string) => void;
   onRenameCancel: () => void;
+  /** G6: 节点聚焦回调 */
+  onNodeFocus: (id: string) => void;
+  /** G8: 是否正在拖拽，控制 TreeDropSlot 显隐 */
+  isTreeDragging?: boolean;
 }): ReactNode[] {
-  const { nodes, parentKey, depth, expandedSet, toggle, displayNameMap, visibleSet, editingId, onStartRename, onRenameSubmit, onRenameCancel } = args;
+  const { nodes, parentKey, depth, expandedSet, toggle, displayNameMap, visibleSet, editingId, onStartRename, onRenameSubmit, onRenameCancel, onNodeFocus, isTreeDragging } = args;
   const isSearchMode = visibleSet !== undefined;
   const out: ReactNode[] = [];
   // 搜索模式下不渲染 TreeDropSlot，减少视觉噪音
   if (!isSearchMode) {
-    out.push(<TreeDropSlot key={`${parentKey}:drop:0`} parentKey={parentKey} index={0} depth={depth} />);
+    out.push(<TreeDropSlot key={`${parentKey}:drop:0`} parentKey={parentKey} index={0} depth={depth} isDragging={isTreeDragging} />);
   }
   nodes.forEach((n, idx) => {
     // 搜索模式下只显示匹配节点及其祖先
@@ -265,6 +306,7 @@ function renderNodeGroup(args: {
         onStartRename={onStartRename}
         onRenameSubmit={onRenameSubmit}
         onRenameCancel={onRenameCancel}
+        onNodeFocus={onNodeFocus}
       />,
     );
     if (expanded && (n.children?.length ?? 0) > 0) {
@@ -281,12 +323,14 @@ function renderNodeGroup(args: {
           onStartRename,
           onRenameSubmit,
           onRenameCancel,
+          onNodeFocus,
+          isTreeDragging,
         }),
       );
     }
     // 搜索模式下不渲染 TreeDropSlot
     if (!isSearchMode) {
-      out.push(<TreeDropSlot key={`${parentKey}:drop:${idx + 1}`} parentKey={parentKey} index={idx + 1} depth={depth} />);
+      out.push(<TreeDropSlot key={`${parentKey}:drop:${idx + 1}`} parentKey={parentKey} index={idx + 1} depth={depth} isDragging={isTreeDragging} />);
     }
   });
   return out;
@@ -294,6 +338,8 @@ function renderNodeGroup(args: {
 
 export const ComponentTreePanel = memo(function ComponentTreePanel() {
   const components = useCanvasStore((s) => s.components);
+  const selectNode = useCanvasStore((s) => s.selectNode);
+  const activeNodeId = useCanvasStore((s) => s.activeNodeId);
 
   const registry = useMemo(() => createDefaultRegistry(), []);
   const displayNameMap = useMemo(() => {
@@ -416,6 +462,108 @@ export const ComponentTreePanel = memo(function ComponentTreePanel() {
     return new Set([...expandedIds, ...searchMatchIds]);
   }, [searchMatchIds, expandedIds]);
 
+  // ===== G6: 键盘导航状态 =====
+
+  /** G6: 当前键盘聚焦的节点 ID */
+  const [focusedNodeId, setFocusedNodeId] = useState<string | null>(null);
+
+  /** G6: 扁平化的可见节点 ID 列表（按渲染顺序） */
+  const flatVisibleIds = useMemo(() => {
+    const ids: string[] = [];
+    const walk = (nodes: ComponentNode[]) => {
+      for (const n of nodes) {
+        if (searchMatchIds && !searchMatchIds.has(n.id)) continue;
+        ids.push(n.id);
+        if (effectiveExpandedIds.has(n.id) && (n.children?.length ?? 0) > 0) {
+          walk(n.children ?? []);
+        }
+      }
+    };
+    walk(roots);
+    return ids;
+  }, [roots, effectiveExpandedIds, searchMatchIds]);
+
+  /** G6: 键盘事件处理 */
+  const handleTreeKeyDown = useCallback((e: React.KeyboardEvent) => {
+    // 内联重命名编辑中不响应树键盘导航
+    if (editingId) return;
+
+    // 阻止事件冒泡到 editor-layout，避免触发全局方向键微调
+    e.stopPropagation();
+
+    // 确定当前的聚焦节点：优先 focusedNodeId，回退到 activeNodeId
+    const effectiveId = focusedNodeId ?? activeNodeId;
+    const currentIndex = effectiveId ? flatVisibleIds.indexOf(effectiveId) : -1;
+
+    switch (e.key) {
+      case "ArrowDown": {
+        e.preventDefault();
+        if (currentIndex < flatVisibleIds.length - 1) {
+          const nextId = flatVisibleIds[currentIndex + 1]!;
+          setFocusedNodeId(nextId);
+          selectNode(nextId);
+        }
+        break;
+      }
+      case "ArrowUp": {
+        e.preventDefault();
+        if (currentIndex > 0) {
+          const prevId = flatVisibleIds[currentIndex - 1]!;
+          setFocusedNodeId(prevId);
+          selectNode(prevId);
+        }
+        break;
+      }
+      case "ArrowRight": {
+        e.preventDefault();
+        if (effectiveId && !effectiveExpandedIds.has(effectiveId)) {
+          const node = findNodeById(roots, effectiveId);
+          if (node && (node.children?.length ?? 0) > 0) {
+            toggle(effectiveId);
+          }
+        }
+        break;
+      }
+      case "ArrowLeft": {
+        e.preventDefault();
+        if (effectiveId && effectiveExpandedIds.has(effectiveId)) {
+          toggle(effectiveId);
+        }
+        break;
+      }
+      case "Enter": {
+        e.preventDefault();
+        if (effectiveId) {
+          toggle(effectiveId);
+        }
+        break;
+      }
+      case "F2": {
+        e.preventDefault();
+        if (effectiveId) {
+          handleStartRename(effectiveId);
+        }
+        break;
+      }
+    }
+  }, [editingId, focusedNodeId, activeNodeId, flatVisibleIds, effectiveExpandedIds, roots, toggle, selectNode, handleStartRename]);
+
+  /** G6: 节点聚焦回调 */
+  const handleNodeFocus = useCallback((id: string) => {
+    setFocusedNodeId(id);
+  }, []);
+
+  // ===== G8: 拖拽活跃状态 =====
+
+  /** G8: 是否正在拖拽组件树节点 */
+  const [treeDragActive, setTreeDragActive] = useState(false);
+
+  useDndMonitor({
+    onDragStart: () => setTreeDragActive(true),
+    onDragEnd: () => setTreeDragActive(false),
+    onDragCancel: () => setTreeDragActive(false),
+  });
+
   const rows = useMemo(() => renderNodeGroup({
     nodes: roots,
     parentKey: "root",
@@ -428,7 +576,9 @@ export const ComponentTreePanel = memo(function ComponentTreePanel() {
     onStartRename: handleStartRename,
     onRenameSubmit: handleRenameSubmit,
     onRenameCancel: handleRenameCancel,
-  }), [roots, effectiveExpandedIds, toggle, displayNameMap, searchMatchIds, editingId, handleStartRename, handleRenameSubmit, handleRenameCancel]);
+    onNodeFocus: handleNodeFocus,
+    isTreeDragging: treeDragActive,
+  }), [roots, effectiveExpandedIds, toggle, displayNameMap, searchMatchIds, editingId, handleStartRename, handleRenameSubmit, handleRenameCancel, handleNodeFocus, treeDragActive]);
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
@@ -461,7 +611,11 @@ export const ComponentTreePanel = memo(function ComponentTreePanel() {
       </div>
 
       <ScrollArea className="flex-1">
-        <div className="space-y-0.5 p-2">
+        <div
+          className="space-y-0.5 p-2"
+          tabIndex={0}
+          onKeyDown={handleTreeKeyDown}
+        >
           {rows.length > 0 ? rows : (
             <div className="px-2 py-6 text-center text-xs text-muted-foreground">暂无组件</div>
           )}
