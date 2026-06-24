@@ -95,6 +95,8 @@ export interface FlowNodeDefinition {
   inputs: FlowPort[];
   /** 输出端口列表 */
   outputs: FlowPort[];
+  /** 配置字段定义 — 用于动态生成配置面板表单，策略模式按字段类型渲染不同控件 */
+  configSchema?: Record<string, ConfigField>;
 }
 
 /**
@@ -193,4 +195,106 @@ export interface ConversionResult {
   data?: string | FlowDefinition;
   /** 失败时的错误信息 */
   error?: string;
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// 配置字段类型（Domain O — 配置面板动态表单）
+// ═══════════════════════════════════════════════════════════════════
+
+/** 配置字段类型 — 对应不同的表单控件渲染策略 */
+export type ConfigFieldType =
+  | "string" | "number" | "boolean" | "select" | "multi-select"
+  | "code" | "expression" | "json";
+
+/** 配置字段定义 — 描述单个配置项的名称、类型、约束和选项 */
+export interface ConfigField {
+  /** 字段类型，决定渲染控件种类 */
+  type: ConfigFieldType;
+  /** 显示标签（中文） */
+  label: string;
+  /** 是否必填 */
+  required?: boolean;
+  /** 默认值 */
+  default?: unknown;
+  /** 输入占位符提示 */
+  placeholder?: string;
+  /** 字段用途说明 */
+  description?: string;
+  /** select/multi-select 的选项列表 */
+  options?: { label: string; value: string }[];
+  /** code 类型的编程语言标识 */
+  language?: "json" | "sql" | "typescript" | "expression";
+  /** 依赖关系：当指定字段等于指定值时此字段才显示 */
+  dependsOn?: { field: string; value: unknown };
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// 数据模型类型（Domain O — 适配器模式对接数据建模）
+// ═══════════════════════════════════════════════════════════════════
+
+/** 数据表列定义 */
+export interface DataModelColumn {
+  name: string;
+  type: string;
+  required?: boolean;
+}
+
+/** 数据表定义 */
+export interface DataModelTable {
+  name: string;
+  columns: DataModelColumn[];
+}
+
+/** 完整数据模型 Schema — 适配器模式将外部数据模型适配为统一格式 */
+export interface DataModelSchema {
+  tables: DataModelTable[];
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// 执行结果类型（Domain O — 模拟执行引擎输出）
+// ═══════════════════════════════════════════════════════════════════
+
+/** 单个节点的执行状态 — 观察者模式跟踪节点执行生命周期 */
+export interface NodeExecutionState {
+  /** 执行状态 */
+  status: "idle" | "running" | "done" | "error" | "skipped";
+  /** 节点接收的输入数据 */
+  input: unknown;
+  /** 节点产生的输出数据 */
+  output: unknown;
+  /** 错误信息（status 为 error 时有效） */
+  error?: string;
+  /** 执行耗时（毫秒） */
+  durationMs?: number;
+}
+
+/** 完整流程的执行结果 — 包含所有节点的执行快照 */
+export interface FlowExecutionResult {
+  /** 节点 ID 到执行状态的映射 */
+  nodeStates: Record<string, NodeExecutionState>;
+  /** 流程是否整体成功 */
+  success: boolean;
+  /** 总执行耗时（毫秒） */
+  totalDurationMs: number;
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// 共享工具函数
+// ═══════════════════════════════════════════════════════════════════
+
+/**
+ * 检查两个端口数据类型是否兼容
+ *
+ * 兼容规则：
+ * - 相同类型始终兼容
+ * - "any" 类型与其他任何类型兼容
+ * - 其他跨类型组合不兼容
+ *
+ * @param sourceType - 源端口（输出）类型
+ * @param targetType - 目标端口（输入）类型
+ * @returns 是否兼容
+ */
+export function isTypeCompatible(sourceType: string, targetType: string): boolean {
+  if (sourceType === "any" || targetType === "any") return true;
+  return sourceType === targetType;
 }

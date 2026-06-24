@@ -42,6 +42,7 @@ import {
   generateTypes,
   generatePageCode,
   generateFlowRuntimeFiles,
+  generateExpressionEvaluator,
 } from "./generators";
 
 /**
@@ -136,6 +137,9 @@ export async function generateProject(
     let pageIndex = 0;
     const totalPages = config.pages.length;
 
+    // 检测是否需要表达式运行时
+    const needsExpressionRuntime = hasAnyExpressionBindings(config.pages);
+
     for (const page of config.pages) {
       const pageCode = generatePageCode(page);
       const normalizedPath = page.path
@@ -148,6 +152,12 @@ export async function generateProject(
       fs.addFile(filePath, pageCode);
       pageIndex += 1;
       report(`生成页面组件 (${pageIndex}/${totalPages})`, 70 + (pageIndex / totalPages) * 20);
+    }
+
+    // Domain M: 生成表达式运行时求值器
+    if (needsExpressionRuntime) {
+      const evaluatorFile = generateExpressionEvaluator();
+      fs.addFile(evaluatorFile.path, evaluatorFile.content);
     }
   }
 
@@ -222,6 +232,32 @@ function hasAnyEventBindings(pages: PageSchema[]): boolean {
   const walk = (components: ComponentNode[]): boolean => {
     for (const comp of components) {
       if (comp.eventBindings && Object.keys(comp.eventBindings).length > 0) return true;
+      if (comp.children && comp.children.length > 0) {
+        if (walk(comp.children)) return true;
+      }
+    }
+    return false;
+  };
+
+  for (const page of pages) {
+    if (walk(page.components ?? [])) return true;
+  }
+  return false;
+}
+
+/**
+ * Domain M: 检测页面组件树中是否有表达式绑定
+ */
+function hasAnyExpressionBindings(pages: PageSchema[]): boolean {
+  const walk = (components: ComponentNode[]): boolean => {
+    for (const comp of components) {
+      if (
+        (comp.expressionBindings && Object.keys(comp.expressionBindings).length > 0) ||
+        comp.visibleIf ||
+        comp.repeat
+      ) {
+        return true;
+      }
       if (comp.children && comp.children.length > 0) {
         if (walk(comp.children)) return true;
       }

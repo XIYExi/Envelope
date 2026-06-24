@@ -19,7 +19,16 @@ export type {
   ValidationResult,
   ConversionDirection,
   ConversionResult,
+  ConfigFieldType,
+  ConfigField,
+  DataModelColumn,
+  DataModelTable,
+  DataModelSchema,
+  NodeExecutionState,
+  FlowExecutionResult,
 } from "./types";
+
+export { isTypeCompatible } from "./types";
 
 export {
   BUILT_IN_NODE_DEFINITIONS,

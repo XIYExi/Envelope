@@ -27,6 +27,7 @@ export * from "./validation/index";
 export * from "./canvas/index";
 export * from "./property-editor/index";
 export * from "./slots/index";
+export * from "./expression/index";
 
 /** 包名称常量 */
 export const PACKAGE_NAME = "@envelope/engine";

@@ -16,7 +16,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, memo } from "react";
 import { useSearchParams } from "next/navigation";
 import { DndContext, useDroppable, pointerWithin, DragOverlay, type DragEndEvent, type DragMoveEvent, type DragStartEvent, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
 import { createDefaultRegistry } from "@envelope/materials";
-import { useCanvasStore, createComponentNode, CanvasRenderer, VIEWPORT_WIDTHS, CANVAS_CELL_SIZE, CANVAS_CELL_HEIGHT, COMPONENT_TYPES_THAT_SUPPORT_CHILDREN, type CanvasSnapshot, type ComponentNode } from "@envelope/engine";
+import { useCanvasStore, createComponentNode, CanvasRenderer, VIEWPORT_WIDTHS, CANVAS_CELL_SIZE, CANVAS_CELL_HEIGHT, isContainerType, type CanvasSnapshot, type ComponentNode } from "@envelope/engine";
 import { useEditorStore } from "@/stores/editor";
 import { useProjectPagesStore, componentNodesToCanvasComponents } from "@/stores/project-pages";
 import { useProjectFlowsStore } from "@/stores/project-flows";
@@ -56,7 +56,7 @@ const CanvasDropZone = memo(function CanvasDropZone({ dragAlignInfo }: {
     zoom, viewport, panX, panY, gridCols, gridGap,
     pageBackground, pagePadding, pageMaxWidth,
     resizeComponent, setZoom, setPan,
-    selectNode, editScope, enterChildEdit, minRowHeight,
+    selectNode, editScope, enterChildEdit, minRowHeight, positionMode,
   } = useCanvasStore();
 
   const [hoveredId, setHoveredId] = useState<string | null>(null);
@@ -150,6 +150,7 @@ const CanvasDropZone = memo(function CanvasDropZone({ dragAlignInfo }: {
         pageMaxWidth={pageMaxWidth}
         minRowHeight={minRowHeight}
         dragAlignInfo={dragAlignInfo}
+        positionMode={positionMode}
       />
     </div>
   );
@@ -270,7 +271,7 @@ export function EditorLayout() {
   }, []);
 
   function canComponentAcceptChildren(type: string): boolean {
-    return COMPONENT_TYPES_THAT_SUPPORT_CHILDREN.has(type);
+    return isContainerType(type);
   }
 
   /**

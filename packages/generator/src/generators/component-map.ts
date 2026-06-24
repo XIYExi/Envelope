@@ -12,6 +12,7 @@
  */
 
 import type { ComponentNode } from "@envelope/engine";
+import type { MaterialRegistry, MaterialDefinition } from "@envelope/materials";
 import { jsxText, sanitizeJsxComment, tsStringLiteral } from "../core/tsx-escape";
 import { makeEventHandlerName } from "./event-handler-names";
 
@@ -156,6 +157,25 @@ function eventAttrs(comp: ComponentNode): string[] {
  * 每个绑定 flow 生成一条 data-flow-output-{index} 属性，
  * 组件通过 useAppStore 订阅对应 flowId 的执行结果。
  */
+/**
+ * Domain M: 从组件的 expressionBindings 生成 JSX 属性列表
+ *
+ * 每个绑定 prop 对应一个表达式引用代码，
+ * 在生成的页面中通过 evaluateExpression 求值。
+ *
+ * @param comp - 组件节点
+ * @returns JSX 属性字符串数组
+ */
+function expressionAttrs(comp: ComponentNode): string[] {
+  if (!comp.expressionBindings) return [];
+  const attrs: string[] = [];
+  for (const [prop, expr] of Object.entries(comp.expressionBindings)) {
+    if (typeof expr !== "string" || !expr.trim()) continue;
+    attrs.push(`${prop}={evaluateExpression(${tsStringLiteral(expr.trim())}, expressionContext)}`);
+  }
+  return attrs;
+}
+
 function flowOutputAttrs(comp: ComponentNode): string[] {
   if (!comp.eventBindings) return [];
   const attrs: string[] = [];
@@ -269,7 +289,7 @@ export const COMPONENT_MAP: Record<string, ComponentGenerator> = {
 
   "Container": (comp, childrenJSX, indent) => {
     const tw = cx(comp);
-    const attrs: string[] = [...dataBindingAttrs(comp)];
+    const attrs: string[] = [...dataBindingAttrs(comp), ...expressionAttrs(comp)];
     if (tw) attrs.push(`className={${tsStringLiteral(tw)}}`);
     const attrStr = attrs.length > 0 ? " " + attrs.join(" ") : "";
     return `${comment(comp, indent)}${indent}<div${attrStr}>\n${childrenJSX}${indent}</div>`;
@@ -277,7 +297,7 @@ export const COMPONENT_MAP: Record<string, ComponentGenerator> = {
 
   "Card": (comp, childrenJSX, indent) => {
     const tw = cx(comp);
-    const attrs: string[] = [...dataBindingAttrs(comp)];
+    const attrs: string[] = [...dataBindingAttrs(comp), ...expressionAttrs(comp)];
     if (tw) attrs.push(`className={${tsStringLiteral(tw)}}`);
     const attrStr = attrs.length > 0 ? " " + attrs.join(" ") : "";
     return `${comment(comp, indent)}${indent}<Card${attrStr}>\n${childrenJSX}${indent}</Card>`;
@@ -285,7 +305,7 @@ export const COMPONENT_MAP: Record<string, ComponentGenerator> = {
 
   "CardHeader": (comp, childrenJSX, indent) => {
     const tw = cx(comp);
-    const attrs: string[] = [...dataBindingAttrs(comp)];
+    const attrs: string[] = [...dataBindingAttrs(comp), ...expressionAttrs(comp)];
     if (tw) attrs.push(`className={${tsStringLiteral(tw)}}`);
     const attrStr = attrs.length > 0 ? " " + attrs.join(" ") : "";
     if (!childrenJSX) {
@@ -298,7 +318,7 @@ export const COMPONENT_MAP: Record<string, ComponentGenerator> = {
 
   "CardContent": (comp, childrenJSX, indent) => {
     const tw = cx(comp);
-    const attrs: string[] = [...dataBindingAttrs(comp)];
+    const attrs: string[] = [...dataBindingAttrs(comp), ...expressionAttrs(comp)];
     if (tw) attrs.push(`className={${tsStringLiteral(tw)}}`);
     const attrStr = attrs.length > 0 ? " " + attrs.join(" ") : "";
     return `${comment(comp, indent)}${indent}<CardContent${attrStr}>\n${childrenJSX}${indent}</CardContent>`;
@@ -306,7 +326,7 @@ export const COMPONENT_MAP: Record<string, ComponentGenerator> = {
 
   "CardFooter": (comp, childrenJSX, indent) => {
     const tw = cx(comp);
-    const attrs: string[] = [...dataBindingAttrs(comp)];
+    const attrs: string[] = [...dataBindingAttrs(comp), ...expressionAttrs(comp)];
     if (tw) attrs.push(`className={${tsStringLiteral(tw)}}`);
     const attrStr = attrs.length > 0 ? " " + attrs.join(" ") : "";
     return `${comment(comp, indent)}${indent}<CardFooter${attrStr}>\n${childrenJSX}${indent}</CardFooter>`;
@@ -315,7 +335,7 @@ export const COMPONENT_MAP: Record<string, ComponentGenerator> = {
   "CardTitle": (comp, _childrenJSX, indent) => {
     const tw = cx(comp);
     const text = propStr(comp.props, "text", "Card Title");
-    const attrs: string[] = [...dataBindingAttrs(comp)];
+    const attrs: string[] = [...dataBindingAttrs(comp), ...expressionAttrs(comp)];
     if (tw) attrs.push(`className={${tsStringLiteral(tw)}}`);
     const attrStr = attrs.length > 0 ? " " + attrs.join(" ") : "";
     return `${comment(comp, indent)}${indent}<CardTitle${attrStr}>${jsxText(text)}</CardTitle>`;
@@ -324,7 +344,7 @@ export const COMPONENT_MAP: Record<string, ComponentGenerator> = {
   "CardDescription": (comp, _childrenJSX, indent) => {
     const tw = cx(comp);
     const text = propStr(comp.props, "text", "");
-    const attrs: string[] = [...dataBindingAttrs(comp)];
+    const attrs: string[] = [...dataBindingAttrs(comp), ...expressionAttrs(comp)];
     if (tw) attrs.push(`className={${tsStringLiteral(tw)}}`);
     const attrStr = attrs.length > 0 ? " " + attrs.join(" ") : "";
     return `${comment(comp, indent)}${indent}<CardDescription${attrStr}>${jsxText(text)}</CardDescription>`;
@@ -332,7 +352,7 @@ export const COMPONENT_MAP: Record<string, ComponentGenerator> = {
 
   "FlexCol": (comp, childrenJSX, indent) => {
     const tw = cx(comp, "flex flex-col");
-    const attrs: string[] = [...dataBindingAttrs(comp)];
+    const attrs: string[] = [...dataBindingAttrs(comp), ...expressionAttrs(comp)];
     attrs.push(`className={${tsStringLiteral(tw)}}`);
     const attrStr = attrs.length > 0 ? " " + attrs.join(" ") : "";
     return `${comment(comp, indent)}${indent}<div${attrStr}>\n${childrenJSX}${indent}</div>`;
@@ -340,7 +360,7 @@ export const COMPONENT_MAP: Record<string, ComponentGenerator> = {
 
   "FlexRow": (comp, childrenJSX, indent) => {
     const tw = cx(comp, "flex flex-row");
-    const attrs: string[] = [...dataBindingAttrs(comp)];
+    const attrs: string[] = [...dataBindingAttrs(comp), ...expressionAttrs(comp)];
     attrs.push(`className={${tsStringLiteral(tw)}}`);
     const attrStr = attrs.length > 0 ? " " + attrs.join(" ") : "";
     return `${comment(comp, indent)}${indent}<div${attrStr}>\n${childrenJSX}${indent}</div>`;
@@ -348,7 +368,7 @@ export const COMPONENT_MAP: Record<string, ComponentGenerator> = {
 
   "GridContainer": (comp, childrenJSX, indent) => {
     const tw = cx(comp, "grid");
-    const attrs: string[] = [...dataBindingAttrs(comp)];
+    const attrs: string[] = [...dataBindingAttrs(comp), ...expressionAttrs(comp)];
     attrs.push(`className={${tsStringLiteral(tw)}}`);
     const attrStr = attrs.length > 0 ? " " + attrs.join(" ") : "";
     return `${comment(comp, indent)}${indent}<div${attrStr}>\n${childrenJSX}${indent}</div>`;
@@ -356,7 +376,7 @@ export const COMPONENT_MAP: Record<string, ComponentGenerator> = {
 
   "Section": (comp, childrenJSX, indent) => {
     const tw = cx(comp);
-    const attrs: string[] = [...dataBindingAttrs(comp)];
+    const attrs: string[] = [...dataBindingAttrs(comp), ...expressionAttrs(comp)];
     if (tw) attrs.push(`className={${tsStringLiteral(tw)}}`);
     const attrStr = attrs.length > 0 ? " " + attrs.join(" ") : "";
     return `${comment(comp, indent)}${indent}<section${attrStr}>\n${childrenJSX}${indent}</section>`;
@@ -365,7 +385,7 @@ export const COMPONENT_MAP: Record<string, ComponentGenerator> = {
   "Separator": (comp, _childrenJSX, indent) => {
     const tw = cx(comp);
     const orientation = propStr(comp.props, "orientation", "horizontal");
-    const attrs: string[] = [...dataBindingAttrs(comp)];
+    const attrs: string[] = [...dataBindingAttrs(comp), ...expressionAttrs(comp)];
     if (tw) attrs.push(`className={${tsStringLiteral(tw)}}`);
     if (orientation !== "horizontal") attrs.push(jsxAttrString("orientation", orientation));
     const attrStr = attrs.length > 0 ? " " + attrs.join(" ") : "";
@@ -383,7 +403,7 @@ export const COMPONENT_MAP: Record<string, ComponentGenerator> = {
     const disabled = propBool(p, "disabled");
     const tw = cx(comp);
     const attrs = [`variant={${tsStringLiteral(variant)}}`, `size={${tsStringLiteral(size)}}`];
-    attrs.push(...dataBindingAttrs(comp));
+    attrs.push(...dataBindingAttrs(comp), ...expressionAttrs(comp));
     attrs.push(...eventAttrs(comp));
     attrs.push(...flowOutputAttrs(comp));
     if (disabled) attrs.push("disabled");
@@ -400,7 +420,7 @@ export const COMPONENT_MAP: Record<string, ComponentGenerator> = {
     const disabled = propBool(p, "disabled");
     const tw = cx(comp);
     const attrs: string[] = [jsxAttrString("type", inputType)];
-    attrs.push(...dataBindingAttrs(comp));
+    attrs.push(...dataBindingAttrs(comp), ...expressionAttrs(comp));
     attrs.push(...eventAttrs(comp));
     attrs.push(...flowOutputAttrs(comp));
     if (placeholder) attrs.push(jsxAttrString("placeholder", placeholder));
@@ -417,7 +437,7 @@ export const COMPONENT_MAP: Record<string, ComponentGenerator> = {
     const disabled = propBool(p, "disabled");
     const tw = cx(comp);
     const attrs: string[] = [];
-    attrs.push(...dataBindingAttrs(comp));
+    attrs.push(...dataBindingAttrs(comp), ...expressionAttrs(comp));
     attrs.push(...eventAttrs(comp));
     attrs.push(...flowOutputAttrs(comp));
     if (placeholder) attrs.push(jsxAttrString("placeholder", placeholder));
@@ -437,7 +457,7 @@ export const COMPONENT_MAP: Record<string, ComponentGenerator> = {
       .map((opt) => `${indent}  <SelectItem ${jsxAttrString("value", opt.value)}>${jsxText(opt.label)}</SelectItem>`)
       .join("\n");
     const attrs: string[] = [];
-    attrs.push(...dataBindingAttrs(comp));
+    attrs.push(...dataBindingAttrs(comp), ...expressionAttrs(comp));
     attrs.push(...eventAttrs(comp));
     attrs.push(...flowOutputAttrs(comp));
     if (defaultValue) attrs.push(jsxAttrString("defaultValue", defaultValue));
@@ -451,7 +471,7 @@ export const COMPONENT_MAP: Record<string, ComponentGenerator> = {
     const tw = cx(comp);
     const label = propStr(p, "label", "");
     const attrs: string[] = [];
-    attrs.push(...dataBindingAttrs(comp));
+    attrs.push(...dataBindingAttrs(comp), ...expressionAttrs(comp));
     attrs.push(...eventAttrs(comp));
     attrs.push(...flowOutputAttrs(comp));
     if (checked) attrs.push("defaultChecked");
@@ -469,7 +489,7 @@ export const COMPONENT_MAP: Record<string, ComponentGenerator> = {
     const disabled = propBool(p, "disabled");
     const tw = cx(comp);
     const attrs: string[] = [];
-    attrs.push(...dataBindingAttrs(comp));
+    attrs.push(...dataBindingAttrs(comp), ...expressionAttrs(comp));
     attrs.push(...eventAttrs(comp));
     attrs.push(...flowOutputAttrs(comp));
     if (checked) attrs.push("defaultChecked");
@@ -487,7 +507,7 @@ export const COMPONENT_MAP: Record<string, ComponentGenerator> = {
       .map((opt) => `${indent}  <div className="flex items-center gap-2">\n${indent}    <RadioGroupItem ${jsxAttrString("value", opt.value)} ${jsxAttrString("id", opt.value)} />\n${indent}    <Label ${jsxAttrString("htmlFor", opt.value)}>${jsxText(opt.label)}</Label>\n${indent}  </div>`)
       .join("\n");
     const attrs: string[] = [];
-    attrs.push(...dataBindingAttrs(comp));
+    attrs.push(...dataBindingAttrs(comp), ...expressionAttrs(comp));
     attrs.push(...eventAttrs(comp));
     attrs.push(...flowOutputAttrs(comp));
     if (defaultValue) attrs.push(jsxAttrString("defaultValue", defaultValue));
@@ -532,7 +552,7 @@ export const COMPONENT_MAP: Record<string, ComponentGenerator> = {
     const p = comp.props as Record<string, unknown> | undefined;
     const placeholder = propStr(p, "placeholder", "Pick a date");
     const tw = cx(comp);
-    const attrs: string[] = [...dataBindingAttrs(comp), jsxAttrString("placeholder", placeholder)];
+    const attrs: string[] = [...dataBindingAttrs(comp), ...expressionAttrs(comp), jsxAttrString("placeholder", placeholder)];
     if (tw) attrs.push(`className={${tsStringLiteral(tw)}}`);
     const attrStr = attrs.length > 0 ? " " + attrs.join(" ") : "";
     return `${comment(comp, indent)}${indent}<DatePicker${attrStr} />`;
@@ -547,7 +567,7 @@ export const COMPONENT_MAP: Record<string, ComponentGenerator> = {
     const variant = propStr(p, "variant", "default");
     const tw = cx(comp);
     const text = childrenJSX || jsxText(propStr(p, "text", "Badge"));
-    const attrs: string[] = [...dataBindingAttrs(comp), jsxAttrString("variant", variant)];
+    const attrs: string[] = [...dataBindingAttrs(comp), ...expressionAttrs(comp), jsxAttrString("variant", variant)];
     if (tw) attrs.push(`className={${tsStringLiteral(tw)}}`);
     const attrStr = attrs.length > 0 ? " " + attrs.join(" ") : "";
     return `${comment(comp, indent)}${indent}<Badge${attrStr}>${text}</Badge>`;
@@ -558,7 +578,7 @@ export const COMPONENT_MAP: Record<string, ComponentGenerator> = {
     const src = propStr(p, "src", "");
     const fallback = propStr(p, "fallback", "U");
     const tw = cx(comp);
-    const attrs: string[] = [...dataBindingAttrs(comp)];
+    const attrs: string[] = [...dataBindingAttrs(comp), ...expressionAttrs(comp)];
     if (tw) attrs.push(`className={${tsStringLiteral(tw)}}`);
     const attrStr = attrs.length > 0 ? " " + attrs.join(" ") : "";
     return `${comment(comp, indent)}${indent}<Avatar${attrStr}>\n${indent}  <AvatarImage ${jsxAttrString("src", src)} />\n${indent}  <AvatarFallback>${jsxText(fallback)}</AvatarFallback>\n${indent}</Avatar>`;
@@ -584,7 +604,7 @@ export const COMPONENT_MAP: Record<string, ComponentGenerator> = {
     const p = comp.props as Record<string, unknown> | undefined;
     const value = propNum(p, "value", 0);
     const tw = cx(comp);
-    const attrs: string[] = [...dataBindingAttrs(comp), `value={${value}}`];
+    const attrs: string[] = [...dataBindingAttrs(comp), ...expressionAttrs(comp), `value={${value}}`];
     if (tw) attrs.push(`className={${tsStringLiteral(tw)}}`);
     const attrStr = attrs.length > 0 ? " " + attrs.join(" ") : "";
     return `${comment(comp, indent)}${indent}<Progress${attrStr} />`;
@@ -701,7 +721,7 @@ export const COMPONENT_MAP: Record<string, ComponentGenerator> = {
     const tw = cx(comp);
     const text = childrenJSX || jsxText(propStr(p, "text", "Link"));
     const attrs: string[] = [jsxAttrString("href", href)];
-    attrs.push(...dataBindingAttrs(comp));
+    attrs.push(...dataBindingAttrs(comp), ...expressionAttrs(comp));
     attrs.push(...eventAttrs(comp));
     attrs.push(...flowOutputAttrs(comp));
     if (tw) attrs.push(jsxAttrString("className", tw));
@@ -714,7 +734,7 @@ export const COMPONENT_MAP: Record<string, ComponentGenerator> = {
 
   "Table": (comp, childrenJSX, indent) => {
     const tw = cx(comp);
-    const attrs: string[] = [...dataBindingAttrs(comp)];
+    const attrs: string[] = [...dataBindingAttrs(comp), ...expressionAttrs(comp)];
     if (tw) attrs.push(`className={${tsStringLiteral(tw)}}`);
     const attrStr = attrs.length > 0 ? " " + attrs.join(" ") : "";
     return `${comment(comp, indent)}${indent}<Table${attrStr}>\n${childrenJSX}${indent}</Table>`;
@@ -741,7 +761,7 @@ export const COMPONENT_MAP: Record<string, ComponentGenerator> = {
 
   "TableHead": (comp, childrenJSX, indent) => {
     const tw = cx(comp);
-    const attrs: string[] = [...dataBindingAttrs(comp)];
+    const attrs: string[] = [...dataBindingAttrs(comp), ...expressionAttrs(comp)];
     if (tw) attrs.push(`className={${tsStringLiteral(tw)}}`);
     const attrStr = attrs.length > 0 ? " " + attrs.join(" ") : "";
     return `${comment(comp, indent)}${indent}<TableHead${attrStr}>${childrenJSX || jsxText(propStr(comp.props, "text", "Head"))}</TableHead>`;
@@ -759,7 +779,7 @@ export const COMPONENT_MAP: Record<string, ComponentGenerator> = {
 
   "TableCell": (comp, childrenJSX, indent) => {
     const tw = cx(comp);
-    const attrs: string[] = [...dataBindingAttrs(comp)];
+    const attrs: string[] = [...dataBindingAttrs(comp), ...expressionAttrs(comp)];
     if (tw) attrs.push(`className={${tsStringLiteral(tw)}}`);
     const attrStr = attrs.length > 0 ? " " + attrs.join(" ") : "";
     return `${comment(comp, indent)}${indent}<TableCell${attrStr}>${childrenJSX || jsxText(propStr(comp.props, "text", "Cell"))}</TableCell>`;
@@ -768,7 +788,7 @@ export const COMPONENT_MAP: Record<string, ComponentGenerator> = {
   "TableCaption": (comp, _childrenJSX, indent) => {
     const tw = cx(comp);
     const text = propStr(comp.props, "text", "");
-    const attrs: string[] = [...dataBindingAttrs(comp)];
+    const attrs: string[] = [...dataBindingAttrs(comp), ...expressionAttrs(comp)];
     if (tw) attrs.push(`className={${tsStringLiteral(tw)}}`);
     const attrStr = attrs.length > 0 ? " " + attrs.join(" ") : "";
     return `${comment(comp, indent)}${indent}<TableCaption${attrStr}>${jsxText(text)}</TableCaption>`;
@@ -810,6 +830,66 @@ export const COMPONENT_MAP: Record<string, ComponentGenerator> = {
 };
 
 /* ================================================================================================
+ * 默认生成器工厂（策略模式）
+ * ================================================================================================ */
+
+/**
+ * 为没有显式生成器的物料创建默认生成器
+ *
+ * 根据物料定义的 name 作为组件标签名，应用 Tailwind 类名、
+ * 数据绑定、事件绑定等公共属性。
+ * 策略模式：每个物料没有手写生成器时，使用此默认策略渲染。
+ *
+ * @param material - 物料定义
+ * @returns 组件生成器函数
+ */
+function createDefaultGenerator(material: MaterialDefinition): ComponentGenerator {
+  return (comp, childrenJSX, indent) => {
+    const tw = cx(comp);
+    const attrs: string[] = [...dataBindingAttrs(comp), ...expressionAttrs(comp), ...eventAttrs(comp), ...flowOutputAttrs(comp)];
+    if (tw) attrs.push(`className={${tsStringLiteral(tw)}}`);
+    const attrStr = attrs.length > 0 ? " " + attrs.join(" ") : "";
+    if (childrenJSX) {
+      return `${comment(comp, indent)}${indent}<${material.name}${attrStr}>\n${childrenJSX}${indent}</${material.name}>`;
+    }
+    return `${comment(comp, indent)}${indent}<${material.name}${attrStr} />`;
+  };
+}
+
+/**
+ * 从注册表动态创建组件映射表
+ *
+ * 保留所有现有手写生成器（COMPONENT_MAP），
+ * 然后遍历注册表中所有物料，为没有手写生成器的物料
+ * 用 createDefaultGenerator 补全。
+ *
+ * 工厂模式：根据注册表的物料列表，自动组装完整的组件映射表。
+ *
+ * @param registry - 物料注册表（可选）
+ * @returns 完整的组件名→生成器映射
+ *
+ * @example
+ * const map = createComponentMap(registry);
+ * const jsx = map["Button"]?.(comp, children, indent);
+ */
+export function createComponentMap(registry?: MaterialRegistry): Record<string, ComponentGenerator> {
+  // 保留所有现有手写生成器
+  const map: Record<string, ComponentGenerator> = { ...COMPONENT_MAP };
+
+  if (registry) {
+    const allMaterials = registry.getAll();
+    for (const material of allMaterials) {
+      if (!map[material.name]) {
+        // 为没有显式生成器的物料创建默认生成器
+        map[material.name] = createDefaultGenerator(material);
+      }
+    }
+  }
+
+  return map;
+}
+
+/* ================================================================================================
  * 递归 JSX 生成
  * ================================================================================================ */
 
@@ -821,27 +901,49 @@ export const COMPONENT_MAP: Record<string, ComponentGenerator> = {
  *
  * @param comp - 待渲染的组件节点
  * @param depth - 嵌套深度（决定缩进层级），根节点 depth=0
+ * @param registry - 可选物料注册表，提供时用于生成默认生成器
  * @returns 完整的 JSX 代码字符串
  */
-export function generateComponentJSX(comp: ComponentNode, depth = 0): string {
+export function generateComponentJSX(comp: ComponentNode, depth = 0, registry?: MaterialRegistry): string {
   const indent = "  ".repeat(depth);
 
-  // 递归渲染子组件
+  // 递归渲染子组件（传递 registry 以支持深层默认生成器）
   let childrenJSX = "";
   if (comp.children && comp.children.length > 0) {
     childrenJSX = comp.children
-      .map((child: ComponentNode) => generateComponentJSX(child, depth + 1))
+      .map((child: ComponentNode) => generateComponentJSX(child, depth + 1, registry))
       .join("\n");
   }
 
-  // 查找生成器
-  const generator = COMPONENT_MAP[comp.type];
+  // 根据 registry 动态构建映射表，优先保留手写生成器
+  const componentMap = registry ? createComponentMap(registry) : COMPONENT_MAP;
+  const generator = componentMap[comp.type];
+  let jsx: string;
   if (generator) {
-    return generator(comp, childrenJSX, indent);
+    jsx = generator(comp, childrenJSX, indent);
+  } else {
+    // 未映射组件类型 — 生成带注释的 <div> 占位符
+    const tw = cx(comp);
+    const typeNote = sanitizeJsxComment(String(comp.type));
+    jsx = `${comment(comp, indent)}${indent}{/* 未映射组件类型: ${typeNote} */}\n${indent}<div${tw ? ` ${jsxAttrString("className", tw)}` : ""}>\n${childrenJSX || `${indent}  {/* ${typeNote} */}`}\n${indent}</div>`;
   }
 
-  // 未映射组件类型 — 生成带注释的 <div> 占位符
-  const tw = cx(comp);
-  const typeNote = sanitizeJsxComment(String(comp.type));
-  return `${comment(comp, indent)}${indent}{/* 未映射组件类型: ${typeNote} */}\n${indent}<div${tw ? ` ${jsxAttrString("className", tw)}` : ""}>\n${childrenJSX || `${indent}  {/* ${typeNote} */}`}\n${indent}</div>`;
+  // ===== Domain M: 表达式系统包装层 =====
+  // visibleIf 在 repeat 内部（每个 repeat 项独立判断 visibleIf）
+
+  // 1) visibleIf 包装
+  if (comp.visibleIf) {
+    const cond = comp.visibleIf.trim();
+    jsx = `\n${indent}{evaluateExpression(${tsStringLiteral(cond)}, expressionContext) ? (${jsx}\n${indent}) : null}`;
+  }
+
+  // 2) repeat 包装（最外层）
+  if (comp.repeat) {
+    const source = comp.repeat.source;
+    const itemName = comp.repeat.itemName || "item";
+    const indexName = comp.repeat.indexName || "index";
+    jsx = `\n${indent}{evaluateExpressionAsArray(${tsStringLiteral(source)}, expressionContext).map((${itemName}, ${indexName}) => (${jsx}\n${indent}))}`;
+  }
+
+  return jsx;
 }

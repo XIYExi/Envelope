@@ -378,6 +378,9 @@ importers:
       '@envelope/flow':
         specifier: workspace:*
         version: link:../flow
+      '@envelope/materials':
+        specifier: workspace:*
+        version: link:../materials
       prettier:
         specifier: ^3.3.0
         version: 3.8.4

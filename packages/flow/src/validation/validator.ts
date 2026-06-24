@@ -17,28 +17,10 @@ import type {
   ValidationError,
   ValidationResult,
 } from "../thing-model/types";
+import { isTypeCompatible } from "../thing-model/types";
 import {
   NODE_DEFINITION_MAP,
 } from "../thing-model/node-definitions";
-
-/**
- * 检查两个端口类型是否兼容
- *
- * 兼容规则：
- * - 相同类型始终兼容
- * - "any" 类型与其他任何类型兼容
- * - 其他跨类型组合不兼容
- *
- * @param sourceType - 源端口（输出）类型
- * @param targetType - 目标端口（输入）类型
- * @returns 是否兼容
- */
-function isTypeCompatible(sourceType: string, targetType: string): boolean {
-  if (sourceType === "any" || targetType === "any") {
-    return true;
-  }
-  return sourceType === targetType;
-}
 
 /**
  * 验证节点间连接的类型兼容性

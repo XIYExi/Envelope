@@ -1,5 +1,6 @@
 import { createRegistry } from "../registry";
-import type { MaterialRegistry } from "../types/material";
+import type { MaterialDefinition, MaterialRegistry } from "../types/material";
+import { SHADCN_IMPORT_MAP_DATA } from "../shadcn-import-map";
 
 import { cardMaterial, cardHeaderMaterial, cardContentMaterial, cardFooterMaterial, separatorMaterial } from "./layout";
 import { scrollAreaMaterial } from "./layout";
@@ -17,6 +18,7 @@ import { toggleMaterial, toggleGroupMaterial } from "./form";
 import { sliderMaterial } from "./form";
 import { formItemMaterial } from "./form/form-item";
 import { formMaterial } from "./form/form";
+import { formGroupMaterial } from "./form/form-group";
 
 import { avatarMaterial, badgeMaterial, textMaterial } from "./display";
 
@@ -51,6 +53,25 @@ import { hoverCardMaterial, hoverCardTriggerMaterial, hoverCardContentMaterial }
 import { drawerMaterial, drawerTriggerMaterial, drawerContentMaterial, drawerHeaderMaterial } from "./overlay";
 import { collapsibleMaterial, collapsibleTriggerMaterial, collapsibleContentMaterial } from "./overlay";
 
+/**
+ * 批量注入 shadcnImport 到物料定义
+ *
+ * 从 SHADCN_IMPORT_MAP_DATA 中读取导入路径信息，
+ * 注入到每个物料定义的 shadcnImport 字段。
+ * 生成器通过 registry.get(type)?.shadcnImport 获取导入声明。
+ *
+ * 适配器模式：将 shadcn-import-map 的数据适配到物料定义中。
+ */
+function withShadcnImportAll(defs: MaterialDefinition[]): MaterialDefinition[] {
+  return defs.map((def) => {
+    const importData = SHADCN_IMPORT_MAP_DATA[def.name];
+    if (importData) {
+      return { ...def, shadcnImport: importData };
+    }
+    return def;
+  });
+}
+
 let defaultRegistry: MaterialRegistry | null = null;
 
 export function createDefaultRegistry(): MaterialRegistry {
@@ -60,7 +81,7 @@ export function createDefaultRegistry(): MaterialRegistry {
 
   const internal = <T extends { showInPalette?: boolean }>(def: T): T => ({ ...def, showInPalette: false });
 
-  registry.registerAll([
+  registry.registerAll(withShadcnImportAll([
     // ========== 布局组件 ==========
     cardMaterial,
     internal(cardHeaderMaterial),
@@ -93,6 +114,7 @@ export function createDefaultRegistry(): MaterialRegistry {
     sliderMaterial,
     formItemMaterial,
     formMaterial,
+    formGroupMaterial,
 
     // ========== 展示组件 ==========
     avatarMaterial,
@@ -173,7 +195,7 @@ export function createDefaultRegistry(): MaterialRegistry {
     collapsibleMaterial,
     internal(collapsibleTriggerMaterial),
     internal(collapsibleContentMaterial),
-  ]);
+  ]));
 
   defaultRegistry = registry;
   return registry;

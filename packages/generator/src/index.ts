@@ -41,6 +41,7 @@ export {
   generateAuthFiles,
   generateProjectFiles,
   COMPONENT_MAP,
+  createComponentMap,
   generateComponentJSX,
   generatePageCode,
   generateFlowRuntimeFiles,

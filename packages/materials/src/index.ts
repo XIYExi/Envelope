@@ -15,7 +15,10 @@ export {
 } from "./types/material";
 
 export { createRegistry } from "./registry";
+export type { RegistryOptions } from "./registry";
 export { createDefaultRegistry } from "./components/index";
+export { validateProps } from "./props-validator";
+export type { ValidationError } from "./props-validator";
 
 // ========== 表单组件 ==========
 export { buttonMaterial, inputMaterial, labelMaterial } from "./components/form";
@@ -26,6 +29,7 @@ export { selectMaterial, selectItemMaterial } from "./components/form";
 export { switchMaterial } from "./components/form";
 export { toggleMaterial, toggleGroupMaterial } from "./components/form";
 export { sliderMaterial } from "./components/form";
+export { formGroupMaterial } from "./components/form";
 
 // ========== 布局组件 ==========
 export {

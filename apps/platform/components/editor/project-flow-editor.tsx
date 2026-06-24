@@ -4,8 +4,9 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { useProjectFlowsStore } from "@/stores/project-flows";
+import { useProjectModelsStore } from "@/stores/project-models";
 import type { ProjectFlow } from "@/lib/supabase/types";
-import { FlowEditor, jsonToYamlFile, yamlToJson, type FlowDefinition } from "@envelope/flow";
+import { FlowEditor, jsonToYamlFile, yamlToJson, type FlowDefinition, type DataModelSchema } from "@envelope/flow";
 
 function toFlowDefinition(flow: ProjectFlow): FlowDefinition | null {
   const text = (flow.yaml_content ?? "").trim();
@@ -20,6 +21,21 @@ export function ProjectFlowEditor() {
   const projectId = searchParams.get("project");
 
   const { flows, save } = useProjectFlowsStore();
+
+  // 适配器模式：将 project-models store 中的表定义适配为 DataModelSchema
+  const projectModelsTables = useProjectModelsStore((s) => s.tables);
+  const dataModels: DataModelSchema | undefined = useMemo(() => {
+    if (!projectModelsTables || projectModelsTables.length === 0) return undefined;
+    return {
+      tables: projectModelsTables.map((t: { name: string; columns: Array<{ name: string; type: string }> }) => ({
+        name: t.name,
+        columns: (t.columns ?? []).map((c: { name: string; type: string }) => ({
+          name: c.name,
+          type: c.type,
+        })),
+      })),
+    };
+  }, [projectModelsTables]);
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const autosaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -130,6 +146,7 @@ export function ProjectFlowEditor() {
       <div className="flex-1 overflow-hidden">
         <FlowEditor
           initialFlow={initialFlow}
+          dataModels={dataModels}
           onChange={(def) => {
             if (!selectedFlow) return;
             upsertFlow({

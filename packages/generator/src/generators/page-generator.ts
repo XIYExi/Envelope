@@ -16,6 +16,7 @@
  */
 
 import type { PageSchema, ComponentNode } from "@envelope/engine";
+import type { MaterialRegistry } from "@envelope/materials";
 import { COMPONENT_MAP, SHADCN_IMPORT_MAP, generateComponentJSX } from "./component-map";
 import { tsStringLiteral } from "../core/tsx-escape";
 import { makeEventHandlerName } from "./event-handler-names";
@@ -66,12 +67,19 @@ function hasDeepComponents(components: ComponentNode[], predicate: (c: Component
  * 相同路径的组件会合并到一条 import 语句中，
  * 自动去重，按路径字母序排列。
  */
-function generateImports(componentTypes: Set<string>): string[] {
+function generateImports(componentTypes: Set<string>, registry?: MaterialRegistry): string[] {
   // path → components 的聚合映射
   const importMap = new Map<string, Set<string>>();
 
   for (const type of componentTypes) {
-    const entry = SHADCN_IMPORT_MAP[type];
+    // 优先从注册表获取 shadcnImport（物料定义的单一真相源）
+    let entry = SHADCN_IMPORT_MAP[type];
+    if (registry) {
+      const material = registry.get(type);
+      if (material?.shadcnImport) {
+        entry = material.shadcnImport;
+      }
+    }
     if (!entry) continue;
     // 跳过不生成主导入的类型（子类型如 CardHeader 已通过 Card 路径覆盖）
     if (entry.components.length === 0) continue;
@@ -113,6 +121,31 @@ function needsUseClient(componentTypes: Set<string>): boolean {
     if (clientTypes.has(type)) return true;
   }
   return false;
+}
+
+/**
+ * Domain M: 从组件树中收集所有数据绑定的表名（去重）
+ */
+function collectDataBindingTableNames(components: ComponentNode[]): string[] {
+  const tables = new Set<string>();
+  const walk = (comps: ComponentNode[]) => {
+    for (const comp of comps) {
+      if (comp.dataBindings && Object.keys(comp.dataBindings).length > 0) {
+        for (const binding of Object.values(comp.dataBindings)) {
+          if (binding.startsWith("{{") && binding.endsWith("}}")) continue;
+          const dot = binding.indexOf(".");
+          if (dot !== -1) {
+            tables.add(binding.slice(0, dot));
+          }
+        }
+      }
+      if (comp.children && comp.children.length > 0) {
+        walk(comp.children);
+      }
+    }
+  };
+  walk(components);
+  return Array.from(tables);
 }
 
 /**
@@ -317,6 +350,7 @@ function renderBackgroundStyle(background: PageSchema["background"]): string {
 export function generatePageCode(
   page: PageSchema,
   options: PageGeneratorOptions = {},
+  registry?: MaterialRegistry,
 ): string {
   const components = page.components || [];
   const componentTypes = collectComponentTypes(components);
@@ -330,6 +364,19 @@ export function generatePageCode(
     components,
     (c) => Boolean(c.dataBindings && Object.keys(c.dataBindings).length > 0),
   );
+
+  // Domain M: 检测是否有表达式绑定
+  const hasExpressions = hasDeepComponents(
+    components,
+    (c) => Boolean(
+      (c.expressionBindings && Object.keys(c.expressionBindings).length > 0) ||
+      c.visibleIf ||
+      c.repeat
+    ),
+  );
+
+  // 收集数据绑定表名（用于表达式上下文）
+  const collectedTableNames = collectDataBindingTableNames(components);
 
   // 检查是否有搜索参数绑定（在 import 阶段之前需要知道）
   const needsSearchParams = hasDeepComponents(
@@ -345,10 +392,10 @@ export function generatePageCode(
   // 决定是否 use client
   const useClient = options.forceUseClient === true
     ? true
-    : needsUseClient(componentTypes) || hasEventBindings || hasDataBindings;
+    : needsUseClient(componentTypes) || hasEventBindings || hasDataBindings || hasExpressions;
 
-  // 生成 imports
-  const imports = generateImports(componentTypes);
+  // 生成 imports（优先从注册表读取 shadcnImport）
+  const imports = generateImports(componentTypes, registry);
 
   // 添加自定义 imports
   if (options.imports && options.imports.length > 0) {
@@ -363,6 +410,10 @@ export function generatePageCode(
   if (hasDataBindings) {
     imports.push(`import { useQuery } from "@tanstack/react-query";`);
     imports.push(`import { createClient } from "@supabase/supabase-js";`);
+  }
+
+  if (hasExpressions) {
+    imports.push(`import { evaluateExpression, evaluateExpressionAsArray } from "@/lib/expression/evaluator";`);
   }
 
   if (needsSearchParams) {
@@ -446,6 +497,17 @@ export function generatePageCode(
     lines.push("");
   }
 
+  // Domain M: 生成表达式上下文
+  if (hasExpressions) {
+    lines.push(`  // ── 表达式上下文 (Domain M) ──`);
+    lines.push(`  const expressionContext: Record<string, unknown> = {`);
+    for (const tableName of collectedTableNames) {
+      lines.push(`    ${tableName}: ${tableName}Data,`);
+    }
+    lines.push(`  };`);
+    lines.push("");
+  }
+
   // ── 页面容器 ──
   const bgStyle = renderBackgroundStyle(page.background);
   const containerClasses: string[] = [];
@@ -460,7 +522,7 @@ export function generatePageCode(
 
   // 渲染所有顶层组件
   for (const comp of components) {
-    lines.push(generateComponentJSX(comp, 3));
+    lines.push(generateComponentJSX(comp, 3, registry));
   }
 
   lines.push(`    </div>`);

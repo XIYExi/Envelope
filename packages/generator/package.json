@@ -16,6 +16,7 @@
   "dependencies": {
     "@envelope/engine": "workspace:*",
     "@envelope/flow": "workspace:*",
+    "@envelope/materials": "workspace:*",
     "prettier": "^3.3.0",
     "zod": "^3.23.0"
   },

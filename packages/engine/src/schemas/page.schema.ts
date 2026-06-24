@@ -51,6 +51,19 @@ export interface ComponentNode {
   };
   /** 注释说明，会导出到生成的代码中作为注释 */
   comment?: string;
+  /** 表达式绑定: prop → 表达式字符串 */
+  expressionBindings?: Record<string, string>;
+  /** 条件渲染表达式（值为 falsy 时隐藏组件） */
+  visibleIf?: string;
+  /** 循环渲染配置 */
+  repeat?: {
+    /** 数据源表达式 */
+    source: string;
+    /** 循环变量名（默认 "item"） */
+    itemName?: string;
+    /** 索引变量名（默认 "index"） */
+    indexName?: string;
+  };
 }
 
 /**
@@ -101,6 +114,16 @@ export const componentSchema: z.ZodType<ComponentNode> = z.lazy(() =>
     }).optional(),
     /** 注释说明 */
     comment: z.string().optional(),
+    /** 表达式绑定 */
+    expressionBindings: z.record(z.string()).optional(),
+    /** 条件渲染表达式 */
+    visibleIf: z.string().optional(),
+    /** 循环渲染配置 */
+    repeat: z.object({
+      source: z.string(),
+      itemName: z.string().optional(),
+      indexName: z.string().optional(),
+    }).optional(),
   }).transform(data => ({
     ...data,
     name: data.name?.trim() || `${data.type}-${data.id}`,

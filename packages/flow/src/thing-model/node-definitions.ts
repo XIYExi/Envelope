@@ -17,7 +17,7 @@
  * @date 2026-06-14
  */
 
-import type { FlowNodeDefinition, FlowNodeType } from "./types";
+import type { FlowNodeDefinition, FlowNodeType, ConfigField } from "./types";
 
 /**
  * 所有内置节点类型定义集合
@@ -89,6 +89,11 @@ export const BUILT_IN_NODE_DEFINITIONS: FlowNodeDefinition[] = [
       { id: "result", label: "查询结果", type: "array", description: "查询返回的行数组" },
       { id: "error", label: "错误信息", type: "string", description: "失败时的错误详情" },
     ],
+    configSchema: {
+      table: { type: "select", label: "数据表", required: true, placeholder: "选择数据表" },
+      limit: { type: "number", label: "限制条数", default: 50, placeholder: "最多返回记录数" },
+      orderBy: { type: "string", label: "排序字段", placeholder: "如 created_at desc" },
+    },
   },
   {
     type: "db.insert",
@@ -105,6 +110,9 @@ export const BUILT_IN_NODE_DEFINITIONS: FlowNodeDefinition[] = [
       { id: "record", label: "插入记录", type: "object", description: "插入后的完整记录" },
       { id: "error", label: "错误信息", type: "string", description: "失败时的错误详情" },
     ],
+    configSchema: {
+      table: { type: "select", label: "数据表", required: true, placeholder: "选择数据表" },
+    },
   },
   {
     type: "db.update",
@@ -122,6 +130,9 @@ export const BUILT_IN_NODE_DEFINITIONS: FlowNodeDefinition[] = [
       { id: "count", label: "影响行数", type: "number", description: "被更新的行数" },
       { id: "error", label: "错误信息", type: "string", description: "失败时的错误详情" },
     ],
+    configSchema: {
+      table: { type: "select", label: "数据表", required: true, placeholder: "选择数据表" },
+    },
   },
   {
     type: "db.delete",
@@ -138,6 +149,9 @@ export const BUILT_IN_NODE_DEFINITIONS: FlowNodeDefinition[] = [
       { id: "count", label: "影响行数", type: "number", description: "被删除的行数" },
       { id: "error", label: "错误信息", type: "string", description: "失败时的错误详情" },
     ],
+    configSchema: {
+      table: { type: "select", label: "数据表", required: true, placeholder: "选择数据表" },
+    },
   },
 
   // ═══════════════════════════════════════════════════════════════
@@ -162,6 +176,17 @@ export const BUILT_IN_NODE_DEFINITIONS: FlowNodeDefinition[] = [
       { id: "status", label: "状态码", type: "number", description: "HTTP 状态码" },
       { id: "error", label: "错误信息", type: "string", description: "失败时的错误详情" },
     ],
+    configSchema: {
+      url: { type: "string", label: "请求地址", required: true, placeholder: "https://api.example.com/endpoint" },
+      method: { type: "select", label: "请求方法", required: true, options: [
+        { label: "GET", value: "GET" },
+        { label: "POST", value: "POST" },
+        { label: "PUT", value: "PUT" },
+        { label: "DELETE", value: "DELETE" },
+      ]},
+      headers: { type: "json", label: "请求头", placeholder: '{"Content-Type": "application/json"}' },
+      timeout: { type: "number", label: "超时时间(ms)", default: 30000, placeholder: "请求超时毫秒数" },
+    },
   },
 
   // ═══════════════════════════════════════════════════════════════
@@ -196,6 +221,9 @@ export const BUILT_IN_NODE_DEFINITIONS: FlowNodeDefinition[] = [
     outputs: [
       { id: "default", label: "默认", type: "any", description: "无匹配时的默认输出" },
     ],
+    configSchema: {
+      cases: { type: "json", label: "分支定义", placeholder: '[{ "label": "选项A", "value": "a" }]', description: "JSON 数组，每项包含 label 和 value" },
+    },
   },
 
   // ═══════════════════════════════════════════════════════════════
@@ -232,6 +260,9 @@ export const BUILT_IN_NODE_DEFINITIONS: FlowNodeDefinition[] = [
       { id: "body", label: "循环体", type: "any", description: "每次循环的输出数据" },
       { id: "done", label: "循环结束", type: "boolean", description: "条件为假时的退出信号" },
     ],
+    configSchema: {
+      maxIterations: { type: "number", label: "最大循环次数", default: 100, placeholder: "防止无限循环" },
+    },
   },
 
   // ═══════════════════════════════════════════════════════════════
@@ -255,6 +286,13 @@ export const BUILT_IN_NODE_DEFINITIONS: FlowNodeDefinition[] = [
       { id: "sent", label: "发送状态", type: "boolean", description: "是否发送成功" },
       { id: "error", label: "错误信息", type: "string", description: "失败时的错误详情" },
     ],
+    configSchema: {
+      to: { type: "string", label: "收件人", required: true, placeholder: "user@example.com" },
+      subject: { type: "string", label: "邮件主题", required: true, placeholder: "邮件标题" },
+      template: { type: "select", label: "邮件模板", placeholder: "选择邮件模板" },
+      cc: { type: "string", label: "抄送", placeholder: "cc@example.com" },
+      bcc: { type: "string", label: "密送", placeholder: "bcc@example.com" },
+    },
   },
   {
     type: "notification",
@@ -271,6 +309,15 @@ export const BUILT_IN_NODE_DEFINITIONS: FlowNodeDefinition[] = [
     outputs: [
       { id: "shown", label: "已显示", type: "boolean", description: "通知是否成功显示" },
     ],
+    configSchema: {
+      type: { type: "select", label: "通知类型", options: [
+        { label: "成功", value: "success" },
+        { label: "错误", value: "error" },
+        { label: "警告", value: "warning" },
+        { label: "信息", value: "info" },
+      ]},
+      persistent: { type: "boolean", label: "持久化通知", default: false, description: "是否常驻显示直到用户手动关闭" },
+    },
   },
 
   // ═══════════════════════════════════════════════════════════════
@@ -292,6 +339,9 @@ export const BUILT_IN_NODE_DEFINITIONS: FlowNodeDefinition[] = [
       { id: "result", label: "转换结果", type: "any", description: "转换后的输出数据" },
       { id: "error", label: "错误信息", type: "string", description: "失败时的错误详情" },
     ],
+    configSchema: {
+      expression: { type: "expression", label: "转换表达式", placeholder: "data.items.map(i => i.name)", description: "JavaScript 表达式，输入数据可用 data 变量访问" },
+    },
   },
   {
     type: "custom.code",
@@ -307,6 +357,9 @@ export const BUILT_IN_NODE_DEFINITIONS: FlowNodeDefinition[] = [
       { id: "result", label: "执行结果", type: "any", description: "代码返回的值" },
       { id: "error", label: "错误信息", type: "string", description: "代码异常的详情" },
     ],
+    configSchema: {
+      code: { type: "code", label: "自定义代码", language: "typescript", placeholder: "// 在此编写 TypeScript 代码\nreturn context.data;", description: "拥有 flow 上下文全部访问权限的 TypeScript 代码" },
+    },
   },
 
   // ═══════════════════════════════════════════════════════════════
@@ -326,6 +379,9 @@ export const BUILT_IN_NODE_DEFINITIONS: FlowNodeDefinition[] = [
     outputs: [
       { id: "done", label: "完成", type: "boolean", description: "延时结束信号" },
     ],
+    configSchema: {
+      milliseconds: { type: "number", label: "延时毫秒数", default: 1000, placeholder: "延迟的毫秒数" },
+    },
   },
 ];
 

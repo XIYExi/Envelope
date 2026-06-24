@@ -32,7 +32,16 @@ export type {
   ValidationResult,
   ConversionDirection,
   ConversionResult,
+  ConfigFieldType,
+  ConfigField,
+  DataModelColumn,
+  DataModelTable,
+  DataModelSchema,
+  NodeExecutionState,
+  FlowExecutionResult,
 } from "./thing-model/types";
+
+export { isTypeCompatible } from "./thing-model/types";
 
 export {
   BUILT_IN_NODE_DEFINITIONS,
@@ -76,7 +85,7 @@ export {
 // 可视化编辑器
 // ═══════════════════════════════════════════════════════════════
 
-export { FlowEditor } from "./editor/flow-editor";
+export { FlowEditor, NodeConfigPanel, ExecutionMonitor, executeFlowLocally } from "./editor";
 
 // ═══════════════════════════════════════════════════════════════
 // 流程绑定

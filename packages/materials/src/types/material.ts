@@ -278,27 +278,21 @@ export interface MaterialRegistry {
    * @param defs - 物料定义数组
    */
   registerAll: (defs: MaterialDefinition[]) => void;
-}
-
-/**
- * 物料注册表接口
- *
- * 定义了物料管理的核心 API，支持：
- * - 按分类获取组件列表
- * - 获取所有已注册组件
- * - 按名称获取单个组件
- * - 注册新组件
- * - 批量注册组件
- */
-export interface MaterialRegistry {
-  /** 按分类获取组件列表，按 displayName 排序 */
-  getByCategory: (category: ComponentCategory) => MaterialDefinition[];
-  /** 获取所有已注册组件，按 displayName 排序 */
-  getAll: () => MaterialDefinition[];
-  /** 按名称获取单个组件，不存在返回 undefined */
-  get: (name: string) => MaterialDefinition | undefined;
-  /** 注册单个组件 */
-  register: (def: MaterialDefinition) => void;
-  /** 批量注册组件 */
-  registerAll: (defs: MaterialDefinition[]) => void;
+  /**
+   * 异步注册物料（懒加载）
+   *
+   * 适用于按需加载的物料，loader 返回 Promise<MaterialDefinition>。
+   * 注册完成后可通过 get/has 查询，适合分包场景。
+   *
+   * @param name - 物料名称（用于去重和缓存）
+   * @param loader - 异步加载器，返回物料定义
+   */
+  registerAsync: (name: string, loader: () => Promise<MaterialDefinition>) => Promise<void>;
+  /**
+   * 检查物料是否已注册
+   *
+   * @param name - 物料名称
+   * @returns 是否已注册
+   */
+  has: (name: string) => boolean;
 }

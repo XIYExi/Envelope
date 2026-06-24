@@ -20,36 +20,85 @@ import type { MaterialRegistry, MaterialDefinition, ComponentCategory } from "./
 import { materialDefinitionSchema } from "./types/material";
 
 /**
+ * 注册表创建选项
+ *
+ * 工厂模式选项参数，提供注册表的行为配置：
+ * - strictMode: 严格模式下注册失败会抛异常（默认 false 仅警告）
+ * - onDuplicate: 重复注册时的处理策略（默认 'warn'）
+ */
+export interface RegistryOptions {
+  /** 严格模式：校验失败时抛出异常而非仅 log（默认 false） */
+  strictMode?: boolean;
+  /** 重复注册策略：'error' 抛异常 / 'warn' 警告 / 'silent' 静默忽略（默认 'warn'） */
+  onDuplicate?: "error" | "warn" | "silent";
+}
+
+/**
  * 创建物料注册表
  *
  * 返回一个实现了 MaterialRegistry 接口的注册表实例。
  * 内部使用 Map 存储物料，key 为物料名称（name）。
  *
+ * @param options - 可选配置（strictMode、onDuplicate）
  * @returns 物料注册表实例
  *
  * @example
- * const registry = createRegistry();
+ * const registry = createRegistry({ strictMode: true, onDuplicate: "error" });
  * registry.register(buttonMaterial);
  * const button = registry.get("Button");
  */
-export function createRegistry(): MaterialRegistry {
+export function createRegistry(options?: RegistryOptions): MaterialRegistry {
   /** 物料存储 Map，key 为物料名称 */
   const components = new Map<string, MaterialDefinition>();
+
+  /**
+   * 处理重复注册
+   *
+   * 根据配置的 onDuplicate 策略决定行为：
+   * - 'error': 抛出异常，阻止注册
+   * - 'warn': 打印警告
+   * - 'silent': 静默忽略
+   *
+   * @param name - 重复的物料名称
+   */
+  const handleDuplicate = (name: string): void => {
+    const strategy = options?.onDuplicate ?? "warn";
+    const msg = `物料 "${name}" 重复注册`;
+    switch (strategy) {
+      case "error":
+        throw new Error(msg);
+      case "warn":
+        console.warn(msg);
+        break;
+      case "silent":
+        break;
+    }
+  };
 
   /**
    * 注册单个物料
    *
    * 通过 Zod schema 校验物料定义，校验通过后存入 Map。
-   * 校验失败时输出错误日志，不抛出异常。
+   * strictMode 下校验失败会抛出异常，否则仅输出错误日志。
    *
    * @param def - 物料定义对象
    */
   const register = (def: MaterialDefinition): void => {
     const parsed = materialDefinitionSchema.safeParse(def);
     if (!parsed.success) {
-      console.error(`Invalid material "${def.name}":`, parsed.error.flatten());
+      const msg = `物料 "${def.name}" 校验失败: ${JSON.stringify(parsed.error.flatten())}`;
+      if (options?.strictMode) {
+        throw new Error(msg);
+      }
+      console.error(msg);
       return;
     }
+
+    // 检查重复注册
+    if (components.has(def.name)) {
+      handleDuplicate(def.name);
+    }
+
     components.set(def.name, parsed.data);
   };
 
@@ -106,6 +155,55 @@ export function createRegistry(): MaterialRegistry {
      */
     get(name: string): MaterialDefinition | undefined {
       return components.get(name);
+    },
+
+    /**
+     * 异步注册物料（懒加载）
+     *
+     * 适用于分包加载或按需注册的场景。
+     * loader 函数在首次调用时执行，注册完成后可通过 get/has 查询。
+     *
+     * 注意：如果物料已存在注册表中且 onDuplicate 不为 'silent'，
+     * 会触发重复注册处理逻辑。
+     *
+     * @param name - 物料名称（用作缓存键）
+     * @param loader - 异步加载器，返回物料定义
+     */
+    async registerAsync(name: string, loader: () => Promise<MaterialDefinition>): Promise<void> {
+      // 如果已存在且策略不是静默忽略，触发重复处理
+      if (components.has(name) && options?.onDuplicate !== "silent") {
+        handleDuplicate(name);
+      }
+
+      try {
+        const def = await loader();
+        const parsed = materialDefinitionSchema.safeParse(def);
+        if (!parsed.success) {
+          const msg = `异步注册物料 "${name}" 校验失败: ${JSON.stringify(parsed.error.flatten())}`;
+          if (options?.strictMode) {
+            throw new Error(msg);
+          }
+          console.error(msg);
+          return;
+        }
+        components.set(name, parsed.data);
+      } catch (err) {
+        const msg = `异步注册物料 "${name}" 加载失败: ${err instanceof Error ? err.message : String(err)}`;
+        if (options?.strictMode) {
+          throw new Error(msg);
+        }
+        console.error(msg);
+      }
+    },
+
+    /**
+     * 检查物料是否已注册
+     *
+     * @param name - 物料名称
+     * @returns true 表示该物料已在注册表中
+     */
+    has(name: string): boolean {
+      return components.has(name);
     },
   };
 }

@@ -10,3 +10,4 @@ export { toggleMaterial, toggleGroupMaterial } from "./toggle";
 export { sliderMaterial } from "./slider";
 export { formItemMaterial } from "./form-item";
 export { formMaterial } from "./form";
+export { formGroupMaterial } from "./form-group";

@@ -69,6 +69,8 @@ export interface CanvasSnapshot {
   pageMaxWidth: number | null;
   /** 子组件编辑模式作用域 */
   editScope?: { rootId: string; path: { id: string; type: string }[] } | null;
+  /** 定位模式 */
+  positionMode: "grid" | "free";
 }
 
 export type CanvasClipboardItem =
@@ -125,6 +127,9 @@ export interface CanvasState {
 
   /** 子组件编辑模式的作用域（为空时表示正常模式） */
   editScope: { rootId: string; path: { id: string; type: string }[] } | null;
+
+  /** 定位模式: grid = 12列网格, free = 自由定位（绝对定位） */
+  positionMode: "grid" | "free";
 
   canUndo: boolean;
   canRedo: boolean;
@@ -219,6 +224,8 @@ export interface CanvasActions {
   enterChildEdit: (rootId: string, path: { id: string; type: string }[]) => void;
   /** 退出子组件编辑模式 */
   exitChildEdit: () => void;
+
+  setPositionMode: (mode: "grid" | "free") => void;
 
   undo: () => void;
   redo: () => void;
