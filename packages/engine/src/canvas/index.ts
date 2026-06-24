@@ -18,3 +18,4 @@ export * from "./renderer";
 export * from "./ctrl-context";
 export * from "./minimap";
 export * from "./ruler";
+export { buildNodeIndex } from "../shared/canvas-utils";

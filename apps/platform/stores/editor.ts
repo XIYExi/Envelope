@@ -21,7 +21,6 @@ function takeSnapshot(state: EditorState): EditorSnapshot {
   return {
     selectedComponentId: state.selectedComponentId,
     canvasScale: state.canvasScale,
-    canvasViewport: state.canvasViewport,
     leftPanelCollapsed: state.leftPanelCollapsed,
     rightPanelCollapsed: state.rightPanelCollapsed,
     activePanelTab: state.activePanelTab,
@@ -42,7 +41,6 @@ export const useEditorStore = create<EditorState & EditorActions>()(
       // ========== 初始状态 ==========
       selectedComponentId: null,
       canvasScale: 1,
-      canvasViewport: "desktop",
       leftPanelCollapsed: false,
       rightPanelCollapsed: false,
       activePanelTab: "components",
@@ -60,9 +58,6 @@ export const useEditorStore = create<EditorState & EditorActions>()(
 
       /** 设置画布缩放比例（自动钳制在 0.25-2.0 范围内） */
       setCanvasScale: (scale) => set({ canvasScale: Math.min(2.0, Math.max(0.25, scale)) }),
-
-      /** 设置画布视口预设 */
-      setCanvasViewport: (canvasViewport) => set({ canvasViewport }),
 
       /** 切换左侧面板 */
       toggleLeftPanel: () => set((s) => ({ leftPanelCollapsed: !s.leftPanelCollapsed })),

@@ -12,6 +12,15 @@ export const radioGroupMaterial: MaterialDefinition = {
   },
   editableProps: [
     {
+      key: "name",
+      label: "Field Name",
+      type: "text",
+      defaultValue: "",
+      group: "Behavior",
+      order: 0,
+      comment: "字段标识，表单提交时的 key",
+    },
+    {
       key: "defaultValue",
       label: "Default Value",
       type: "text",

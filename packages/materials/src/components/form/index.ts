@@ -9,3 +9,4 @@ export { switchMaterial } from "./switch";
 export { toggleMaterial, toggleGroupMaterial } from "./toggle";
 export { sliderMaterial } from "./slider";
 export { formItemMaterial } from "./form-item";
+export { formMaterial } from "./form";

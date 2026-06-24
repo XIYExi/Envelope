@@ -10,7 +10,7 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -26,8 +26,15 @@ import {
 } from "@/components/ui/select";
 import { Plus, Trash2, Table2, Key, Shield } from "lucide-react";
 import { cn } from "@/lib/utils";
+import {
+  useProjectModelsStore,
+  type EditorTableDef,
+  type EditorColumnDef,
+  type EditorForeignKeyDef,
+  editorTableToTableInfo,
+} from "@/stores/project-models";
 
-// ─── Types ───────────────────────────────────────────────────────────────────
+// ─── Constants ───────────────────────────────────────────────────────────────
 
 /** PostgreSQL 数据库列类型列表 */
 const COLUMN_TYPES = [
@@ -45,77 +52,12 @@ const COLUMN_TYPES = [
   "text[]",
 ] as const;
 
-/** 数据库列定义 */
-interface ColumnDef {
-  id: string;
-  name: string;
-  type: string;
-  isPrimary: boolean;
-  isRequired: boolean;
-  isUnique: boolean;
-  defaultValue: string;
-}
-
-/** 外键约束定义 */
-interface ForeignKeyDef {
-  id: string;
-  columnName: string;
-  referencedTable: string;
-  referencedColumn: string;
-}
-
-/** 数据库表定义 */
-interface TableDef {
-  id: string;
-  name: string;
-  columns: ColumnDef[];
-  foreignKeys: ForeignKeyDef[];
-  rlsEnabled: boolean;
-  rlsPolicies: string[];
-}
-
 /** RLS 策略模板列表 */
 const RLS_POLICY_TEMPLATES = [
   { label: "Owner only", value: "owner_only" },
   { label: "Public read", value: "public_read" },
   { label: "Authenticated read", value: "authenticated_read" },
 ];
-
-// ─── Helpers ─────────────────────────────────────────────────────────────────
-
-/** 生成唯一 ID（crypto.randomUUID），所有现代浏览器均支持 */
-function uid() {
-  return crypto.randomUUID();
-}
-
-/** 创建默认列对象 */
-function newColumn(type: string = "text"): ColumnDef {
-  return {
-    id: uid(),
-    name: "",
-    type,
-    isPrimary: false,
-    isRequired: false,
-    isUnique: false,
-    defaultValue: "",
-  };
-}
-
-/** 创建默认表对象，自带 uuid 主键列 */
-function newTable(): TableDef {
-  const idCol = newColumn("uuid");
-  idCol.name = "id";
-  idCol.isPrimary = true;
-  idCol.isRequired = true;
-  return {
-    id: uid(),
-    name: "",
-    columns: [idCol],
-    foreignKeys: [],
-    rlsEnabled: false,
-    rlsPolicies: [],
-  };
-}
 
 // ─── Styles ──────────────────────────────────────────────────────────────────
 
@@ -135,7 +77,7 @@ function TableListItem({
   onSelect,
   onDelete,
 }: {
-  table: TableDef;
+  table: EditorTableDef;
   isSelected: boolean;
   onSelect: () => void;
   onDelete: () => void;
@@ -180,8 +122,8 @@ function ColumnRow({
   onChange,
   onDelete,
 }: {
-  col: ColumnDef;
-  onChange: (patch: Partial<ColumnDef>) => void;
+  col: EditorColumnDef;
+  onChange: (patch: Partial<EditorColumnDef>) => void;
   onDelete: () => void;
 }) {
   const showDefault = col.isRequired || col.defaultValue !== "";
@@ -263,9 +205,9 @@ function FKRow({
   onChange,
   onDelete,
 }: {
-  fk: ForeignKeyDef;
-  tables: TableDef[];
-  onChange: (patch: Partial<ForeignKeyDef>) => void;
+  fk: EditorForeignKeyDef;
+  tables: EditorTableDef[];
+  onChange: (patch: Partial<EditorForeignKeyDef>) => void;
   onDelete: () => void;
 }) {
   return (
@@ -318,202 +260,56 @@ function FKRow({
  *
  * 左侧为表列表（支持增删选），右侧为选中表的详细配置：
  * 列定义、外键关联、行级安全策略（RLS）。
- *
- * @returns JSX 元素
  */
 export function DataModelEditor() {
-  const [tables, setTables] = useState<TableDef[]>([]);
+  const editorTables = useProjectModelsStore((s) => s.editorTables);
+  const addEditorTable = useProjectModelsStore((s) => s.addEditorTable);
+  const updateEditorTable = useProjectModelsStore((s) => s.updateEditorTable);
+  const removeEditorTable = useProjectModelsStore((s) => s.removeEditorTable);
+  const addColumn = useProjectModelsStore((s) => s.addColumn);
+  const updateColumn = useProjectModelsStore((s) => s.updateColumn);
+  const deleteColumn = useProjectModelsStore((s) => s.deleteColumn);
+  const addFK = useProjectModelsStore((s) => s.addFK);
+  const updateFK = useProjectModelsStore((s) => s.updateFK);
+  const deleteFK = useProjectModelsStore((s) => s.deleteFK);
+  const toggleRLS = useProjectModelsStore((s) => s.toggleRLS);
+  const togglePolicy = useProjectModelsStore((s) => s.togglePolicy);
+  const updateCustomPolicy = useProjectModelsStore((s) => s.updateCustomPolicy);
+  const addCustomPolicy = useProjectModelsStore((s) => s.addCustomPolicy);
+  const removePolicy = useProjectModelsStore((s) => s.removePolicy);
+  const setTables = useProjectModelsStore((s) => s.setTables);
+
   const [selectedTableId, setSelectedTableId] = useState<string | null>(null);
 
-  const selectedTable = tables.find((t) => t.id === selectedTableId) ?? null;
+  const selectedTable = editorTables.find((t) => t.id === selectedTableId) ?? null;
+
+  // ── Q6: 模型变更时同步 tables 供 dataBinding 使用 ──────────────────
+  useEffect(() => {
+    const synced = editorTables.map(editorTableToTableInfo);
+    setTables(synced);
+  }, [editorTables, setTables]);
 
   // ── Table CRUD ──────────────────────────────────────────────────────────
 
-  /** 添加新表，自动分配默认列并选中 */
   const addTable = () => {
-    const t = newTable();
-    setTables((prev) => [...prev, t]);
-    setSelectedTableId(t.id);
+    const id = addEditorTable();
+    setSelectedTableId(id);
   };
 
-  /** 更新表属性，拒绝空表名 */
-  const updateTable = (id: string, patch: Partial<TableDef>) => {
-    setTables((prev) =>
-      prev.map((t) => {
-        if (t.id !== id) return t;
-        const merged = { ...t, ...patch };
-        // 表名不允许为空
-        if (patch.name !== undefined && patch.name.trim() === "") {
-          return t;
-        }
-        return merged;
-      }),
-    );
+  const updateTable = (id: string, patch: Partial<EditorTableDef>) => {
+    updateEditorTable(id, patch);
   };
 
-  /** 删除表（带确认），同时清空关联的外键引用 */
   const deleteTable = (id: string) => {
-    const table = tables.find((t) => t.id === id);
+    const table = editorTables.find((t) => t.id === id);
     if (!table) return;
     if (!window.confirm(`确定要删除表 "${table.name || "Untitled"}" 吗？此操作不可撤销。`)) {
       return;
     }
-    setTables((prev) => prev.filter((t) => t.id !== id));
+    removeEditorTable(id);
     if (selectedTableId === id) {
       setSelectedTableId(null);
     }
-  };
-
-  // ── Column CRUD ─────────────────────────────────────────────────────────
-
-  /** 向指定表添加新列 */
-  const addColumn = (tableId: string) => {
-    setTables((prev) =>
-      prev.map((t) =>
-        t.id === tableId ? { ...t, columns: [...t.columns, newColumn()] } : t,
-      ),
-    );
-  };
-
-  /** 更新指定列的部分属性 */
-  const updateColumn = (
-    tableId: string,
-    colId: string,
-    patch: Partial<ColumnDef>,
-  ) => {
-    setTables((prev) =>
-      prev.map((t) => {
-        if (t.id !== tableId) return t;
-        return {
-          ...t,
-          columns: t.columns.map((c) =>
-            c.id === colId ? { ...c, ...patch } : c,
-          ),
-        };
-      }),
-    );
-  };
-
-  /** 删除指定列 */
-  const deleteColumn = (tableId: string, colId: string) => {
-    setTables((prev) =>
-      prev.map((t) => {
-        if (t.id !== tableId) return t;
-        return { ...t, columns: t.columns.filter((c) => c.id !== colId) };
-      }),
-    );
-  };
-
-  // ── FK CRUD ─────────────────────────────────────────────────────────────
-
-  /** 向指定表添加新外键 */
-  const addFK = (tableId: string) => {
-    setTables((prev) =>
-      prev.map((t) => {
-        if (t.id !== tableId) return t;
-        const fk: ForeignKeyDef = {
-          id: uid(),
-          columnName: "",
-          referencedTable: "",
-          referencedColumn: "id",
-        };
-        return { ...t, foreignKeys: [...t.foreignKeys, fk] };
-      }),
-    );
-  };
-
-  /** 更新指定外键的部分属性 */
-  const updateFK = (
-    tableId: string,
-    fkId: string,
-    patch: Partial<ForeignKeyDef>,
-  ) => {
-    setTables((prev) =>
-      prev.map((t) => {
-        if (t.id !== tableId) return t;
-        return {
-          ...t,
-          foreignKeys: t.foreignKeys.map((fk) =>
-            fk.id === fkId ? { ...fk, ...patch } : fk,
-          ),
-        };
-      }),
-    );
-  };
-
-  /** 删除指定外键 */
-  const deleteFK = (tableId: string, fkId: string) => {
-    setTables((prev) =>
-      prev.map((t) => {
-        if (t.id !== tableId) return t;
-        return {
-          ...t,
-          foreignKeys: t.foreignKeys.filter((fk) => fk.id !== fkId),
-        };
-      }),
-    );
-  };
-
-  // ── RLS ─────────────────────────────────────────────────────────────────
-
-  /** 切换 RLS 启用/禁用 */
-  const toggleRLS = (tableId: string) => {
-    setTables((prev) =>
-      prev.map((t) =>
-        t.id === tableId ? { ...t, rlsEnabled: !t.rlsEnabled } : t,
-      ),
-    );
-  };
-
-  /** 切换 RLS 策略模板的启用/禁用 */
-  const togglePolicy = (tableId: string, policy: string) => {
-    setTables((prev) =>
-      prev.map((t) => {
-        if (t.id !== tableId) return t;
-        const exists = t.rlsPolicies.includes(policy);
-        return {
-          ...t,
-          rlsPolicies: exists
-            ? t.rlsPolicies.filter((p) => p !== policy)
-            : [...t.rlsPolicies, policy],
-        };
-      }),
-    );
-  };
-
-  /** 更新自定义策略文本 */
-  const updateCustomPolicy = (tableId: string, index: number, value: string) => {
-    setTables((prev) =>
-      prev.map((t) => {
-        if (t.id !== tableId) return t;
-        const policies = [...t.rlsPolicies];
-        policies[index] = value;
-        return { ...t, rlsPolicies: policies };
-      }),
-    );
-  };
-
-  /** 添加自定义策略 */
-  const addCustomPolicy = (tableId: string) => {
-    setTables((prev) =>
-      prev.map((t) => {
-        if (t.id !== tableId) return t;
-        return { ...t, rlsPolicies: [...t.rlsPolicies, ""] };
-      }),
-    );
-  };
-
-  /** 删除指定索引的策略 */
-  const removePolicy = (tableId: string, index: number) => {
-    setTables((prev) =>
-      prev.map((t) => {
-        if (t.id !== tableId) return t;
-        return {
-          ...t,
-          rlsPolicies: t.rlsPolicies.filter((_, i) => i !== index),
-        };
-      }),
-    );
   };
 
   // ── Render ──────────────────────────────────────────────────────────────
@@ -535,12 +331,12 @@ export function DataModelEditor() {
         </div>
         <ScrollArea className="flex-1">
           <div className="space-y-0.5 p-2">
-            {tables.length === 0 ? (
+            {editorTables.length === 0 ? (
               <p className="px-2 py-4 text-center text-xs text-muted-foreground">
                 No tables yet
               </p>
             ) : (
-              tables.map((table) => (
+              editorTables.map((table) => (
                 <TableListItem
                   key={table.id}
                   table={table}
@@ -631,7 +427,7 @@ export function DataModelEditor() {
                     <FKRow
                       key={fk.id}
                       fk={fk}
-                      tables={tables}
+                      tables={editorTables}
                       onChange={(patch) =>
                         updateFK(selectedTable.id, fk.id, patch)
                       }

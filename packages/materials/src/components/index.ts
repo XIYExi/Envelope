@@ -16,6 +16,7 @@ import { switchMaterial } from "./form";
 import { toggleMaterial, toggleGroupMaterial } from "./form";
 import { sliderMaterial } from "./form";
 import { formItemMaterial } from "./form/form-item";
+import { formMaterial } from "./form/form";
 
 import { avatarMaterial, badgeMaterial, textMaterial } from "./display";
 
@@ -91,6 +92,7 @@ export function createDefaultRegistry(): MaterialRegistry {
     toggleGroupMaterial,
     sliderMaterial,
     formItemMaterial,
+    formMaterial,
 
     // ========== 展示组件 ==========
     avatarMaterial,

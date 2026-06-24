@@ -30,6 +30,16 @@ import { ApiEndpointEditor } from "./api-endpoint-editor";
 import { ProjectFlowEditor } from "./project-flow-editor";
 import { useFlowBindingStore } from "@envelope/flow";
 import { Input } from "@/components/ui/input";
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogAction,
+  AlertDialogCancel,
+} from "@/components/ui/alert-dialog";
 import { KeyboardShortcutsDialog } from "./keyboard-shortcuts-dialog";
 
 /**
@@ -38,7 +48,9 @@ import { KeyboardShortcutsDialog } from "./keyboard-shortcuts-dialog";
  * 注册为 DnD Kit 的可放置区域，接收从素材面板拖来的组件。
  * 处理 Ctrl+滚轮缩放，渲染 CanvasRenderer 并传递所有画布状态。
  */
-const CanvasDropZone = memo(function CanvasDropZone() {
+const CanvasDropZone = memo(function CanvasDropZone({ dragAlignInfo }: {
+  dragAlignInfo: { gridX: number; gridY: number; gridWidth: number; gridHeight: number } | null;
+}) {
   const {
     components, selectedIds, activeNodeId, selectComponent, clearSelection,
     zoom, viewport, panX, panY, gridCols, gridGap,
@@ -137,6 +149,7 @@ const CanvasDropZone = memo(function CanvasDropZone() {
         pagePadding={pagePadding}
         pageMaxWidth={pageMaxWidth}
         minRowHeight={minRowHeight}
+        dragAlignInfo={dragAlignInfo}
       />
     </div>
   );
@@ -155,7 +168,7 @@ export function EditorLayout() {
 
   const {
     leftPanelCollapsed, rightPanelCollapsed,
-    canvasViewport, editorMode,
+    editorMode,
   } = useEditorStore();
   const {
     components,
@@ -211,6 +224,7 @@ export function EditorLayout() {
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const renamingIdRef = useRef<string | null>(null);
   const [helpOpen, setHelpOpen] = useState(false);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
 
   // 同步 renamingId 到 ref，供键盘事件处理函数读取最新值
   useEffect(() => {
@@ -347,10 +361,14 @@ export function EditorLayout() {
         const category = materialMap.get(materialName)?.category ?? material?.category ?? "layout";
         const defaultProps = material?.defaultProps ?? {};
         const node = createComponentNode(materialName, category, { ...defaultProps });
-        insertNode(node, { parentId: null, index: curComponents.length });
+        // B9: 直接计算位置后一次性插入，避免先 append 末尾再 moveComponent 的两步闪跳
         const x = Math.max(1, Math.round(delta.x / (CANVAS_CELL_SIZE * curZoom)));
         const y = Math.max(1, Math.round(delta.y / (CANVAS_CELL_HEIGHT * curZoom)));
-        moveComponent(node.id, x, y);
+        insertNode(node, {
+          parentId: null,
+          index: curComponents.length,
+          position: { x, y, width: 3, height: 2 },
+        });
         return;
       }
     },
@@ -367,11 +385,6 @@ export function EditorLayout() {
     },
     [components.length, insertNode, materialMap, registry],
   );
-
-  // 编辑器 store 中的视口变化同步到画布 store
-  useEffect(() => {
-    setViewport(canvasViewport);
-  }, [canvasViewport, setViewport]);
 
   useEffect(() => {
     if (!projectId || !isPageMode) return;
@@ -441,7 +454,7 @@ export function EditorLayout() {
       return;
     }
     useProjectPagesStore.getState().syncCurrentPageFromCanvas({ components, pageBackground, pagePadding, pageMaxWidth });
-    useProjectPagesStore.getState().scheduleAutosave(30_000);
+    useProjectPagesStore.getState().scheduleAutosave(5_000);
   }, [components, isPageMode, pageBackground, pagePadding, pageMaxWidth]);
 
   // 全局键盘快捷键（仅当不在输入框内且处于 pages 模式时生效）
@@ -577,7 +590,12 @@ export function EditorLayout() {
       }
       if (e.key === "Delete" || e.key === "Backspace") {
         e.preventDefault();
-        deleteSelected();
+        const canvasState = useCanvasStore.getState();
+        if (canvasState.historyPast.length >= canvasState.historyLimit) {
+          setDeleteConfirmOpen(true);
+        } else {
+          deleteSelected();
+        }
       }
     }
 
@@ -595,17 +613,18 @@ export function EditorLayout() {
   const rafRef = useRef<number | null>(null);
 
   // rAF 循环：持续读取 scrollDirRef 并调用 setPan，实现平滑平移
+  // 注意：必须在 useEffect 中启动首次 tick，否则 rAF 循环永远不会被触发
   useEffect(() => {
     function tick() {
       const dir = scrollDirRef.current;
       if (dir.x !== 0 || dir.y !== 0) {
         const state = useCanvasStore.getState();
         state.setPan(state.panX + dir.x, state.panY + dir.y);
-        rafRef.current = requestAnimationFrame(tick);
-      } else {
-        rafRef.current = null;
       }
+      // 持续调度下一帧，当 dir 为 (0,0) 时 tick 为空转，开销可忽略
+      rafRef.current = requestAnimationFrame(tick);
     }
+    rafRef.current = requestAnimationFrame(tick);
 
     return () => {
       if (rafRef.current !== null) {
@@ -616,11 +635,13 @@ export function EditorLayout() {
   }, []);
 
   // 拖拽移动中检测鼠标是否位于画布边缘，计算需要自动平移的方向和速度
+  // 同时计算拖拽对齐辅助线（B10）
   const handleDragMove = useCallback((event: DragMoveEvent) => {
     // 仅对画布组件重排或从素材面板拖拽新组件到画布时启用自动平移
     const dragType = event.active.data.current?.type;
     if (dragType !== "canvas-component" && dragType !== "material") {
       scrollDirRef.current = { x: 0, y: 0 };
+      setDragAlignInfo(null);
       return;
     }
 
@@ -658,9 +679,31 @@ export function EditorLayout() {
     }
 
     scrollDirRef.current = { x: dx, y: dy };
+
+    // B10: 计算拖拽对齐辅助线网格位置
+    const { delta } = event;
+    const curZoom = zoomRef2.current;
+    if (dragType === "canvas-component") {
+      const draggedNodeId = event.active.data.current?.componentId as string | undefined;
+      const comp = componentsRef.current.find((c) => c.id === draggedNodeId);
+      if (comp) {
+        const gx = comp.position.x + delta.x / (CANVAS_CELL_SIZE * curZoom);
+        const gy = comp.position.y + delta.y / (CANVAS_CELL_HEIGHT * curZoom);
+        setDragAlignInfo({ gridX: gx, gridY: gy, gridWidth: comp.position.width, gridHeight: comp.position.height });
+      }
+    } else if (dragType === "material") {
+      const gx = Math.max(1, Math.round(delta.x / (CANVAS_CELL_SIZE * curZoom)));
+      const gy = Math.max(1, Math.round(delta.y / (CANVAS_CELL_HEIGHT * curZoom)));
+      setDragAlignInfo({ gridX: gx, gridY: gy, gridWidth: 3, gridHeight: 2 });
+    }
   }, []);
 
   const [activeDragId, setActiveDragId] = useState<string | null>(null);
+  // B10: 拖拽对齐辅助线 — 存储被拖组件的网格坐标用于计算对齐
+  const [dragAlignInfo, setDragAlignInfo] = useState<{
+    gridX: number; gridY: number; gridWidth: number; gridHeight: number;
+  } | null>(null);
+
   const handleDragStart = useCallback((event: DragStartEvent) => {
     const name = event.active.data.current?.materialName as string | undefined
       ?? event.active.data.current?.componentId as string | undefined;
@@ -668,6 +711,7 @@ export function EditorLayout() {
   }, []);
   const handleDragEndWrapper = useCallback((event: DragEndEvent) => {
     setActiveDragId(null);
+    setDragAlignInfo(null);
     // 停止 autoScroll 平移
     scrollDirRef.current = { x: 0, y: 0 };
     handleDragEnd(event);
@@ -686,10 +730,10 @@ export function EditorLayout() {
           sensors={sensors}
         >
           <div className="flex flex-1 overflow-hidden">
-            {!leftPanelCollapsed && <LeftPanel collapsed={leftPanelCollapsed} />}
+            {!leftPanelCollapsed ? <LeftPanel collapsed={leftPanelCollapsed} /> : null}
             <MaterialPanel collapsed={leftPanelCollapsed} onAddMaterial={handleAddMaterial} />
-            <CanvasDropZone />
-            <RightPanel collapsed={rightPanelCollapsed} />
+            <CanvasDropZone dragAlignInfo={dragAlignInfo} />
+            {!rightPanelCollapsed ? <RightPanel /> : null}
           </div>
           <DragOverlay dropAnimation={null}>
             {activeDragId && (
@@ -702,14 +746,14 @@ export function EditorLayout() {
         </DndContext>
       ) : (
         <div className="flex flex-1 overflow-hidden">
-          {!leftPanelCollapsed && <LeftPanel collapsed={leftPanelCollapsed} />}
+          {!leftPanelCollapsed ? <LeftPanel collapsed={leftPanelCollapsed} /> : null}
           <div className="flex-1 overflow-hidden">
             {editorMode === "data-models" && <DataModelEditor />}
             {editorMode === "routing" && <RoutingEditor />}
             {editorMode === "flows" && <ProjectFlowEditor />}
             {editorMode === "api" && <ApiEndpointEditor />}
           </div>
-          <RightPanel collapsed={rightPanelCollapsed} />
+          {!rightPanelCollapsed ? <RightPanel /> : null}
         </div>
       )}
       {/* F2 内联重命名输入框 */}
@@ -746,6 +790,22 @@ export function EditorLayout() {
         </div>
       )}
       <KeyboardShortcutsDialog open={helpOpen} onOpenChange={setHelpOpen} />
+      <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>确认删除</AlertDialogTitle>
+            <AlertDialogDescription>
+              撤销栈已满，删除后将无法撤销，是否继续？
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>取消</AlertDialogCancel>
+            <AlertDialogAction onClick={() => { deleteSelected(); setDeleteConfirmOpen(false); }}>
+              删除
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

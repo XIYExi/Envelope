@@ -1,10 +1,29 @@
 import type { MaterialRegistry } from "@envelope/materials";
+import type { ComponentNode } from "../schemas/page.schema";
 
 // Lazy registry holder - set once during app initialization
 let _materialRegistry: MaterialRegistry | null = null;
 
 export function setMaterialRegistry(registry: MaterialRegistry): void {
   _materialRegistry = registry;
+}
+
+export function getMaterialRegistry(): MaterialRegistry | null {
+  return _materialRegistry;
+}
+
+/**
+ * 构建组件节点 ID → 节点的索引映射
+ * 替代递归 findNodeById，O(1) 查找
+ */
+export function buildNodeIndex(nodes: ComponentNode[]): Map<string, ComponentNode> {
+  const map = new Map<string, ComponentNode>();
+  function walk(node: ComponentNode) {
+    map.set(node.id, node);
+    for (const child of node.children ?? []) walk(child);
+  }
+  for (const n of nodes) walk(n);
+  return map;
 }
 
 export function isContainerType(type: string): boolean {

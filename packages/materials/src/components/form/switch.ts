@@ -8,6 +8,15 @@ export const switchMaterial: MaterialDefinition = {
   icon: "ToggleLeft",
   editableProps: [
     {
+      key: "name",
+      label: "Field Name",
+      type: "text",
+      defaultValue: "",
+      group: "Behavior",
+      order: 0,
+      comment: "字段标识，表单提交时的 key",
+    },
+    {
       key: "label",
       label: "Label",
       type: "text",

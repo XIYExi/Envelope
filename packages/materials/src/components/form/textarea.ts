@@ -8,6 +8,15 @@ export const textareaMaterial: MaterialDefinition = {
   icon: "Text",
   editableProps: [
     {
+      key: "name",
+      label: "Field Name",
+      type: "text",
+      defaultValue: "",
+      group: "Behavior",
+      order: 0,
+      comment: "字段标识，表单提交时的 key",
+    },
+    {
       key: "placeholder",
       label: "Placeholder",
       type: "text",
@@ -40,6 +49,30 @@ export const textareaMaterial: MaterialDefinition = {
       defaultValue: false,
       group: "Validation",
       order: 4,
+    },
+    {
+      key: "pattern",
+      label: "Pattern",
+      type: "text",
+      placeholder: "e.g. [a-zA-Z]+",
+      group: "Validation",
+      order: 5,
+    },
+    {
+      key: "minLength",
+      label: "Min Length",
+      type: "number",
+      min: 0,
+      group: "Validation",
+      order: 6,
+    },
+    {
+      key: "maxLength",
+      label: "Max Length",
+      type: "number",
+      min: 0,
+      group: "Validation",
+      order: 7,
     },
     {
       key: "className",

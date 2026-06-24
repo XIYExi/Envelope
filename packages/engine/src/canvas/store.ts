@@ -18,7 +18,7 @@
 
 import { create } from "zustand";
 import type { CanvasState, CanvasActions, CanvasComponent, CanvasSnapshot, CanvasClipboard, CanvasClipboardItem } from "./types";
-import { syncAggregateSlots } from "../slots";
+import { syncAggregateSlots, getSlotsForType } from "../slots";
 import type { ComponentNode } from "../schemas/page.schema";
 import { isContainerType } from "../shared/canvas-utils";
 
@@ -206,6 +206,14 @@ function insertNodeIntoTree(
   if (node.id === parentId) {
     if (!canNodeHaveChildren(node.type)) {
       return { nextNode: node, inserted: false };
+    }
+    // B8: Slot 类型校验 — 如果父组件 slot 声明了 allowedChildTypes，则只允许匹配的子组件类型
+    const slots = getSlotsForType(node.type);
+    if (slots.length > 0) {
+      const allowedTypes = new Set(slots.flatMap(s => s.allowedChildTypes));
+      if (allowedTypes.size > 0 && !allowedTypes.has(child.type)) {
+        return { nextNode: node, inserted: false };
+      }
     }
     const children = node.children ?? [];
     const nextChildren = children.slice();
@@ -1020,13 +1028,19 @@ export const useCanvasStore = create<CanvasState & CanvasActions>((set, get) => 
       if (parentId === null) {
         const nextComponents = state.components.slice();
         const safeIndex = Math.max(0, Math.min(nextComponents.length, index));
-        const maxY = nextComponents.length > 0
-          ? Math.max(...nextComponents.map((c) => c.position.y + c.position.height))
-          : 0;
+        // B9: 支持外部传入 position，避免先 insert 后 move 的两步闪跳
+        const pos = target.position
+          ? { x: target.position.x, y: target.position.y, width: target.position.width ?? 3, height: target.position.height ?? 2 }
+          : (() => {
+            const maxY = nextComponents.length > 0
+              ? Math.max(...nextComponents.map((c) => c.position.y + c.position.height))
+              : 0;
+            return { x: 1, y: Math.max(1, maxY + 1), width: 3, height: 2 };
+          })();
         nextComponents.splice(safeIndex, 0, {
           id: node.id,
           node,
-          position: { x: 1, y: Math.max(1, maxY + 1), width: 3, height: 2 },
+          position: pos,
         });
         const partial = { components: nextComponents, selectedIds: [node.id], activeNodeId: node.id };
         if (batching) return partial;

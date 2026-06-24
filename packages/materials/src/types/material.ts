@@ -215,6 +215,10 @@ export const materialDefinitionSchema = z.object({
   thumbnail: z.object({ preset: z.string() }).optional(),
   /** 文档链接或说明（可选） */
   documentation: z.string().optional(),
+  /** 此组件可绑定的事件类型白名单，不设置则允许所有 */
+  bindableEvents: z.array(z.string()).optional(),
+  /** 自定义画布预览渲染函数，覆盖默认 simulated 占位渲染 */
+  previewRender: z.any().optional(),
 });
 
 /**

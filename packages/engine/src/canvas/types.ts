@@ -185,7 +185,7 @@ export interface CanvasActions {
   /** 将内部剪贴板内容粘贴到目标位置（不传则按当前选中推断） */
   pasteClipboard: (target?: { parentId: string | null; index?: number }) => void;
   /** 将一个新节点插入到目标位置（支持 root 与嵌套插入） */
-  insertNode: (node: ComponentNode, target: { parentId: string | null; index?: number }) => void;
+  insertNode: (node: ComponentNode, target: { parentId: string | null; index?: number; position?: { x: number; y: number; width?: number; height?: number } }) => void;
   /** 在组件树中移动/重排节点（支持 root ↔ 嵌套） */
   moveNode: (nodeId: string, target: { parentId: string | null; index?: number }) => void;
   /** 更新组件树中的任意节点（根或嵌套） */

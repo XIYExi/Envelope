@@ -44,6 +44,19 @@ export const buttonMaterial: MaterialDefinition = {
   icon: "SquareMousePointer",
   supportsChildren: true,
   editableProps: [
+    // ========== 行为配置 ==========
+    {
+      key: "submitType",
+      label: "Submit Type",
+      type: "select",
+      options: [
+        { label: "Button", value: "button" },
+        { label: "Submit", value: "submit" },
+      ],
+      defaultValue: "button",
+      group: "Behavior",
+      order: 0,
+    },
     // ========== 外观配置 ==========
     {
       key: "variant",

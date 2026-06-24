@@ -39,8 +39,6 @@ export interface EditorState {
   selectedComponentId: string | null;
   /** 画布缩放比例（0.25-2.0） */
   canvasScale: number;
-  /** 画布视口尺寸预设 */
-  canvasViewport: "mobile" | "tablet" | "desktop" | "fluid";
   /** 左侧导航面板是否折叠 */
   leftPanelCollapsed: boolean;
   /** 右侧属性面板是否折叠 */
@@ -72,8 +70,6 @@ export interface EditorSnapshot {
   selectedComponentId: string | null;
   /** 画布缩放比例 */
   canvasScale: number;
-  /** 画布视口尺寸预设 */
-  canvasViewport: "mobile" | "tablet" | "desktop" | "fluid";
   /** 左侧导航面板是否折叠 */
   leftPanelCollapsed: boolean;
   /** 右侧属性面板是否折叠 */
@@ -96,8 +92,6 @@ export interface EditorActions {
   selectComponent: (id: string | null) => void;
   /** 设置画布缩放比例 */
   setCanvasScale: (scale: number) => void;
-  /** 设置画布视口尺寸预设 */
-  setCanvasViewport: (viewport: EditorState["canvasViewport"]) => void;
   /** 切换左侧面板折叠状态 */
   toggleLeftPanel: () => void;
   /** 切换右侧面板折叠状态 */

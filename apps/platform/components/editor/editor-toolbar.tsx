@@ -21,6 +21,16 @@ import { useProjectLocalSync } from "@/lib/hooks/use-project-local-sync";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogAction,
+  AlertDialogCancel,
+} from "@/components/ui/alert-dialog";
 import { useSearchParams } from "next/navigation";
 import type { ArchiveExportOptions } from "@/lib/archive/archive-types";
 import { ConfigArchiveExportDialog } from "./config-archive-export-dialog";
@@ -97,7 +107,6 @@ export function EditorToolbar() {
     toggleRightPanel,
     leftPanelCollapsed,
     rightPanelCollapsed,
-    setCanvasViewport,
     editorMode,
   } = useEditorStore();
 
@@ -140,6 +149,8 @@ export function EditorToolbar() {
 
   const [previewOpen, setPreviewOpen] = useState(false);
   const [apiTestOpen, setApiTestOpen] = useState(false);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [saveBadgeExpanded, setSaveBadgeExpanded] = useState(false);
 
   const wsClientIdStorageKey = "envelope_task_ws_client_id";
   const sync = useProjectLocalSync(projectId, {
@@ -751,18 +762,19 @@ export function EditorToolbar() {
 
   /** 删除选中组件（先压入快照以支持撤销） */
   const handleDelete = () => {
-    deleteSelected();
+    if (useCanvasStore.getState().historyPast.length >= useCanvasStore.getState().historyLimit) {
+      setDeleteConfirmOpen(true);
+    } else {
+      deleteSelected();
+    }
   };
 
   /**
    * 视口切换
    *
-   * 同时更新编辑器 store（持久化偏好）和画布 store（即时生效）。
-   * 画布 store 的 viewport 是渲染用的事实来源，
-   * 编辑器 store 的 canvasViewport 是持久化偏好。
+   * U5: 视口状态单一 store，统一写入画布 store
    */
   const handleViewportChange = (vp: CanvasState["viewport"]) => {
-    setCanvasViewport(vp);
     setViewport(vp);
   };
 
@@ -999,16 +1011,39 @@ export function EditorToolbar() {
             <Terminal className="mr-1 h-3 w-3" />
             API 测试
           </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-7 text-[10px]"
-            disabled={isSaving || !dirty}
-            onClick={() => void flushAutosave()}
-          >
-            <Save className="mr-1 h-3 w-3" />
-            {isSaving ? "保存中" : dirty ? "保存" : "已保存"}
-          </Button>
+          <div className="relative">
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7 text-[10px]"
+              disabled={isSaving || !dirty}
+              onClick={() => {
+                if (saveBadgeExpanded) { void flushAutosave(); setSaveBadgeExpanded(false); }
+                else { setSaveBadgeExpanded(true); }
+              }}
+              onBlur={() => setTimeout(() => setSaveBadgeExpanded(false), 200)}
+              title={isSaving ? "保存中" : dirty ? "未保存更改" : "已保存"}
+            >
+              <Save className={`mr-1 h-3 w-3 ${isSaving ? "animate-pulse" : ""}`} />
+              {saveBadgeExpanded ? (
+                isSaving ? "保存中" : dirty ? "保存" : "已保存"
+              ) : null}
+            </Button>
+            {saveBadgeExpanded && dirty && (
+              <div className="absolute right-0 top-full z-50 mt-1 w-48 rounded-md border bg-popover p-2 text-[10px] shadow-md">
+                <div className="text-muted-foreground">有未保存的更改</div>
+                {error && <div className="mt-1 text-destructive">{error}</div>}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="mt-1 h-6 w-full text-[10px]"
+                  onClick={() => { void flushAutosave(); setSaveBadgeExpanded(false); }}
+                >
+                  立即保存
+                </Button>
+              </div>
+            )}
+          </div>
           {projectId && (
             <Button
               variant="outline"
@@ -1070,6 +1105,22 @@ export function EditorToolbar() {
 
       <PagePreviewDialog open={previewOpen} onOpenChange={setPreviewOpen} />
       <ApiTestPanel open={apiTestOpen} onOpenChange={setApiTestOpen} />
+      <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>确认删除</AlertDialogTitle>
+            <AlertDialogDescription>
+              撤销栈已满，删除后将无法撤销，是否继续？
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>取消</AlertDialogCancel>
+            <AlertDialogAction onClick={() => { deleteSelected(); setDeleteConfirmOpen(false); }}>
+              删除
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <ConfigArchiveExportDialog
         open={archiveExportDialogOpen}

@@ -13,12 +13,12 @@
  */
 "use client";
 
-import { useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { VIEWPORT_WIDTHS, useCanvasStore } from "@envelope/engine";
 import { RuntimePageRenderer } from "@/components/runtime/runtime-renderer";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { ExternalLink, Smartphone, Tablet, Monitor } from "lucide-react";
+import { ExternalLink, Smartphone, Tablet, Monitor, FileCode } from "lucide-react";
 
 /**
  * P4: 设备框架 — 根据视口类型渲染不同的外壳
@@ -93,19 +93,55 @@ export function PagePreviewDialog({
 
   const viewportWidth = VIEWPORT_WIDTHS[viewport];
 
+  const [previewMode, setPreviewMode] = useState<"embedded" | "iframe">("embedded");
+
+  /**
+   * 生成页面标识符（用于 sessionStorage 和预览路由）
+   */
+  const pageId = useMemo(() => {
+    if (typeof window === "undefined") return "preview";
+    const params = new URLSearchParams(window.location.search);
+    return params.get("project") ?? "preview";
+  }, []);
+
+  /**
+   * A6: 切换预览模式时将画布状态保存至 sessionStorage
+   */
+  const handleToggleMode = useCallback(() => {
+    const nextMode = previewMode === "embedded" ? "iframe" : "embedded";
+    if (nextMode === "iframe") {
+      sessionStorage.setItem(`preview-${pageId}`, JSON.stringify({
+        components,
+        gridCols,
+        gridGap,
+        pageBackground,
+        pagePadding,
+        pageMaxWidth,
+        viewportWidth,
+        viewport,
+      }));
+    }
+    setPreviewMode(nextMode);
+  }, [previewMode, pageId, components, gridCols, gridGap, pageBackground, pagePadding, pageMaxWidth, viewportWidth, viewport]);
+
   /**
    * P5: 构建预览 URL 并打开新窗口
    * 使用当前 project ID 和页面路径构建真实路由 URL
    */
   const handleOpenNewWindow = () => {
-    // 从 URL search params 获取 projectId
-    const params = new URLSearchParams(window.location.search);
-    const projectId = params.get("project");
-    // 构造预览路径：/preview/[projectId]
+    // A6: 先保存当前画布状态至 sessionStorage
+    sessionStorage.setItem(`preview-${pageId}`, JSON.stringify({
+      components,
+      gridCols,
+      gridGap,
+      pageBackground,
+      pagePadding,
+      pageMaxWidth,
+      viewportWidth,
+      viewport,
+    }));
     const baseUrl = window.location.origin;
-    const previewUrl = projectId
-      ? `${baseUrl}/preview/${encodeURIComponent(projectId)}`
-      : `${baseUrl}/preview`;
+    const previewUrl = `${baseUrl}/preview/${encodeURIComponent(pageId)}`;
     window.open(previewUrl, "_blank", "noopener,noreferrer");
   };
 
@@ -116,6 +152,8 @@ export function PagePreviewDialog({
     desktop: <Monitor className="h-4 w-4" />,
     fluid: <Monitor className="h-4 w-4" />,
   };
+
+  const iframeSrc = `/preview/${encodeURIComponent(pageId)}`;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -129,6 +167,9 @@ export function PagePreviewDialog({
               <DialogTitle className="flex items-center gap-2">
                 {viewportIcons[viewport] ?? null}
                 Preview
+                {previewMode === "iframe" ? (
+                  <span className="rounded bg-blue-100 px-1.5 py-0.5 text-[10px] text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">iframe</span>
+                ) : null}
                 {viewport !== "desktop" && viewport !== "fluid" ? (
                   <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">
                     {viewport === "mobile" ? "375px" : "768px"}
@@ -137,35 +178,56 @@ export function PagePreviewDialog({
                 ) : null}
               </DialogTitle>
               <DialogDescription>
-                真实组件渲染（非 Canvas simulated）
+                {previewMode === "iframe" ? "iframe 嵌入预览" : "真实组件渲染（非 Canvas simulated）"}
                 {components.length > 0 && ` · ${components.length} 个组件`}
               </DialogDescription>
             </div>
-            {/* P5: 新窗口预览按钮 */}
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-8 gap-1 text-xs"
-              onClick={handleOpenNewWindow}
-              title="在新窗口中打开真实路由预览"
-            >
-              <ExternalLink className="h-3.5 w-3.5" />
-              新窗口预览
-            </Button>
+            <div className="flex items-center gap-2">
+              {/* A6: 切换 iframe / embedded 预览模式 */}
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 gap-1 text-xs"
+                onClick={handleToggleMode}
+                title={previewMode === "embedded" ? "切换到 iframe 嵌入预览" : "切换到直接渲染预览"}
+              >
+                <FileCode className="h-3.5 w-3.5" />
+                {previewMode === "embedded" ? "iframe 预览" : "直接渲染"}
+              </Button>
+              {/* P5: 新窗口预览按钮 */}
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 gap-1 text-xs"
+                onClick={handleOpenNewWindow}
+                title="在新窗口中打开真实路由预览"
+              >
+                <ExternalLink className="h-3.5 w-3.5" />
+                新窗口预览
+              </Button>
+            </div>
           </DialogHeader>
           <div className="flex-1 overflow-auto bg-muted/30 p-6">
-            {/* P4: 使用 DeviceFrame 包裹渲染内容 */}
             <DeviceFrame viewport={viewport}>
-              <RuntimePageRenderer
-                components={components}
-                gridCols={gridCols}
-                gridGap={gridGap}
-                pageBackground={pageBackground}
-                pagePadding={pagePadding}
-                pageMaxWidth={pageMaxWidth}
-                viewportWidth={viewportWidth}
-                viewport={viewport}
-              />
+              {previewMode === "iframe" ? (
+                <iframe
+                  src={iframeSrc}
+                  className="h-full w-full border-0"
+                  title="Preview"
+                  sandbox="allow-scripts allow-same-origin allow-forms"
+                />
+              ) : (
+                <RuntimePageRenderer
+                  components={components}
+                  gridCols={gridCols}
+                  gridGap={gridGap}
+                  pageBackground={pageBackground}
+                  pagePadding={pagePadding}
+                  pageMaxWidth={pageMaxWidth}
+                  viewportWidth={viewportWidth}
+                  viewport={viewport}
+                />
+              )}
             </DeviceFrame>
           </div>
         </div>

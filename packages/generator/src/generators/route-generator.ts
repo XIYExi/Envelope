@@ -17,6 +17,7 @@ import { jsxText, tsStringLiteral } from "../core/tsx-escape";
 
 /** 页面元数据（用于匹配路由到页面） */
 interface PageInfo {
+  id?: string;
   path: string;
   title: string;
 }
@@ -327,15 +328,20 @@ function findPageByPath(fullPath: string, pages: Map<string, PageInfo>): PageInf
  */
 export function generateRouteFiles(
   routes: RoutesConfig,
-  pages: { path: string; title: string }[],
+  pages: { id?: string; path: string; title: string }[],
 ): VirtualFile[] {
-  // 构建页面映射（按路径索引）
+  // 构建页面映射（按路径 + pageId 索引）
   const pageMap = new Map<string, PageInfo>();
   for (const page of pages) {
     const normalized = page.path.replace(/^\//, "").replace(/\/$/, "") || "";
-    pageMap.set(normalized, { path: page.path, title: page.title });
+    const pageInfo: PageInfo = { id: page.id, path: page.path, title: page.title };
+    pageMap.set(normalized, pageInfo);
     // 也按带斜杠的路径索引
-    pageMap.set("/" + normalized, { path: page.path, title: page.title });
+    pageMap.set("/" + normalized, pageInfo);
+    // 如果有 id，也按 id 索引（供 pageId 查找）
+    if (page.id) {
+      pageMap.set(page.id, pageInfo);
+    }
   }
 
   const routeNodes = routes.routes ?? [];

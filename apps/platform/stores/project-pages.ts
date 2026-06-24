@@ -165,6 +165,8 @@ async function getApiErrorMessage(res: Response, fallback: string): Promise<stri
 }
 
 let autosaveTimer: ReturnType<typeof setTimeout> | null = null;
+let maxDelayTimer: ReturnType<typeof setTimeout> | null = null;
+const MAX_DELAY_MS = 30_000;
 
 export const useProjectPagesStore = create<ProjectPagesState & ProjectPagesActions>((set, get) => ({
   projectId: null,
@@ -186,21 +188,44 @@ export const useProjectPagesStore = create<ProjectPagesState & ProjectPagesActio
 
   markDirty: () => set({ dirty: true }),
 
-  scheduleAutosave: (delayMs = 30_000) => {
+  /**
+   * 调度自动保存（防抖 + 最大间隔守卫）
+   *
+   * U4: 同时维护两个计时器：
+   * 1. 防抖计时器：最后一次修改后等 delayMs（默认 5s）保存
+   * 2. 最大间隔计时器：首次脏状态起 MAX_DELAY_MS（30s）强制保存
+   * 两者任一触发都执行保存并清除两个计时器
+   */
+  scheduleAutosave: (delayMs = 5_000) => {
     if (autosaveTimer) clearTimeout(autosaveTimer);
     autosaveTimer = setTimeout(() => {
+      if (maxDelayTimer) clearTimeout(maxDelayTimer);
+      maxDelayTimer = null;
+      autosaveTimer = null;
       useProjectPagesStore.getState().save();
     }, delayMs);
+    if (!maxDelayTimer) {
+      maxDelayTimer = setTimeout(() => {
+        if (autosaveTimer) clearTimeout(autosaveTimer);
+        autosaveTimer = null;
+        maxDelayTimer = null;
+        useProjectPagesStore.getState().save();
+      }, MAX_DELAY_MS);
+    }
   },
 
   cancelAutosave: () => {
     if (autosaveTimer) clearTimeout(autosaveTimer);
     autosaveTimer = null;
+    if (maxDelayTimer) clearTimeout(maxDelayTimer);
+    maxDelayTimer = null;
   },
 
   flushAutosave: async () => {
     if (autosaveTimer) clearTimeout(autosaveTimer);
     autosaveTimer = null;
+    if (maxDelayTimer) clearTimeout(maxDelayTimer);
+    maxDelayTimer = null;
     await useProjectPagesStore.getState().save();
   },
 

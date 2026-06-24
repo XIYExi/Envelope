@@ -20,6 +20,15 @@ export const inputMaterial: MaterialDefinition = {
   editableProps: [
     // 行为配置
     {
+      key: "name",
+      label: "Field Name",
+      type: "text",
+      defaultValue: "",
+      group: "Behavior",
+      order: 0,
+      comment: "字段标识，表单提交时的 key",
+    },
+    {
       key: "type",
       label: "Input Type",
       type: "select",
@@ -60,6 +69,30 @@ export const inputMaterial: MaterialDefinition = {
       defaultValue: false,
       group: "Validation",
       order: 4,
+    },
+    {
+      key: "pattern",
+      label: "Pattern",
+      type: "text",
+      placeholder: "e.g. [a-zA-Z]+",
+      group: "Validation",
+      order: 5,
+    },
+    {
+      key: "minLength",
+      label: "Min Length",
+      type: "number",
+      min: 0,
+      group: "Validation",
+      order: 6,
+    },
+    {
+      key: "maxLength",
+      label: "Max Length",
+      type: "number",
+      min: 0,
+      group: "Validation",
+      order: 7,
     },
     // 样式配置
     {

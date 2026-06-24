@@ -56,7 +56,7 @@ export function setSlotLookup(fn: (type: string) => SlotDefinition[] | undefined
   _slotLookup = fn;
 }
 
-function getSlotsForType(type: string): SlotDefinition[] {
+export function getSlotsForType(type: string): SlotDefinition[] {
   const slots = _slotLookup?.(type);
   return slots ?? [];
 }

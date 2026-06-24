@@ -22,7 +22,7 @@
 import { memo, useMemo, useState, useCallback, useRef, useEffect, type ReactNode } from "react";
 import { useDroppable, useDraggable, useDndMonitor } from "@dnd-kit/core";
 import { createDefaultRegistry } from "@envelope/materials";
-import { createComponentDragItem, useCanvasStore } from "@envelope/engine";
+import { createComponentDragItem, useCanvasStore, buildNodeIndex } from "@envelope/engine";
 import type { CanvasComponent, ComponentNode } from "@envelope/engine";
 import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -40,20 +40,6 @@ function nodeLabel(node: ComponentNode, displayNameMap: Map<string, string>): st
   const display = displayNameMap.get(node.type);
   const name = typeof node.name === "string" && node.name.trim() ? node.name.trim() : `${node.type}-${node.id.slice(0, 8)}`;
   return display ? `${display} · ${name}` : name;
-}
-
-/**
- * 在递归树中按 ID 查找节点
- */
-function findNodeById(nodes: ComponentNode[], id: string): ComponentNode | null {
-  for (const n of nodes) {
-    if (n.id === id) return n;
-    if (n.children) {
-      const found = findNodeById(n.children, id);
-      if (found) return found;
-    }
-  }
-  return null;
 }
 
 const TreeDropSlot = memo(function TreeDropSlot({
@@ -517,7 +503,8 @@ export const ComponentTreePanel = memo(function ComponentTreePanel() {
       case "ArrowRight": {
         e.preventDefault();
         if (effectiveId && !effectiveExpandedIds.has(effectiveId)) {
-          const node = findNodeById(roots, effectiveId);
+          const nodeIndex = buildNodeIndex(roots);
+          const node = nodeIndex.get(effectiveId);
           if (node && (node.children?.length ?? 0) > 0) {
             toggle(effectiveId);
           }

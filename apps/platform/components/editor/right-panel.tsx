@@ -10,9 +10,9 @@
 "use client";
 
 import { useMemo, useCallback, useRef } from "react";
-import { useCanvasStore, PropertyEditor } from "@envelope/engine";
+import { useCanvasStore, PropertyEditor, buildNodeIndex } from "@envelope/engine";
 import { createDefaultRegistry } from "@envelope/materials";
-import type { EditableProp } from "@envelope/materials";
+import type { EditableProp, MaterialDefinition } from "@envelope/materials";
 import { useFlowBindingStore } from "@envelope/flow";
 import { useEditorStore } from "@/stores/editor";
 import { useProjectModelsStore } from "@/stores/project-models";
@@ -20,16 +20,6 @@ import { cn } from "@/lib/utils";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import type { ComponentNode, CanvasComponent } from "@envelope/engine";
-
-function findNodeById(root: ComponentNode, targetId: string): ComponentNode | null {
-  if (root.id === targetId) return root;
-  const children = root.children ?? [];
-  for (const c of children) {
-    const found = findNodeById(c, targetId);
-    if (found) return found;
-  }
-  return null;
-}
 
 /**
  * 批量编辑多选组件的共有属性
@@ -213,12 +203,6 @@ function BatchPropertyEditor({ components, registry, onBatchChange }: {
   );
 }
 
-/** 右侧面板 Props */
-interface RightPanelProps {
-  /** 面板是否处于折叠态 */
-  collapsed: boolean;
-}
-
 /**
  * 右侧属性面板
  *
@@ -226,8 +210,10 @@ interface RightPanelProps {
  * - 选中多个组件：显示选中数量
  * - 未选中：提示文本
  * - 底部固定：缩放滑块、背景色、内边距（始终可见）
+ *
+ * U2: 面板折叠由父组件通过条件渲染控制，不再通过 CSS 隐藏
  */
-export function RightPanel({ collapsed }: RightPanelProps) {
+export function RightPanel() {
   const {
     zoom, setZoom, components, selectedIds, activeNodeId,
     setPageBackground, pageBackground, pagePadding, setPagePadding, pageMaxWidth, setPageMaxWidth,
@@ -243,7 +229,8 @@ export function RightPanel({ collapsed }: RightPanelProps) {
 
   const active = useMemo(() => {
     if (!activeNodeId || !selectedRoot) return null;
-    return findNodeById(selectedRoot.node, activeNodeId);
+    const idx = buildNodeIndex([selectedRoot.node]);
+    return idx.get(activeNodeId) ?? null;
   }, [activeNodeId, selectedRoot]);
 
   const activeRootComp: CanvasComponent | null = useMemo(() => {
@@ -344,6 +331,11 @@ export function RightPanel({ collapsed }: RightPanelProps) {
 
       // K1+K3: eventBindings 值改为 string[]，支持多 flow 绑定
       if (type === "eventBinding") {
+        // U14: 事件白名单校验
+        const material = registry.get(node.type);
+        if (material?.bindableEvents && !material.bindableEvents.includes(key)) {
+          return;
+        }
         const current = node.eventBindings ?? {};
         const next = { ...current };
         if (typeof value === "string" && value.trim().length > 0) {
@@ -367,7 +359,7 @@ export function RightPanel({ collapsed }: RightPanelProps) {
       }
       updateNode(node.id, { props: Object.keys(nextProps).length > 0 ? nextProps : undefined });
     },
-    [updateNode],
+    [updateNode, registry],
   );
 
   /**
@@ -387,7 +379,7 @@ export function RightPanel({ collapsed }: RightPanelProps) {
       data-testid="right-panel"
       className={cn(
         "flex flex-col border-l bg-background transition-all duration-200",
-        collapsed ? "w-0 overflow-hidden border-l-0" : "w-72",
+        "w-72",
       )}
     >
       <div className="flex h-9 items-center border-b px-3">

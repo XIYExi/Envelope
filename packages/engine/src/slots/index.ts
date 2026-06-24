@@ -9,4 +9,5 @@
  * @since 3.0.0
  */
 export * from "./aggregate-slot-mapper";
+export { getSlotsForType } from "./slot-engine";
 

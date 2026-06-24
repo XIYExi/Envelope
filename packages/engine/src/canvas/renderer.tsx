@@ -28,7 +28,7 @@ import type { ComponentNode } from "../schemas/page.schema";
 import { useCtrlDown } from "./ctrl-context";
 import { Minimap } from "./minimap";
 import { HorizontalRuler, VerticalRuler } from "./ruler";
-import { CANVAS_CELL_HEIGHT as CELL_HEIGHT, CANVAS_CELL_WIDTH as CELL_WIDTH, isContainerType } from "../shared/canvas-utils";
+import { CANVAS_CELL_HEIGHT as CELL_HEIGHT, CANVAS_CELL_WIDTH as CELL_WIDTH, isContainerType, getMaterialRegistry } from "../shared/canvas-utils";
 
 /** 缩放手柄的视觉尺寸（px） */
 const RESIZE_HANDLE_SIZE = 12;
@@ -108,25 +108,54 @@ function parr<T = unknown>(props: Record<string, unknown> | undefined, key: stri
   return Array.isArray(v) ? (v as T[]) : fallback;
 }
 
+/** 紧凑模式样式覆盖表，将根级样式映射为子组件紧凑版 */
+const COMPACT_STYLES = {
+  buttonSize: "px-2 py-0.5 text-[10px]",
+  inputHeight: "h-6",
+  badgeSize: "px-1.5 py-0 text-[10px]",
+  cardPadding: "p-1",
+  avatarSize: "h-6 w-6",
+  skeletonHeight: "h-3",
+  progressHeight: "h-1.5",
+} as const;
+
 /**
- * 模拟组件视觉呈现
+ * 模拟组件视觉呈现（统一版本）
  *
- * 根据组件类型和属性渲染对应的视觉占位符，
- * 让用户在画布上预览组件外观而不执行实际逻辑。
+ * 合并 SimulatedContent 和 SimulatedChildContent 的功能，
+ * 通过 variant 控制根级/子组件样式。
  *
- * @param props - 组件属性
- * @param props.comp - 画布组件数据
+ * @param comp - 画布组件数据
+ * @param variant - "root" 根级样式 / "child" 紧凑子组件样式
+ * @param onSelectChild - 子节点选中回调
  */
 /**
  * 子节点选中回调上下文
  *
- * 用于在 SimulatedContent → ChildrenSlot → SimulatedChildContent 之间传递
+ * 用于在 UnifiedSimulatedContent → ChildrenSlot 之间传递
  * 嵌套子组件点击选中回调，避免逐层透传 props 修改大量调用点。
  */
 const SelectChildContext = React.createContext<((nodeId: string) => void) | null>(null);
 
-function SimulatedContent({ comp, onSelectChild }: { comp: CanvasComponent; onSelectChild?: (nodeId: string) => void }) {
+function UnifiedSimulatedContent({ comp, variant = "root", onSelectChild }: { comp: CanvasComponent; variant?: "root" | "child"; onSelectChild?: (nodeId: string) => void }) {
   const { type, props } = comp.node;
+  const isCompact = variant === "child";
+
+  // A7: 优先检查物料注册表中的 previewRender 覆盖
+  if (!isCompact) {
+    const registry = getMaterialRegistry();
+    if (registry) {
+      const def = registry.get(type);
+      if (def?.previewRender) {
+        const children = comp.node.children ?? [];
+        const rendered = def.previewRender(
+          (props ?? {}) as Record<string, unknown>,
+          children.length > 0 ? <ChildrenSlot components={children} /> : undefined,
+        );
+        if (rendered != null) return <>{rendered}</>;
+      }
+    }
+  }
 
   switch (type) {
     // ===== Container components =====
@@ -141,8 +170,8 @@ function SimulatedContent({ comp, onSelectChild }: { comp: CanvasComponent; onSe
         const contentText = pstr(props, "contentText", "Content");
         const footerText = pstr(props, "footerText", "Footer");
         return (
-          <div className="flex h-full flex-col rounded-lg border bg-card p-3">
-            <div className="mb-1 text-xs font-semibold text-muted-foreground">{pstr(props, "label", "Card")}</div>
+          <div className={cn("flex h-full flex-col rounded-lg border bg-card", isCompact ? COMPACT_STYLES.cardPadding : "p-3")}>
+            <div className={cn("font-semibold text-muted-foreground", isCompact ? "mb-0.5 text-[10px]" : "mb-1 text-xs")}>{pstr(props, "label", "Card")}</div>
             <div className="flex-1">
               {hasChildren ? (
                 <ChildrenSlot components={children} />
@@ -168,9 +197,9 @@ function SimulatedContent({ comp, onSelectChild }: { comp: CanvasComponent; onSe
     case "SheetContent":
     case "AlertDialogContent":
       return (
-        <div className="flex h-full flex-col rounded-lg border-2 border-primary/30 bg-background p-3 shadow-lg">
-          <div className="mb-1 text-xs font-semibold">{pstr(props, "label", type.replace("Content", ""))}</div>
-          <div className="flex-1 text-xs text-muted-foreground">{comp.node.children && <ChildrenSlot components={comp.node.children} />}</div>
+        <div className={cn("flex h-full flex-col rounded-lg border-2 border-primary/30 bg-background shadow-lg", isCompact ? "p-1" : "p-3")}>
+          <div className={cn("font-semibold", isCompact ? "mb-0.5 text-[10px]" : "mb-1 text-xs")}>{pstr(props, "label", type.replace("Content", ""))}</div>
+          <div className={cn("flex-1 text-muted-foreground", isCompact ? "text-[10px]" : "text-xs")}>{comp.node.children && <ChildrenSlot components={comp.node.children} />}</div>
         </div>
       );
 
@@ -292,7 +321,10 @@ function SimulatedContent({ comp, onSelectChild }: { comp: CanvasComponent; onSe
       const variant = pstr(props, "variant", "default");
       const size = pstr(props, "size", "default");
       const label = pstr(props, "label", "Button");
-      const sizeClass = size === "sm" ? "px-2 py-0.5 text-[10px]" : size === "lg" ? "px-4 py-1.5 text-sm" : "px-3 py-1 text-xs";
+      const sizeClass = isCompact
+        ? COMPACT_STYLES.buttonSize
+        : size === "sm" ? "px-2 py-0.5 text-[10px]" : size === "lg" ? "px-4 py-1.5 text-sm" : "px-3 py-1 text-xs";
+      const buttonVariant = isCompact ? "default" : variant;
       const variantClass: string = ({
         default: "bg-primary text-primary-foreground",
         destructive: "bg-destructive text-destructive-foreground",
@@ -300,7 +332,7 @@ function SimulatedContent({ comp, onSelectChild }: { comp: CanvasComponent; onSe
         secondary: "bg-secondary text-secondary-foreground",
         ghost: "",
         link: "underline text-primary",
-      } as Record<string, string>)[variant] ?? "bg-primary text-primary-foreground";
+      } as Record<string, string>)[buttonVariant] ?? "bg-primary text-primary-foreground";
       return (
         <button
           className={cn("inline-flex items-center justify-center rounded-md font-medium", sizeClass, variantClass)}
@@ -313,7 +345,7 @@ function SimulatedContent({ comp, onSelectChild }: { comp: CanvasComponent; onSe
 
     case "Input":
       return (
-        <div className="flex h-8 items-center rounded-md border bg-background px-2 text-xs text-muted-foreground">
+        <div className={cn("flex items-center rounded-md border bg-background px-2 text-xs text-muted-foreground", isCompact ? COMPACT_STYLES.inputHeight : "h-8")}>
           {pstr(props, "placeholder", "Input...")}
         </div>
       );
@@ -331,9 +363,10 @@ function SimulatedContent({ comp, onSelectChild }: { comp: CanvasComponent; onSe
     case "Checkbox": {
       const checked = pbool(props, "defaultChecked");
       const label = pstr(props, "label", "Checkbox");
+      const boxSize = isCompact ? "h-3 w-3 text-[8px]" : "h-4 w-4 text-[10px]";
       return (
-        <label className="inline-flex items-center gap-2 text-xs">
-          <span className={cn("flex h-4 w-4 items-center justify-center rounded border", checked ? "bg-primary border-primary text-primary-foreground" : "")}>
+        <label className={cn("inline-flex items-center gap-2", isCompact ? "text-[10px]" : "text-xs")}>
+          <span className={cn("flex items-center justify-center rounded border", boxSize, checked ? "bg-primary border-primary text-primary-foreground" : "")}>
             {checked ? "✓" : ""}
           </span>
           {label}
@@ -358,10 +391,12 @@ function SimulatedContent({ comp, onSelectChild }: { comp: CanvasComponent; onSe
 
     case "Switch": {
       const checked = pbool(props, "defaultChecked");
+      const trackSize = isCompact ? "h-4 w-7 p-[3px]" : "h-5 w-9 p-0.5";
+      const thumbSize = isCompact ? "h-2.5 w-2.5" : "h-4 w-4";
       return (
-        <label className="inline-flex items-center gap-2 text-xs">
-          <span className={cn("flex h-5 w-9 items-center rounded-full p-0.5 transition-colors", checked ? "bg-primary justify-end" : "bg-muted justify-start")}>
-            <span className="h-4 w-4 rounded-full bg-background shadow" />
+        <label className={cn("inline-flex items-center gap-2", isCompact ? "text-[10px]" : "text-xs")}>
+          <span className={cn("flex items-center rounded-full transition-colors", trackSize, checked ? "bg-primary justify-end" : "bg-muted justify-start")}>
+            <span className={cn("rounded-full bg-background shadow", thumbSize)} />
           </span>
           {pstr(props, "label", "")}
         </label>
@@ -374,7 +409,7 @@ function SimulatedContent({ comp, onSelectChild }: { comp: CanvasComponent; onSe
       const selectedIndex = Math.floor(pnum(props, "selectedIndex", -1));
       const selected = selectedIndex >= 0 && selectedIndex < options.length ? options[selectedIndex] : null;
       return (
-        <div className="flex h-8 items-center justify-between rounded-md border bg-background px-2 text-xs text-muted-foreground">
+        <div className={cn("flex items-center justify-between rounded-md border bg-background px-2 text-muted-foreground", isCompact ? `${COMPACT_STYLES.inputHeight} text-[10px]` : "h-8 text-xs")}>
           <span className={cn(selected ? "text-foreground" : "")}>{selected ?? placeholder}</span>
           <span>▼</span>
         </div>
@@ -384,10 +419,10 @@ function SimulatedContent({ comp, onSelectChild }: { comp: CanvasComponent; onSe
     case "Slider":
       return (
         <div className="flex items-center gap-2">
-          <div className="relative h-2 flex-1 rounded-full bg-muted">
-            <div className="absolute h-2 rounded-full bg-primary" style={{ width: `${pnum(props, "defaultValue", 50)}%` }} />
+          <div className={cn("relative flex-1 rounded-full bg-muted", isCompact ? "h-1.5" : "h-2")}>
+            <div className={cn("absolute rounded-full bg-primary", isCompact ? "h-1.5" : "h-2")} style={{ width: `${pnum(props, "defaultValue", 50)}%` }} />
           </div>
-          <span className="text-[10px] text-muted-foreground">{pnum(props, "defaultValue", 50)}</span>
+          <span className={cn("text-muted-foreground", isCompact ? "text-[9px]" : "text-[10px]")}>{pnum(props, "defaultValue", 50)}</span>
         </div>
       );
 
@@ -421,11 +456,11 @@ function SimulatedContent({ comp, onSelectChild }: { comp: CanvasComponent; onSe
       const src = pstr(props, "src", pstr(props, "image", ""));
       const initial = String(pstr(props, "label", pstr(props, "name", "?"))).charAt(0).toUpperCase();
       return (
-        <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full bg-muted">
+        <div className={cn("flex items-center justify-center overflow-hidden rounded-full bg-muted", isCompact ? COMPACT_STYLES.avatarSize : "h-10 w-10")}>
           {src ? (
             <img src={src} alt="Avatar" className="h-full w-full object-cover" />
           ) : (
-            <span className="text-xs font-medium text-muted-foreground">{initial}</span>
+            <span className={cn("font-medium text-muted-foreground", isCompact ? "text-[9px]" : "text-xs")}>{initial}</span>
           )}
         </div>
       );
@@ -440,7 +475,7 @@ function SimulatedContent({ comp, onSelectChild }: { comp: CanvasComponent; onSe
         outline: "border",
       } as Record<string, string>)[variant] ?? "bg-primary/15 text-primary";
       return (
-        <span className={cn("inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium", variantClass)}>
+        <span className={cn("inline-flex items-center rounded-full font-medium", variantClass, isCompact ? COMPACT_STYLES.badgeSize : "px-2 py-0.5 text-[10px]")}>
           {pstr(props, "label", "Badge")}
         </span>
       );
@@ -448,7 +483,7 @@ function SimulatedContent({ comp, onSelectChild }: { comp: CanvasComponent; onSe
 
     // ===== Feedback components =====
     case "Skeleton": {
-      return <div className="h-full w-full animate-pulse rounded bg-muted" />;
+      return <div className={cn("animate-pulse rounded bg-muted", isCompact ? COMPACT_STYLES.skeletonHeight : "h-full w-full")} />;
     }
 
     case "Alert": {
@@ -475,8 +510,8 @@ function SimulatedContent({ comp, onSelectChild }: { comp: CanvasComponent; onSe
     case "Progress": {
       const value = pnum(props, "value", 0);
       return (
-        <div className="h-2 w-full rounded-full bg-muted">
-          <div className="h-2 rounded-full bg-primary transition-all" style={{ width: `${value}%` }} />
+        <div className={cn("w-full rounded-full bg-muted", isCompact ? COMPACT_STYLES.progressHeight : "h-2")}>
+          <div className={cn("rounded-full bg-primary transition-all", isCompact ? COMPACT_STYLES.progressHeight : "h-2")} style={{ width: `${value}%` }} />
         </div>
       );
     }
@@ -523,7 +558,7 @@ function SimulatedContent({ comp, onSelectChild }: { comp: CanvasComponent; onSe
     // ===== Layout components =====
     case "Box":
       return (
-        <div className="flex h-full min-h-[60px] items-center justify-center rounded border-2 border-dashed border-muted-foreground/30 bg-muted/10 text-[10px] text-muted-foreground">
+        <div className={cn("flex items-center justify-center rounded border-2 border-dashed border-muted-foreground/30 bg-muted/10 text-[10px] text-muted-foreground", isCompact ? "min-h-0" : "h-full min-h-[60px]")}>
           {comp.node.children && comp.node.children.length > 0 ? (
             <div className="w-full p-2"><ChildrenSlot components={comp.node.children} /></div>
           ) : (
@@ -531,15 +566,16 @@ function SimulatedContent({ comp, onSelectChild }: { comp: CanvasComponent; onSe
           )}
         </div>
       );
-    case "Flex":
+    case "Flex": {
+      const gap = pnum(props, "gap", 4);
       return (
         <div className={cn(
-          "flex h-full min-h-[60px] gap-2 rounded border-2 border-dashed border-muted-foreground/30 bg-muted/10 p-2",
+          isCompact ? "flex rounded border-2 border-dashed border-muted-foreground/30 bg-muted/5 p-1" : "flex h-full min-h-[60px] rounded border-2 border-dashed border-muted-foreground/30 bg-muted/10 p-2",
           pstr(props, "direction", "row") === "column" ? "flex-col" : "flex-row",
           (props?.wrap === true || pstr(props, "wrap", "") === "wrap") ? "flex-wrap" : "",
-          pstr(props, "justify", "start") === "center" ? "justify-center" : pstr(props, "justify", "start") === "end" ? "justify-end" : pstr(props, "justify", "start") === "between" ? "justify-between" : "justify-start",
-          pstr(props, "align", "start") === "center" ? "items-center" : pstr(props, "align", "start") === "end" ? "items-end" : pstr(props, "align", "start") === "stretch" ? "items-stretch" : "items-start",
-        )}>
+          pstr(props, "justify", "start") === "center" ? "justify-center" : pstr(props, "justify", "start") === "end" ? "justify-end" : pstr(props, "justify", "start") === "between" ? "justify-between" : pstr(props, "justify", "start") === "around" ? "justify-around" : pstr(props, "justify", "start") === "evenly" ? "justify-evenly" : "justify-start",
+          pstr(props, "align", "start") === "center" ? "items-center" : pstr(props, "align", "start") === "end" ? "items-end" : pstr(props, "align", "start") === "stretch" ? "items-stretch" : pstr(props, "align", "start") === "baseline" ? "items-baseline" : "items-start",
+        )} style={{ gap: `${gap * 4}px` } as CSSProperties}>
           {comp.node.children && comp.node.children.length > 0 ? (
             <ChildrenSlot components={comp.node.children} />
           ) : (
@@ -547,32 +583,51 @@ function SimulatedContent({ comp, onSelectChild }: { comp: CanvasComponent; onSe
           )}
         </div>
       );
-    case "Container":
+    }
+    case "Container": {
+      const paddingX = pnum(props, "paddingX", 16);
+      const paddingY = pnum(props, "paddingY", 16);
+      const marginTop = pnum(props, "marginTop", 0);
+      const marginBottom = pnum(props, "marginBottom", 0);
       return (
-        <div className="flex h-full min-h-[60px] flex-col rounded border-2 border-dashed border-muted-foreground/20 bg-background">
+        <div className={cn("flex flex-col rounded border-2 border-dashed border-muted-foreground/20 bg-background", isCompact ? "min-h-0" : "h-full min-h-[60px]")}>
           <div className="border-b border-dashed px-2 py-1 text-[9px] font-medium text-muted-foreground/60">Container</div>
-          <div className="flex-1" style={{ maxWidth: pnum(props, "maxWidth", 1200) > 0 ? `${pnum(props, "maxWidth", 1200)}px` : undefined, margin: "0 auto", width: "100%" }}>
+          <div className="flex-1" style={{ maxWidth: pnum(props, "maxWidth", 1200) > 0 ? `${pnum(props, "maxWidth", 1200)}px` : undefined, margin: `0 auto`, width: "100%", paddingLeft: `${paddingX}px`, paddingRight: `${paddingX}px`, paddingTop: `${paddingY}px`, paddingBottom: `${paddingY}px`, marginTop: `${marginTop}px`, marginBottom: `${marginBottom}px` } as CSSProperties}>
             {comp.node.children && comp.node.children.length > 0 ? (
-              <div className="p-2"><ChildrenSlot components={comp.node.children} /></div>
+              <div><ChildrenSlot components={comp.node.children} /></div>
             ) : (
-              <div className="flex h-full items-center justify-center p-4 text-[10px] text-muted-foreground">
+              <div className="flex h-full items-center justify-center text-[10px] text-muted-foreground">
                 Centered Container ({pstr(props, "maxWidthText", "1200px")})
               </div>
             )}
           </div>
         </div>
       );
-    case "Grid":
+    }
+    case "Grid": {
+      const gap = pnum(props, "gap", 4);
+      const rows = pnum(props, "rows", 0);
+      const autoFlow = pstr(props, "autoFlow", "row");
+      const justifyItems = pstr(props, "justifyItems", "stretch");
+      const alignItems = pstr(props, "alignItems", "stretch");
       return (
         <div className={cn(
-          "h-full min-h-[60px] rounded border-2 border-dashed border-muted-foreground/30 bg-muted/10 p-2",
+          "rounded border-2 border-dashed border-muted-foreground/30 bg-muted/10",
+          isCompact ? "p-1" : "h-full min-h-[60px] p-2",
         )}>
           <div className="mb-1 text-[9px] font-medium text-muted-foreground/60">
-            Grid ({pstr(props, "columns", "3")} cols)
+            Grid ({pstr(props, "columns", "3")} cols{rows > 0 ? ` x ${rows} rows` : ""})
           </div>
           <div
-            className="grid gap-2"
-            style={{ gridTemplateColumns: `repeat(${pnum(props, "columns", 3)}, 1fr)` }}
+            className="grid"
+            style={{
+              gridTemplateColumns: `repeat(${pnum(props, "columns", 3)}, 1fr)`,
+              gridTemplateRows: rows > 0 ? `repeat(${rows}, 1fr)` : undefined,
+              gridAutoFlow: autoFlow,
+              justifyItems: justifyItems,
+              alignItems: alignItems,
+              gap: `${gap * 4}px`,
+            } as CSSProperties}
           >
             {comp.node.children && comp.node.children.length > 0 ? (
               <div className="col-span-full"><ChildrenSlot components={comp.node.children} /></div>
@@ -582,6 +637,23 @@ function SimulatedContent({ comp, onSelectChild }: { comp: CanvasComponent; onSe
                   {i + 1}
                 </div>
               ))
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    case "Form":
+      return (
+        <div className="flex h-full flex-col rounded-lg border-2 border-blue-200 bg-blue-50/20 p-3">
+          <div className="mb-1 text-xs font-semibold text-blue-600">
+            📋 {pstr(props, "name", "Form")}
+          </div>
+          <div className="flex-1">
+            {comp.node.children ? <ChildrenSlot components={comp.node.children} /> : (
+              <div className="flex h-full items-center justify-center text-[10px] text-muted-foreground">
+                拖入表单字段组件
+              </div>
             )}
           </div>
         </div>
@@ -804,12 +876,29 @@ function SimulatedContent({ comp, onSelectChild }: { comp: CanvasComponent; onSe
       );
 
     // ===== Default fallback =====
-    default:
+    default: {
+      if (isCompact) {
+        const children = comp.node.children ?? [];
+        const firstChild = children[0];
+        const childText = firstChild?.type === "Text" ? (firstChild.props as Record<string, unknown> | undefined)?.text : "";
+        return (
+          <div className="rounded bg-muted/30 px-1 py-0.5 text-[10px] text-muted-foreground">
+            <span className="font-medium">{type}</span>
+            {typeof childText === "string" && childText ? <span className="ml-1 text-muted-foreground">· {childText}</span> : null}
+            {children.length > 0 && type !== "Text" ? (
+              <div className="mt-1">
+                <ChildrenSlot components={children} onSelectChild={onSelectChild} />
+              </div>
+            ) : null}
+          </div>
+        );
+      }
       return (
         <div className="flex h-full items-center justify-center rounded bg-muted/30 text-[10px] font-medium text-muted-foreground">
           {type}
         </div>
       );
+    }
   }
 }
 
@@ -833,260 +922,17 @@ function ChildrenSlot({ components, onSelectChild: explicitOnSelectChild }: { co
   if (!components || components.length === 0) return null;
   return (
     <div className="space-y-1">
-      {components.map((child) => (
-        <SimulatedChildContent key={child.id} node={child} onSelectChild={resolvedOnSelectChild ?? undefined} />
-      ))}
-    </div>
-  );
-}
-
-/**
- * 渲染单个子组件的简化视觉表示
- *
- * 相比 SimulatedContent，子组件使用更紧凑的样式（更小的字体、无边框等），
- * 适合在容器内部展示。
- *
- * @param props - 组件属性
- * @param props.type - 组件类型名称
- * @param props.props - 组件属性对象（可选）
- */
-function SimulatedChildContent({ node, onSelectChild }: { node: ComponentNode; onSelectChild?: (nodeId: string) => void }) {
-  const { type, props } = node;
-  const children = node.children ?? [];
-  const childText = (() => {
-    const first = children[0];
-    if (!first) return "";
-    if (first.type !== "Text") return "";
-    const t = (first.props as Record<string, unknown> | undefined)?.text;
-    return typeof t === "string" ? t : "";
-  })();
-
-  const handleChildClick = useCallback((e: React.MouseEvent) => {
-    e.stopPropagation();
-    onSelectChild?.(node.id);
-  }, [node.id, onSelectChild]);
-
-  const inner = (() => {
-    switch (type) {
-    case "Button":
-      return (
-        <button className="inline-flex items-center rounded bg-primary px-2 py-0.5 text-[10px] text-primary-foreground" tabIndex={-1}>
-          {(props?.label as string) || (props?.text as string) || "Btn"}
-        </button>
-      );
-    case "Input":
-      return <div className="h-6 rounded border bg-background px-1 text-[10px] leading-6 text-muted-foreground">{(props?.placeholder as string) || "Input"}</div>;
-    case "Label":
-      return <span className="text-[10px] font-medium">{(props?.label as string) || "Label"}</span>;
-    case "Badge":
-      return <span className="inline-flex rounded-full bg-primary/15 px-1.5 py-0 text-[10px] font-medium text-primary">{(props?.label as string) || "Badge"}</span>;
-    case "Avatar":
-      return (() => {
-        const src = pstr(props, "src", pstr(props, "image", ""));
+      {components.map((child) => {
+        // 将 ComponentNode 转换为 CanvasComponent（ChildrenSlot 内部使用）
+        const childCanvasComp: CanvasComponent = {
+          id: child.id,
+          node: child,
+          position: { x: 1, y: 1, width: 1, height: 1 },
+        };
         return (
-          <span className="inline-flex h-6 w-6 items-center justify-center overflow-hidden rounded-full bg-muted text-[10px]">
-            {src ? <img src={src} alt="Avatar" className="h-full w-full object-cover" /> : "?"}
-          </span>
+          <UnifiedSimulatedContent key={child.id} comp={childCanvasComp} variant="child" onSelectChild={resolvedOnSelectChild ?? undefined} />
         );
-      })();
-    case "Separator":
-      return <hr className="border-muted" />;
-    case "Skeleton":
-      return <div className="h-3 animate-pulse rounded bg-muted" />;
-    case "Alert":
-      return <div className="rounded border border-primary/50 px-1 py-0.5 text-[10px]">⚠ Alert</div>;
-    case "Progress":
-      return <div className="h-1.5 w-20 rounded-full bg-muted"><div className="h-1.5 w-1/2 rounded-full bg-primary" /></div>;
-    case "Checkbox":
-      return <label className="inline-flex items-center gap-1 text-[10px]"><span className="flex h-3 w-3 items-center justify-center rounded border">✓</span>{(props?.label as string) || ""}</label>;
-    case "Switch":
-      return <span className="inline-flex h-4 w-7 items-center rounded-full bg-primary p-0.5"><span className="h-3 w-3 rounded-full bg-background" /></span>;
-    case "CardHeader":
-      return (
-        <div className="rounded-t border-b bg-muted/30 p-1 text-[10px] font-medium">
-          {childText || "Header"}
-          {children.length > 0 ? <div className="mt-1 font-normal"><ChildrenSlot components={children} /></div> : null}
-        </div>
-      );
-    case "CardContent":
-      return (
-        <div className="p-1 text-[10px] text-muted-foreground">
-          {childText || "Content"}
-          {children.length > 0 ? <div className="mt-1"><ChildrenSlot components={children} /></div> : null}
-        </div>
-      );
-    case "CardFooter":
-      return (
-        <div className="rounded-b border-t bg-muted/10 p-1 text-[10px]">
-          {childText || "Footer"}
-          {children.length > 0 ? <div className="mt-1"><ChildrenSlot components={children} /></div> : null}
-        </div>
-      );
-    case "TabsList":
-      return (
-        <div className="inline-flex gap-0.5 rounded bg-muted p-0.5 text-[10px]">
-          {children.length > 0 ? (
-            children.slice(0, 6).map((c) => (
-              <span key={c.id} className="rounded bg-background px-1">
-                {((c.children?.[0]?.props as Record<string, unknown> | undefined)?.text as string) || "Tab"}
-              </span>
-            ))
-          ) : (
-            <span className="rounded bg-background px-1">Tab</span>
-          )}
-        </div>
-      );
-    case "TabsTrigger":
-      return <span className="inline-flex rounded px-1 py-0.5 text-[10px] font-medium">{childText || "Tab"}</span>;
-    case "TableHeader":
-      return (
-        <div className="rounded border bg-muted/20 p-1 text-[10px] font-medium">
-          <div>TableHeader</div>
-          {children.length > 0 ? <div className="mt-1 font-normal"><ChildrenSlot components={children} /></div> : null}
-        </div>
-      );
-    case "TableBody":
-      return (
-        <div className="rounded border bg-background p-1 text-[10px]">
-          <div className="font-medium">TableBody</div>
-          {children.length > 0 ? <div className="mt-1"><ChildrenSlot components={children} /></div> : null}
-        </div>
-      );
-    case "TableRow":
-      return (
-        <div className="rounded border bg-background/50 p-1 text-[10px]">
-          <div className="font-medium">TableRow</div>
-          {children.length > 0 ? <div className="mt-1"><ChildrenSlot components={children} /></div> : null}
-        </div>
-      );
-    case "Text":
-      return <span className="text-[10px] text-foreground">{(props?.text as string) || ""}</span>;
-    case "Box":
-      return (
-        <div className="rounded border-2 border-dashed border-muted-foreground/20 bg-muted/5 p-1 text-[10px] text-muted-foreground">
-          {children.length > 0 ? <ChildrenSlot components={children} /> : "Box"}
-        </div>
-      );
-    case "Flex":
-      return (
-        <div className="flex items-center gap-1 rounded border-2 border-dashed border-muted-foreground/20 bg-muted/5 p-1 text-[10px] text-muted-foreground">
-          {children.length > 0 ? <ChildrenSlot components={children} /> : "Flex"}
-        </div>
-      );
-    case "Container":
-      return (
-        <div className="rounded border-2 border-dashed border-muted-foreground/20 bg-muted/5 p-1 text-[10px] text-muted-foreground">
-          {children.length > 0 ? <ChildrenSlot components={children} /> : "Container"}
-        </div>
-      );
-    case "Grid":
-      return (
-        <div className="rounded border-2 border-dashed border-muted-foreground/20 bg-muted/5 p-1 text-[10px] text-muted-foreground">
-          {children.length > 0 ? <ChildrenSlot components={children} /> : "Grid"}
-        </div>
-      );
-    case "AlertTitle":
-      return <span className="text-[10px] font-semibold">{(props?.text as string) || "Alert Title"}</span>;
-    case "AlertDescription":
-      return <span className="text-[10px] text-muted-foreground">{(props?.text as string) || "Alert description"}</span>;
-    case "DialogTitle":
-      return <span className="text-[10px] font-semibold">{(props?.text as string) || "Dialog Title"}</span>;
-    case "DialogDescription":
-      return <span className="text-[10px] text-muted-foreground">{(props?.text as string) || "Dialog description"}</span>;
-    case "DialogHeader":
-    case "SheetHeader":
-    case "AlertDialogHeader":
-    case "DrawerHeader":
-      return (
-        <div className="rounded bg-muted/20 p-1 text-[10px] font-medium">
-          {childText || type}
-          {children.length > 0 ? <div className="mt-1 font-normal"><ChildrenSlot components={children} /></div> : null}
-        </div>
-      );
-    case "DialogFooter":
-    case "AlertDialogFooter":
-      return (
-        <div className="flex items-center justify-end gap-1 rounded bg-muted/10 p-1 text-[10px]">
-          {children.length > 0 ? <ChildrenSlot components={children} /> : type}
-        </div>
-      );
-    case "SheetTitle":
-    case "SheetDescription":
-      return <span className="text-[10px]">{childText || type}</span>;
-    case "DialogTrigger":
-    case "SheetTrigger":
-    case "AlertDialogTrigger":
-    case "DrawerTrigger":
-    case "PopoverTrigger":
-    case "TooltipTrigger":
-    case "HoverCardTrigger":
-    case "DropdownMenuTrigger":
-    case "ContextMenuTrigger":
-    case "CollapsibleTrigger":
-      return (
-        <div className="rounded border bg-muted/10 p-1 text-[10px] text-muted-foreground">
-          {children.length > 0 ? <ChildrenSlot components={children} /> : type}
-        </div>
-      );
-    case "DialogContent":
-    case "SheetContent":
-    case "AlertDialogContent":
-    case "DrawerContent":
-    case "PopoverContent":
-    case "HoverCardContent":
-    case "DropdownMenuContent":
-    case "ContextMenuContent":
-    case "CollapsibleContent":
-      return (
-        <div className="rounded border bg-muted/5 p-1 text-[10px] text-muted-foreground">
-          {children.length > 0 ? <ChildrenSlot components={children} /> : type}
-        </div>
-      );
-    case "AccordionItem":
-      return (
-        <div className="rounded border bg-muted/10 p-1 text-[10px]">
-          {children.length > 0 ? <ChildrenSlot components={children} /> : "AccordionItem"}
-        </div>
-      );
-    case "AccordionTrigger":
-      return <div className="text-[10px] font-medium">{childText || "Section"}</div>;
-    case "AccordionContent":
-      return <div className="text-[10px] text-muted-foreground pl-1">{children.length > 0 ? <ChildrenSlot components={children} /> : (childText || "Content")}</div>;
-    case "TableHead":
-      return <span className="text-[10px] font-medium">{childText || "Head"}</span>;
-    case "TableCell":
-      return <span className="text-[10px]">{childText || "Cell"}</span>;
-    case "BreadcrumbItem":
-      return <span className="text-[10px] text-muted-foreground">{childText || "/ Page"}</span>;
-    case "BreadcrumbLink":
-      return <span className="text-[10px] text-primary underline">{childText || "Link"}</span>;
-    case "PaginationItem":
-      return <span className="text-[10px]">{childText || "1"}</span>;
-    case "ResizableHandle":
-      return <div className="mx-0.5 h-full w-0.5 bg-muted" />;
-    case "SelectItem":
-    case "RadioGroupItem":
-    case "DropdownMenuItem":
-    case "ContextMenuItem":
-      return <div className="rounded px-1 py-0.5 text-[10px] hover:bg-muted">{childText || type}</div>;
-    default:
-      return (
-        <div className="rounded bg-muted/30 px-1 py-0.5 text-[10px] text-muted-foreground">
-          <span className="font-medium">{type}</span>
-          {childText ? <span className="ml-1 text-muted-foreground">· {childText}</span> : null}
-          {children.length > 0 && type !== "Text" ? (
-            <div className="mt-1">
-              <ChildrenSlot components={children} />
-            </div>
-          ) : null}
-        </div>
-      );
-    }
-  })();
-
-  return (
-    <div data-child-node-id={node.id} onClick={handleChildClick} className="cursor-pointer">
-      {inner}
+      })}
     </div>
   );
 }
@@ -1164,7 +1010,11 @@ const CanvasComponentItem = React.memo(function CanvasComponentItem({
               ? "border-blue-400 ring-1 ring-blue-100 shadow-sm z-10"
               : "border-transparent",
         isDragging && "opacity-50",
-        isOver && "ring-2 ring-blue-400/50",
+        isOver && isContainerType(comp.node.type)
+          ? "ring-2 ring-blue-400 bg-blue-50/30"
+          : isOver && !isContainerType(comp.node.type)
+            ? "ring-2 ring-red-300 bg-red-50/20"
+            : "",
         isDimmed && "opacity-30 pointer-events-none",
       )}
       style={{
@@ -1188,6 +1038,18 @@ const CanvasComponentItem = React.memo(function CanvasComponentItem({
         </div>
       )}
 
+      {/* B7: 拖拽悬停反馈指示器 — 容器显示蓝色"+可放入"，非容器显示红色"⛔不允许" */}
+      {isOver && (
+        <div className={cn(
+          "absolute right-1 top-1 z-30 rounded px-1.5 py-0.5 text-[9px] font-medium shadow-sm",
+          isContainerType(comp.node.type)
+            ? "bg-blue-500 text-white"
+            : "bg-red-400 text-white",
+        )}>
+          {isContainerType(comp.node.type) ? "+ 可放入" : "⛔ 不允许"}
+        </div>
+      )}
+
       {/* 内容区：Ctrl 按下时 pointer-events 穿透（让组件原声事件响应），否则由上层捕获点击用于选中 */}
       <div
         className="h-full w-full"
@@ -1195,7 +1057,7 @@ const CanvasComponentItem = React.memo(function CanvasComponentItem({
         data-ctrl-gate="true"
       >
         <SelectChildContext.Provider value={onSelectChild ?? null}>
-          <SimulatedContent comp={comp} />
+          <UnifiedSimulatedContent comp={comp} variant="root" />
         </SelectChildContext.Provider>
       </div>
 
@@ -1390,6 +1252,105 @@ function BreadcrumbBar({ editScope, onNavigate }: {
   );
 }
 
+// ===== B10: 智能对齐辅助线 =====
+
+/** 对齐辅助线定义 */
+interface AlignGuide {
+  axis: "h" | "v";
+  position: number;
+}
+
+/**
+ * 计算拖拽对齐辅助线
+ *
+ * 比较被拖组件与所有其他组件的六种边缘（左/右/水平中/上/下/垂直中），
+ * 当距离小于 threshold px 时生成对应的辅助线。
+ */
+function computeAlignGuides(
+  dragInfo: { gridX: number; gridY: number; gridWidth: number; gridHeight: number },
+  components: CanvasComponent[],
+  colW: number,
+  gap: number,
+  cellH: number,
+  threshold = 5,
+): AlignGuide[] {
+  const cellW = colW + gap;
+  const cellHTotal = cellH + gap;
+
+  // 被拖组件的像素边缘
+  const dLeft = (dragInfo.gridX - 1) * cellW;
+  const dTop = (dragInfo.gridY - 1) * cellHTotal;
+  const dRight = dLeft + dragInfo.gridWidth * colW + (dragInfo.gridWidth - 1) * gap;
+  const dBottom = dTop + dragInfo.gridHeight * cellH + (dragInfo.gridHeight - 1) * gap;
+  const dCenterX = (dLeft + dRight) / 2;
+  const dCenterY = (dTop + dBottom) / 2;
+
+  const guides: AlignGuide[] = [];
+
+  for (const comp of components) {
+    if (comp.hidden) continue;
+
+    const cx = comp.position.x;
+    const cy = comp.position.y;
+    const cw = comp.position.width;
+    const ch = comp.position.height;
+
+    const cLeft = (cx - 1) * cellW;
+    const cTop = (cy - 1) * cellHTotal;
+    const cRight = cLeft + cw * colW + (cw - 1) * gap;
+    const cBottom = cTop + ch * cellH + (ch - 1) * gap;
+    const cCenterX = (cLeft + cRight) / 2;
+    const cCenterY = (cTop + cBottom) / 2;
+
+    // 垂直对齐：左边缘 / 水平居中 / 右边缘
+    if (Math.abs(dLeft - cLeft) < threshold) guides.push({ axis: "v", position: dLeft });
+    else if (Math.abs(dCenterX - cCenterX) < threshold) guides.push({ axis: "v", position: dCenterX });
+    else if (Math.abs(dRight - cRight) < threshold) guides.push({ axis: "v", position: dRight });
+
+    // 水平对齐：上边缘 / 垂直居中 / 下边缘
+    if (Math.abs(dTop - cTop) < threshold) guides.push({ axis: "h", position: dTop });
+    else if (Math.abs(dCenterY - cCenterY) < threshold) guides.push({ axis: "h", position: dCenterY });
+    else if (Math.abs(dBottom - cBottom) < threshold) guides.push({ axis: "h", position: dBottom });
+  }
+
+  // 去重（同一位置多条相同轴向的线只保留一条）
+  const seen = new Set<string>();
+  const unique: AlignGuide[] = [];
+  for (const g of guides) {
+    const key = `${g.axis}:${Math.round(g.position)}`;
+    if (!seen.has(key)) { seen.add(key); unique.push(g); }
+  }
+  return unique;
+}
+
+/**
+ * 对齐辅助线覆盖层
+ *
+ * 在拖拽过程中显示蓝色虚线对齐指示线，帮助用户精确定位。
+ */
+function SmartGuideOverlay({ guides }: { guides: AlignGuide[] }) {
+  if (guides.length === 0) return null;
+  return (
+    <div className="pointer-events-none absolute inset-0 z-50">
+      {guides.map((g, i) =>
+        g.axis === "v" ? (
+          <div
+            key={i}
+            className="absolute top-0 h-full w-0 border-l-2 border-dashed border-blue-400/80"
+            style={{ left: `${g.position}px` }}
+          />
+        ) : (
+          <div
+            key={i}
+            className="absolute left-0 w-full h-0 border-t-2 border-dashed border-blue-400/80"
+            style={{ top: `${g.position}px` }}
+          />
+        ),
+      )}
+    </div>
+  );
+}
+
 // ===== 主画布渲染器 =====
 
 /**
@@ -1442,6 +1403,8 @@ interface CanvasRendererProps {
   pageMaxWidth?: number | null;
   /** 组件最小行高（px），设为 0 时自适应由内容撑开 */
   minRowHeight?: number;
+  /** B10: 拖拽对齐辅助线信息（被拖组件的网格坐标） */
+  dragAlignInfo?: { gridX: number; gridY: number; gridWidth: number; gridHeight: number } | null;
 }
 
 // ===== 框选覆盖层 =====
@@ -1490,7 +1453,7 @@ export const CanvasRenderer = forwardRef<HTMLDivElement, CanvasRendererProps>(
   function CanvasRenderer({
     components, selectedIds, activeNodeId: activeNodeIdProp, editScope, hoveredId, onSelect, onClearSelection, onSelectChild, onDoubleClickComponent, onExitChildEdit, onResize, onHover,
     zoom, viewportWidth, panX, panY, onPan, gridCols, gridGap,
-    pageBackground, pagePadding, pageMaxWidth, minRowHeight,
+    pageBackground, pagePadding, pageMaxWidth, minRowHeight, dragAlignInfo,
   }, ref) {
     const activeNodeId = activeNodeIdProp ?? null;
     const containerRef = useRef<HTMLDivElement>(null);
@@ -1522,6 +1485,13 @@ export const CanvasRenderer = forwardRef<HTMLDivElement, CanvasRendererProps>(
       const gap = gridGap ?? 0;
       return Math.max(1, (contentWidth - (gridCols - 1) * gap) / gridCols);
     }, [viewportWidth, pageMaxWidth, pagePadding, gridCols, gridGap]);
+
+    // B10: 拖拽对齐辅助线计算
+    const alignGuides = useMemo(() => {
+      if (!dragAlignInfo) return [];
+      const visible = components.filter((c) => !c.hidden);
+      return computeAlignGuides(dragAlignInfo, visible, columnWidth, gridGap, CELL_HEIGHT, 5);
+    }, [dragAlignInfo, components, columnWidth, gridGap]);
 
     const handleMouseDown = useCallback((e: RMouseEvent) => {
       if (e.button !== 0) return;
@@ -1736,6 +1706,9 @@ export const CanvasRenderer = forwardRef<HTMLDivElement, CanvasRendererProps>(
                     gridCols={gridCols}
                   />
                 )}
+
+                {/* B10: 拖拽对齐辅助线覆盖层 */}
+                <SmartGuideOverlay guides={alignGuides} />
 
                 {components.filter((c) => !c.hidden).map((comp) => {
                   const { x: rawX, y: rawY, width: rawW, height: rawH } = comp.position;

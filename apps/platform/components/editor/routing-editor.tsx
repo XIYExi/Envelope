@@ -10,7 +10,7 @@
 
 "use client";
 
-import { useState, useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
@@ -18,87 +18,16 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Plus, Trash2, Route, Globe, Shield, Menu, FileCode } from "lucide-react";
 import { useFlowBindingStore } from "@envelope/flow";
+import { useProjectRoutesStore, type EditorRouteDef } from "@/stores/project-routes";
+import { useProjectPagesStore } from "@/stores/project-pages";
 import { cn } from "@/lib/utils";
-
-/** 路由定义 —— 包含路径、类型、父子关系、认证、SEO、导航等全部配置 */
-interface RouteDef {
-  id: string;
-  path: string;
-  type: "page" | "api" | "layout" | "redirect";
-  parentId: string | null;
-  layout: string;
-  authGuard: "public" | "authenticated" | "role";
-  requiredRole: string;
-  httpMethod: string;
-  boundFlow: string;
-  title: string;
-  description: string;
-  ogImage: string;
-  inNavigation: boolean;
-  navLabel: string;
-  navIcon: string;
-  navOrder: number;
-  redirectSource: string;
-  redirectDestination: string;
-  redirectStatus: "301" | "302";
-}
 
 /** 树递归最大深度，防止循环引用导致栈溢出 */
 const MAX_TREE_DEPTH = 100;
 
-/**
- * 创建默认路由对象，使用 Partial<RouteDef> 覆盖默认值
- *
- * @param overrides - 包含 id（必填）和其他可选覆盖字段
- * @returns 完整填充的 RouteDef 对象
- */
-function createDefaultRoute(
-  overrides: Partial<RouteDef> & { id: string }
-): RouteDef {
-  return {
-    path: "/new-route",
-    type: "page",
-    parentId: null,
-    layout: "",
-    authGuard: "public",
-    requiredRole: "",
-    httpMethod: "GET",
-    boundFlow: "",
-    title: "",
-    description: "",
-    ogImage: "",
-    inNavigation: false,
-    navLabel: "",
-    navIcon: "",
-    navOrder: 0,
-    redirectSource: "",
-    redirectDestination: "",
-    redirectStatus: "301",
-    ...overrides,
-  };
-}
-
-/** 应用默认路由预设：首页（/）和健康检查 API（/api/health） */
-const DEFAULT_ROUTES: RouteDef[] = [
-  createDefaultRoute({
-    id: crypto.randomUUID(),
-    path: "/",
-    type: "page",
-    authGuard: "public",
-    title: "Home",
-  }),
-  createDefaultRoute({
-    id: crypto.randomUUID(),
-    path: "/api/health",
-    type: "api",
-    httpMethod: "GET",
-    authGuard: "public",
-  }),
-];
-
 /** 树节点 —— 路由引用 + 子节点列表 + 嵌套深度 */
 interface TreeNode {
-  route: RouteDef;
+  route: EditorRouteDef;
   children: TreeNode[];
   depth: number;
 }
@@ -108,11 +37,8 @@ interface TreeNode {
  *
  * 通过 parentId 建立父子关系，使用递归分配深度。
  * 内建循环检测：深度超过 MAX_TREE_DEPTH 时停止递归。
- *
- * @param routes - 路由定义数组
- * @returns 根节点数组（无 parentId 的路由）
  */
-function buildTree(routes: RouteDef[]): TreeNode[] {
+function buildTree(routes: EditorRouteDef[]): TreeNode[] {
   const map = new Map<string, TreeNode>();
   const roots: TreeNode[] = [];
 
@@ -129,7 +55,6 @@ function buildTree(routes: RouteDef[]): TreeNode[] {
     }
   }
 
-  /** 递归分配深度，带深度上限防止循环引用 */
   function assignDepth(nodes: TreeNode[], depth: number) {
     if (depth > MAX_TREE_DEPTH) return;
     for (const node of nodes) {
@@ -144,11 +69,6 @@ function buildTree(routes: RouteDef[]): TreeNode[] {
 
 /**
  * 将树结构展平为一维数组（深度优先）
- *
- * 内建循环检测：visited 集合防止重复访问，深度超过上限时停止。
- *
- * @param nodes - 根节点数组
- * @returns 展平后的节点数组
  */
 function flattenTree(nodes: TreeNode[]): TreeNode[] {
   const result: TreeNode[] = [];
@@ -168,17 +88,10 @@ function flattenTree(nodes: TreeNode[]): TreeNode[] {
 
 /**
  * 获取指定路由的所有后代 ID（递归）
- *
- * 内建循环检测：visited 集合防止无限递归。
- *
- * @param routeId - 起始路由 ID
- * @param routes - 路由定义数组
- * @param visited - 已访问 ID 集合（内部递归使用）
- * @returns 所有后代路由 ID 的 Set
  */
 function getDescendantIds(
   routeId: string,
-  routes: RouteDef[],
+  routes: EditorRouteDef[],
   visited: Set<string> = new Set()
 ): Set<string> {
   if (visited.has(routeId) || visited.size > MAX_TREE_DEPTH) return new Set();
@@ -194,7 +107,7 @@ function getDescendantIds(
 }
 
 /** 路由类型图标组件 —— 根据 type 显示对应 Lucide 图标 */
-function RouteTypeIcon({ type }: { type: RouteDef["type"] }) {
+function RouteTypeIcon({ type }: { type: EditorRouteDef["type"] }) {
   const cls = "h-3 w-3 shrink-0 text-muted-foreground";
   switch (type) {
     case "api":
@@ -297,70 +210,40 @@ function CompactInput({
  *
  * 左侧为路由树（支持嵌套展开、类型图标、HTTP 方法徽章），
  * 右侧为选中路由的详细配置面板（基本信息、布局/认证、API 配置、
- * SEO 元数据、重定向规则、导航菜单）。
- *
- * @returns JSX 元素
+ * SEO 元数据、关联页面、重定向规则、导航菜单）。
  */
 export function RoutingEditor() {
-  const [routes, setRoutes] = useState<RouteDef[]>(DEFAULT_ROUTES);
-  const [selectedRouteId, setSelectedRouteId] = useState<string | null>(
-    DEFAULT_ROUTES[0]?.id ?? null,
-  );
+  const routes = useProjectRoutesStore((s) => s.editorRoutes);
+  const addRoute = useProjectRoutesStore((s) => s.addEditorRoute);
+  const updateRoute = useProjectRoutesStore((s) => s.updateEditorRoute);
+  const removeRoute = useProjectRoutesStore((s) => s.removeEditorRoute);
+
+  const [selectedId, setSelectedId] = useState<string | null>(null);
 
   const flowList = useFlowBindingStore((s) => s.flowList);
   const bindEndpoint = useFlowBindingStore((s) => s.bindEndpoint);
   const unbindEndpoint = useFlowBindingStore((s) => s.unbindEndpoint);
 
+  const pages = useProjectPagesStore((s) => s.pages);
+
+  const layoutOptions = useMemo(() => {
+    return routes
+      .filter((r) => r.type === "layout")
+      .map((r) => ({ value: r.path, label: r.path }));
+  }, [routes]);
+
   const tree = useMemo(() => buildTree(routes), [routes]);
   const flatTree = useMemo(() => flattenTree(tree), [tree]);
 
   const selectedRoute = useMemo(
-    () => routes.find((r) => r.id === selectedRouteId) ?? null,
-    [routes, selectedRouteId],
+    () => routes.find((r) => r.id === selectedId) ?? null,
+    [routes, selectedId],
   );
 
   const descendantIds = useMemo(
-    () => (selectedRouteId ? getDescendantIds(selectedRouteId, routes) : new Set<string>()),
-    [routes, selectedRouteId],
+    () => (selectedId ? getDescendantIds(selectedId, routes) : new Set<string>()),
+    [routes, selectedId],
   );
-
-  /** 更新路由的部分属性 */
-  function updateRoute(id: string, patch: Partial<RouteDef>) {
-    setRoutes((prev) =>
-      prev.map((r) => (r.id === id ? { ...r, ...patch } : r)),
-    );
-  }
-
-  /** 添加新路由，根据类型设置默认路径 */
-  function addRoute(type: RouteDef["type"]) {
-    const newRoute = createDefaultRoute({
-      id: crypto.randomUUID(),
-      type,
-      path: type === "api" ? "/api/new-route" : "/new-route",
-    });
-    setRoutes((prev) => [...prev, newRoute]);
-    setSelectedRouteId(newRoute.id);
-  }
-
-  /** 删除路由及其所有后代，根路由 / 不可删除 */
-  function deleteRoute(id: string) {
-    const isRoot = routes.find((r) => r.id === id)?.path === "/";
-    if (isRoot) return;
-
-    const children = routes.filter((r) => r.parentId === id);
-    const childIds = new Set(children.map((c) => c.id));
-    for (const child of children) {
-      for (const cid of getDescendantIds(child.id, routes)) {
-        childIds.add(cid);
-      }
-    }
-
-    setRoutes((prev) => prev.filter((r) => r.id !== id && !childIds.has(r.id)));
-    if (selectedRouteId === id || (selectedRouteId && childIds.has(selectedRouteId))) {
-      const rootRoute = routes.find((r) => r.path === "/");
-      setSelectedRouteId(rootRoute?.id ?? null);
-    }
-  }
 
   /** 父路由候选列表 —— 排除自身、后代和重定向类型 */
   const parentOptions = useMemo(() => {
@@ -374,6 +257,24 @@ export function RoutingEditor() {
       )
       .map((r) => ({ value: r.id, label: r.path }));
   }, [routes, selectedRoute, descendantIds]);
+
+  /** 关联页面选项列表（用于 type="page" 时选择） */
+  const pageOptions = useMemo(() => {
+    return pages.map((p) => ({
+      value: p.path,
+      label: `${p.title} (${p.path})`,
+    }));
+  }, [pages]);
+
+  function handleDeleteRoute(id: string) {
+    const isRoot = routes.find((r) => r.id === id)?.path === "/";
+    if (isRoot) return;
+    removeRoute(id);
+    if (selectedId === id) {
+      const rootRoute = routes.find((r) => r.path === "/");
+      setSelectedId(rootRoute?.id ?? null);
+    }
+  }
 
   return (
     <div className="flex h-full">
@@ -393,7 +294,13 @@ export function RoutingEditor() {
             variant="outline"
             size="sm"
             className="h-7 flex-1 text-[10px]"
-            onClick={() => addRoute("page")}
+            onClick={() => {
+              addRoute("page");
+              // 新路由在 store 中追加后需获取最新 id
+              const latest = useProjectRoutesStore.getState().editorRoutes;
+              const last = latest[latest.length - 1];
+              if (last) setSelectedId(last.id);
+            }}
           >
             <Plus className="mr-1 h-3 w-3" />
             Page
@@ -402,7 +309,12 @@ export function RoutingEditor() {
             variant="outline"
             size="sm"
             className="h-7 flex-1 text-[10px]"
-            onClick={() => addRoute("api")}
+            onClick={() => {
+              addRoute("api");
+              const latest = useProjectRoutesStore.getState().editorRoutes;
+              const last = latest[latest.length - 1];
+              if (last) setSelectedId(last.id);
+            }}
           >
             <Plus className="mr-1 h-3 w-3" />
             API
@@ -417,7 +329,7 @@ export function RoutingEditor() {
               </div>
             ) : (
               flatTree.map(({ route, depth }) => {
-                const isSelected = selectedRouteId === route.id;
+                const isSelected = selectedId === route.id;
                 const isRoot = route.path === "/";
 
                 return (
@@ -429,7 +341,7 @@ export function RoutingEditor() {
                         "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300",
                     )}
                     style={{ paddingLeft: `${depth * 16 + 4}px` }}
-                    onClick={() => setSelectedRouteId(route.id)}
+                    onClick={() => setSelectedId(route.id)}
                   >
                     <RouteTypeIcon type={route.type} />
                     <span className="flex-1 truncate">{route.path}</span>
@@ -441,7 +353,7 @@ export function RoutingEditor() {
                         className="shrink-0 rounded p-0.5 opacity-0 group-hover:opacity-100 hover:bg-destructive/10 hover:text-destructive"
                         onClick={(e) => {
                           e.stopPropagation();
-                          deleteRoute(route.id);
+                          handleDeleteRoute(route.id);
                         }}
                         title="Delete route"
                       >
@@ -484,7 +396,7 @@ export function RoutingEditor() {
                   value={selectedRoute.type}
                   onChange={(v) =>
                     updateRoute(selectedRoute.id, {
-                      type: v as RouteDef["type"],
+                      type: v as EditorRouteDef["type"],
                     })
                   }
                   options={[
@@ -525,13 +437,16 @@ export function RoutingEditor() {
                 <h3 className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
                   Layout &amp; Auth
                 </h3>
-                <CompactInput
+                <SelectField
                   label="Layout"
                   value={selectedRoute.layout}
                   onChange={(v) =>
                     updateRoute(selectedRoute.id, { layout: v })
                   }
-                  placeholder="dashboard-layout"
+                  options={[
+                    { value: "", label: "-- 无布局 --" },
+                    ...layoutOptions,
+                  ]}
                 />
 
                 <SelectField
@@ -539,7 +454,7 @@ export function RoutingEditor() {
                   value={selectedRoute.authGuard}
                   onChange={(v) =>
                     updateRoute(selectedRoute.id, {
-                      authGuard: v as RouteDef["authGuard"],
+                      authGuard: v as EditorRouteDef["authGuard"],
                     })
                   }
                   options={[
@@ -615,6 +530,29 @@ export function RoutingEditor() {
                         placeholder="flow-xxxx"
                       />
                     )}
+                  </div>
+                </>
+              )}
+
+              {/* 关联页面 —— type="page" 时显示页面下拉选择器（Q3） */}
+              {selectedRoute.type === "page" && (
+                <>
+                  <Separator />
+                  <div className="space-y-2">
+                    <h3 className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                      Page Association
+                    </h3>
+                    <SelectField
+                      label="关联页面"
+                      value={selectedRoute.pageId}
+                      onChange={(v) =>
+                        updateRoute(selectedRoute.id, { pageId: v })
+                      }
+                      options={[
+                        { value: "", label: "-- 不关联 --" },
+                        ...pageOptions,
+                      ]}
+                    />
                   </div>
                 </>
               )}
