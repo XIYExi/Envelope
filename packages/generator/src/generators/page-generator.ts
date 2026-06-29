@@ -296,6 +296,37 @@ function generateEventBindings(components: ComponentNode[]): string {
             continue;
           }
 
+          // T6: Form onSubmit 自动聚合子字段值为 formData
+          if (comp.type === "Form" && event === "onSubmit") {
+            const fn = makeEventHandlerName(comp.id, event);
+            const callFlowArgsLines: string[] = [];
+            for (const fid of ids) {
+              const safeFid = tsStringLiteral(fid);
+              const safeCompId = tsStringLiteral(comp.id);
+              const safeEvent = tsStringLiteral(event);
+              callFlowArgsLines.push(
+                `    const flowResult = await callFlow(${safeFid}, {`,
+                `      componentId: ${safeCompId},`,
+                `      event: ${safeEvent},`,
+                `      args: [formData],`,
+                `    });`,
+                `    flowResults.push(flowResult);`,
+              );
+            }
+            const callFlowArgsStr = callFlowArgsLines.join("\n");
+
+            bindings.push(
+              `  const ${fn} = useCallback(async (e: React.FormEvent<HTMLFormElement>) => {`,
+              `    e.preventDefault();`,
+              `    const formData = Object.fromEntries(new FormData(e.currentTarget));`,
+              `    const flowResults: unknown[] = [];`,
+              callFlowArgsStr,
+              `    return flowResults;`,
+              `  }, []);`,
+            );
+            continue;
+          }
+
           const fn = makeEventHandlerName(comp.id, event);
           // 带 args 的 callFlow 调用（含 flowResults 收集）
           const callFlowArgsLines: string[] = [];

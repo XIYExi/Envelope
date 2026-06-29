@@ -860,6 +860,20 @@ export const COMPONENT_MAP: Record<string, ComponentGenerator> = {
       : childrenJSX || `${indent}    <ContextMenuItem>Action</ContextMenuItem>`;
     return `${comment(comp, indent)}${indent}<ContextMenu>\n${indent}  <ContextMenuTrigger${tw ? ` ${jsxAttrString("className", tw)}` : ""}>\n${childrenJSX || `${indent}    ${jsxText("Right-click here")}`}\n${indent}  </ContextMenuTrigger>\n${indent}  <ContextMenuContent>\n${itemsJSX}\n${indent}  </ContextMenuContent>\n${indent}</ContextMenu>`;
   },
+
+  /* ──────────────────────────────────────────────
+   * Form (native <form> with onSubmit + FormData)
+   * ────────────────────────────────────────────── */
+
+  "Form": (comp, childrenJSX, indent) => {
+    const tw = cx(comp);
+    const attrs: string[] = [...dataBindingAttrs(comp), ...expressionAttrs(comp), ...eventAttrs(comp), ...flowOutputAttrs(comp)];
+    if (tw) attrs.push(`className={${tsStringLiteral(tw)}}`);
+    const name = propStr(comp.props, "name", "form");
+    attrs.push(`name={${tsStringLiteral(name)}}`);
+    const attrStr = attrs.length > 0 ? " " + attrs.join(" ") : "";
+    return `${comment(comp, indent)}${indent}<form${attrStr}>\n${childrenJSX}${indent}</form>`;
+  },
 };
 
 /* ================================================================================================
