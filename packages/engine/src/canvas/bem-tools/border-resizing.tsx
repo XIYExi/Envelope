@@ -1,8 +1,12 @@
 /**
  * 组件缩放手柄工具
  *
- * 当鼠标悬浮在某个组件上时，在其上方绘制蓝色虚线边框 + 组件名标签。
- * 已选中的组件不显示悬停框（选中框已提供视觉反馈）。
+ * 在主选中组件的边缘绘制 8 个方向的缩放手柄（n/s/e/w/ne/nw/se/sw），
+ * 用户拖拽手柄即可调整组件尺寸。
+ *
+ * 参考 lowcode-engine `builtin-simulator/bem-tools/border-resizing.tsx`,
+ * 但将 DragResizeEngine 事件总线模式简化为 `useResizeHandle` hook，
+ * 直接绑定原生 pointer 事件 + 纯函数计算（calcResizeNext/snapGridDelta）。
  *
  * @author xiye
  * @version 1.0.0

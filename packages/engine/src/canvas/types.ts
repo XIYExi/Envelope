@@ -282,3 +282,23 @@ export const VIEWPORT_WIDTHS: Record<CanvasState["viewport"], number> = {
   desktop: 1440,
   fluid: 1920,
 };
+
+/**
+ * 拖拽插入位置信息
+ *
+ * 由 dnd-kit 的 onDragMove 计算产生，InsertionView 消费渲染。
+ */
+export interface DropTargetInfo {
+  /** 插入类型: cover = 覆盖容器, before/after = 在元素前后插入 */
+  type: "cover" | "before" | "after";
+  /** 像素坐标矩形（画布内部坐标系，未应用 zoom/pan） */
+  rect: { x: number; y: number; width: number; height: number };
+  /** 是否为垂直插入（显示垂直线段） */
+  isVertical?: boolean;
+  /** 目标容器 ID */
+  containerId?: string;
+  /** 插入位置索引（在容器 children 中的位置） */
+  index?: number;
+  /** 是否有效插入（false 时显示禁止样式） */
+  valid?: boolean;
+}

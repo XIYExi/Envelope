@@ -4,11 +4,12 @@
 
 "use client";
 
-import type { CanvasComponent } from "../types";
+import type { CanvasComponent, DropTargetInfo } from "../types";
 import { bemToolsManager } from "./manager";
 import { BorderSelecting } from "./border-selecting";
 import { BorderDetecting } from "./border-detecting";
 import { BorderResizing } from "./border-resizing";
+import { InsertionView } from "./insertion";
 
 export { bemToolsManager } from "./manager";
 export type { BemToolComponent } from "./manager";
@@ -78,13 +79,17 @@ export interface BemToolsProps {
    * 组件锁定/解锁回调
    */
   onLockToggle: (id: string) => void;
+  /**
+   * BEM: 拖拽插入位置信息
+   */
+  dropTarget: DropTargetInfo | null;
 }
 
 export function BemTools(props: BemToolsProps) {
   const {
     components, selectedIds, activeNodeId, hoveredId,
     columnWidth, gridGap, pagePadding, cellWidth, cellHeight, gridCols,
-    zoom, positionMode, onResize, onDeleteComponent, onCopyComponent, onLockToggle,
+    zoom, positionMode, onResize, onDeleteComponent, onCopyComponent, onLockToggle, dropTarget,
   } = props;
 
   // 当前选中组件实例
@@ -146,6 +151,9 @@ export function BemTools(props: BemToolsProps) {
         positionMode={positionMode}
         onResize={onResize}
       />
+
+      {/* 拖拽插入位置指示器 */}
+      <InsertionView dropTarget={dropTarget} />
 
       {/* 插件工具 */}
       {pluginTools.map((Tool, i) => (

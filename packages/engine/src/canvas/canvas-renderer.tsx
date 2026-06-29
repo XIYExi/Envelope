@@ -19,7 +19,7 @@
 
 import React, { forwardRef, useCallback, useMemo, useRef, useState, useEffect, type CSSProperties, type MouseEvent as RMouseEvent } from "react";
 import { cn, CELL_HEIGHT, CELL_WIDTH, RULER_SIZE, getPreviewTailwindClasses } from "./renderer-utils";
-import type { CanvasComponent } from "./types";
+import type { CanvasComponent, DropTargetInfo } from "./types";
 import { isContainerType } from "../shared/canvas-utils";
 import { Minimap } from "./minimap";
 import { HorizontalRuler, VerticalRuler } from "./ruler";
@@ -90,6 +90,8 @@ export interface CanvasRendererProps {
   onCopyComponent?: (id: string) => void;
   /** BEM: 锁定切换回调 */
   onLockToggle?: (id: string) => void;
+  /** 拖拽插入位置信息 */
+  dropTarget?: DropTargetInfo | null;
 }
 
 /**
@@ -104,7 +106,7 @@ export const CanvasRenderer = forwardRef<HTMLDivElement, CanvasRendererProps>(
     zoom, viewportWidth, panX, panY, onPan, gridCols, gridGap,
     pageBackground, pagePadding, pageMaxWidth, minRowHeight, dragAlignInfo,
     positionMode = "grid",
-    onDeleteComponent, onCopyComponent, onLockToggle,
+    onDeleteComponent, onCopyComponent, onLockToggle, dropTarget,
   }, ref) {
     const activeNodeId = activeNodeIdProp ?? null;
     const containerRef = useRef<HTMLDivElement>(null);
@@ -402,6 +404,7 @@ export const CanvasRenderer = forwardRef<HTMLDivElement, CanvasRendererProps>(
                 onDeleteComponent={onDeleteComponent ?? onClearSelection}
                 onCopyComponent={onCopyComponent ?? (() => { })}
                 onLockToggle={onLockToggle ?? (() => { })}
+                dropTarget={dropTarget ?? null}
               />
             </div>
           </div>
