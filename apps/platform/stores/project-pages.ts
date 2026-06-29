@@ -379,6 +379,21 @@ export const useProjectPagesStore = create<ProjectPagesState & ProjectPagesActio
     const { projectId, pages, isSaving, changeSeq } = get();
     if (!projectId || isSaving) return;
 
+    // S6: 保存前执行 schema 校验，拦截非法数据
+    for (const p of pages) {
+      const result = pageSchema.safeParse(p.schema);
+      if (!result.success) {
+        const issues = result.error.issues
+          .map((i) => `  ${i.path.join(".")}: ${i.message}`)
+          .join("\n");
+        set({
+          error: `页面 "${p.path}" 校验失败:\n${issues}`,
+          isSaving: false,
+        });
+        return;
+      }
+    }
+
     set({ isSaving: true, error: null });
     const startSeq = changeSeq;
     try {

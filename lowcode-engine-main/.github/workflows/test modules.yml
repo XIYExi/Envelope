@@ -1,0 +1,44 @@
+name: Lint & Test (Mods)
+
+on:
+  push:
+    paths:
+      - 'modules/**'
+      - '!modules/**.md'
+  pull_request:
+    paths:
+      - 'modules/**'
+      - '!modules/**.md'
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout
+        uses: actions/checkout@v2
+
+      - uses: actions/setup-node@v2
+        with:
+          node-version: '14'
+
+      - name: install
+        run: npm i
+
+      - name: lint
+        run: npm run lint:modules
+
+  test-code-generator:
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout
+        uses: actions/checkout@v2
+
+      - uses: actions/setup-node@v2
+        with:
+          node-version: '14'
+
+      - name: install
+        run: npm i && npm run setup:skip-build
+
+      - name: test
+        run: cd modules/code-generator && npm i && npm run build && npm test

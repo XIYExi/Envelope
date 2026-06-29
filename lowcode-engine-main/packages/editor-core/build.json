@@ -1,0 +1,7 @@
+{
+  "plugins": [
+    "@alilc/build-plugin-lce",
+    "build-plugin-fusion",
+    "./build.plugin.js"
+  ]
+}
