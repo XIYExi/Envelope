@@ -11,6 +11,7 @@
  * - 拖拽缩放手柄：调整组件尺寸
  *
  * @author xiye
+ * @version 1.0.0
  * @date 2026-06-25
  */
 
@@ -27,6 +28,7 @@ import { BoundingBoxOverlay } from "./bounding-box-overlay";
 import { BreadcrumbBar } from "./breadcrumb-bar";
 import { computeAlignGuides, SmartGuideOverlay } from "./smart-guides";
 import { MarqueeOverlay } from "./marquee-overlay";
+import { BemTools } from "./bem-tools";
 
 /**
  * CanvasRenderer 组件的 Props
@@ -82,6 +84,12 @@ export interface CanvasRendererProps {
   dragAlignInfo?: { gridX: number; gridY: number; gridWidth: number; gridHeight: number } | null;
   /** 定位模式: grid = 12列网格, free = 自由定位 */
   positionMode?: "grid" | "free";
+  /** BEM: 删除组件回调（可从 store 直接调用） */
+  onDeleteComponent?: (id: string) => void;
+  /** BEM: 复制组件回调 */
+  onCopyComponent?: (id: string) => void;
+  /** BEM: 锁定切换回调 */
+  onLockToggle?: (id: string) => void;
 }
 
 /**
@@ -96,12 +104,12 @@ export const CanvasRenderer = forwardRef<HTMLDivElement, CanvasRendererProps>(
     zoom, viewportWidth, panX, panY, onPan, gridCols, gridGap,
     pageBackground, pagePadding, pageMaxWidth, minRowHeight, dragAlignInfo,
     positionMode = "grid",
+    onDeleteComponent, onCopyComponent, onLockToggle,
   }, ref) {
     const activeNodeId = activeNodeIdProp ?? null;
     const containerRef = useRef<HTMLDivElement>(null);
     const [isPanning, _setIsPanning] = useState(false);
     const panStart = useRef({ x: 0, y: 0 });
-    const activeResizeCleanupRef = useRef<(() => void) | null>(null);
     /** 框选状态 */
     const [marquee, setMarquee] = useState<{ startX: number; startY: number; currentX: number; currentY: number } | null>(null);
     const marqueeStartRef = useRef<{ x: number; y: number; clientX: number; clientY: number } | null>(null);
@@ -223,6 +231,9 @@ export const CanvasRenderer = forwardRef<HTMLDivElement, CanvasRendererProps>(
     const gridGapRef = useRef(gridGap);
     gridGapRef.current = gridGap;
 
+    /**
+     * 监听鼠标移动和点击事件，处理选中框的更新和删除
+     */
     useEffect(() => {
       if (!marquee) return;
       window.addEventListener("mousemove", handleMarqueeMove);
@@ -233,13 +244,6 @@ export const CanvasRenderer = forwardRef<HTMLDivElement, CanvasRendererProps>(
       };
     }, [marquee, handleMarqueeUp, handleMarqueeMove]);
 
-    useEffect(() => {
-      return () => {
-        activeResizeCleanupRef.current?.();
-        activeResizeCleanupRef.current = null;
-      };
-    }, []);
-
     return (
       <div
         ref={containerRef}
@@ -248,6 +252,7 @@ export const CanvasRenderer = forwardRef<HTMLDivElement, CanvasRendererProps>(
         style={{ cursor: isPanning ? "grabbing" : "default" }}
         onMouseDown={handleMouseDown}
       >
+        {/* 画布背景层 */}
         <div
           ref={ref}
           data-canvas-bg="true"
@@ -267,6 +272,7 @@ export const CanvasRenderer = forwardRef<HTMLDivElement, CanvasRendererProps>(
             onClearSelection();
           }}
         >
+          {/* 面包屑导航栏 */}
           {editScope && (
             <BreadcrumbBar
               editScope={editScope}
@@ -275,7 +281,10 @@ export const CanvasRenderer = forwardRef<HTMLDivElement, CanvasRendererProps>(
               }}
             />
           )}
+          {/* 选中框覆盖层 */}
           {marquee && <MarqueeOverlay marquee={marquee} />}
+
+          {/* 网格辅助线 */}
           <div className="flex">
             <VerticalRuler
               width={RULER_SIZE}
@@ -349,14 +358,8 @@ export const CanvasRenderer = forwardRef<HTMLDivElement, CanvasRendererProps>(
                   const clampedY = Math.max(1, rawY);
                   const clampedWidth = Math.max(1, Math.min(gridCols - clampedX + 1, rawW));
                   const clampedHeight = Math.max(1, rawH);
-                  const isSelected = selectedIds.includes(comp.id);
-                  const isPrimary = activeNodeId
-                    ? activeNodeId === comp.id
-                    : selectedIds.length > 0 && selectedIds[0] === comp.id;
                   const isDimmed = editScope != null && comp.id !== editScope.rootId;
                   const previewTailwind = getPreviewTailwindClasses(comp.node);
-
-                  const isHovered = hoveredId === comp.id;
 
                   return (
                     <CanvasComponentItem
@@ -366,19 +369,13 @@ export const CanvasRenderer = forwardRef<HTMLDivElement, CanvasRendererProps>(
                       y={positionMode === "free" ? rawY : clampedY}
                       width={positionMode === "free" ? rawW : clampedWidth}
                       height={positionMode === "free" ? rawH : clampedHeight}
-                      isSelected={isSelected}
-                      isPrimary={isPrimary}
                       isDimmed={isDimmed}
-                      isHovered={isHovered}
                       previewTailwind={previewTailwind}
                       gridCols={gridCols}
-                      zoom={zoom}
                       onSelect={onSelect}
                       onSelectChild={onSelectChild}
                       onDoubleClick={isContainerType(comp.node.type) ? () => onDoubleClickComponent?.(comp.id) : undefined}
                       onHover={onHover}
-                      onResize={onResize}
-                      activeResizeCleanupRef={activeResizeCleanupRef}
                       minRowHeight={minRowHeight}
                       positionMode={positionMode}
                       columnWidth={columnWidth}
@@ -386,9 +383,31 @@ export const CanvasRenderer = forwardRef<HTMLDivElement, CanvasRendererProps>(
                   );
                 })}
               </div>
+
+              {/* BEM Tools 组件 */}
+              <BemTools
+                components={components}
+                selectedIds={selectedIds}
+                activeNodeId={activeNodeId}
+                hoveredId={hoveredId}
+                columnWidth={columnWidth}
+                gridGap={gridGap}
+                pagePadding={typeof pagePadding === "number" ? pagePadding : 0}
+                cellWidth={CELL_WIDTH}
+                cellHeight={CELL_HEIGHT}
+                gridCols={gridCols}
+                zoom={zoom}
+                positionMode={positionMode}
+                onResize={onResize}
+                onDeleteComponent={onDeleteComponent ?? onClearSelection}
+                onCopyComponent={onCopyComponent ?? (() => { })}
+                onLockToggle={onLockToggle ?? (() => { })}
+              />
             </div>
           </div>
         </div>
+
+        {/* 地图组件 */}
         {components.length > 0 && (
           <Minimap
             components={components}
@@ -402,7 +421,7 @@ export const CanvasRenderer = forwardRef<HTMLDivElement, CanvasRendererProps>(
             gridGap={gridGap}
             cellHeight={CELL_HEIGHT}
             onPan={onPan}
-            onZoom={(_z) => {}}
+            onZoom={(_z) => { }}
           />
         )}
       </div>

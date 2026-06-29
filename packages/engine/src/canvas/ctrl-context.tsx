@@ -4,7 +4,8 @@
  * 将原先 renderer.tsx 中的模块级可变状态（_globalCtrlDown + 模块级事件监听器）
  * 替换为 React Context 模式，消除 SSR 泄漏风险与模块级副作用。
  *
- * @author PAI
+ * @author xiye
+ * @version 1.0.0
  * @date 2026-06-23
  * @since ISC-R8
  */
@@ -57,6 +58,8 @@ export function CtrlProvider({ children }: CtrlProviderProps) {
  *
  * 用法与原有 `useCtrlDown()` 完全一致，签名兼容。
  * 在 CtrlProvider 外部使用时会默认返回 false（与旧行为一致）。
+ * 
+ * @returns 当前 Ctrl 键是否按下
  */
 export function useCtrlDown(): boolean {
   return useContext(CtrlContext);

@@ -1,11 +1,15 @@
 /**
- * 画布单组件渲染项
+ * 画布单组件渲染项 - BEM Tools 精简版
  *
- * 包装 useDraggable/useDroppable hook 绑定，
- * 提供缩放手柄交互、选中态/拖拽态/锁定态渲染。
+ * 仅保留：
+ * - useDraggable/useDroppable 绑定（拖拽）
+ * - UnifiedSimulatedContent 渲染（内容）
+ * - onClick/onMouseEnter/Leave 交互
+ *
+ * 选中框/缩放手柄/悬停标签/尺寸提示已移至 BEM Tools 覆盖层。
  *
  * @author xiye
- * @date 2026-06-25
+ * @date 2026-06-29
  */
 
 "use client";
@@ -13,73 +17,147 @@
 import React, { useCallback } from "react";
 import { useDraggable, useDroppable } from "@dnd-kit/core";
 import type { CSSProperties } from "react";
-import type { MouseEvent as RMouseEvent, PointerEvent as RPointerEvent } from "react";
+import type { MouseEvent as RMouseEvent } from "react";
 import type { CanvasComponent } from "./types";
 import { createComponentDragItem } from "./dnd";
 import { isContainerType } from "../shared/canvas-utils";
 import { useCtrlDown } from "./ctrl-context";
-import { cn, CELL_HEIGHT, CELL_WIDTH, allResizeDirections, resizeHandleStyles } from "./renderer-utils";
-import { calcResizeNext, snapGridDelta } from "./resize-utils";
+import { cn, CELL_HEIGHT, CELL_WIDTH } from "./renderer-utils";
 import { SelectChildContext, UnifiedSimulatedContent } from "./simulated-content";
 
-/**
- * 单个画布组件的渲染包装器
- *
- * 为每个组件绑定 useDraggable（可拖拽）和 useDroppable（容器可接收拖入），
- * 同时保留原有选中、缩放手柄等功能。
- */
-export const CanvasComponentItem = React.memo(function CanvasComponentItem({
-  comp, x, y, width, height, isSelected, isHovered, previewTailwind,
-  gridCols, zoom, onSelect, onHover, onResize, activeResizeCleanupRef,
-  isPrimary, onSelectChild, onDoubleClick, isDimmed, minRowHeight,
-  positionMode = "grid", columnWidth,
-}: {
+interface ICanvasComponentItem {
+  /**
+   * 组件实例
+   */
   comp: CanvasComponent;
-  x: number; y: number; width: number; height: number;
-  isSelected: boolean; isHovered: boolean; previewTailwind: string;
-  gridCols: number; zoom: number;
+  /**
+   * 组件位置 - 水平方向
+   */
+  x: number;
+  /**
+   * 组件位置 - 垂直方向
+   */
+  y: number;
+  /**
+   * 组件宽度
+   */
+  width: number;
+  /**
+   * 组件高度
+   */
+  height: number;
+  /**
+   * 组件预览样式
+   */
+  previewTailwind: string;
+  /**
+   * 组件网格列数
+   */
+  gridCols: number;
+  /**
+   * 组件选中回调
+   */
   onSelect: (id: string, multi?: boolean) => void;
+  /**
+   * 组件悬停回调
+   */
   onHover: (id: string | null) => void;
-  onResize: (id: string, width: number, height: number, x?: number, y?: number) => void;
-  activeResizeCleanupRef: React.MutableRefObject<(() => void) | null>;
-  isPrimary?: boolean;
-  onSelectChild?: (nodeId: string) => void;
-  onDoubleClick?: (e: React.MouseEvent) => void;
+  /**
+   * 组件是否禁用
+   */
   isDimmed?: boolean;
+  /**
+   * 组件子项选中回调
+   */
+  onSelectChild?: (nodeId: string) => void;
+  /**
+   * 组件双击回调
+   */
+  onDoubleClick?: (e: React.MouseEvent) => void;
+  /**
+   * 组件最小行高
+   */
   minRowHeight?: number;
+  /**
+   * 组件位置模式
+   */
   positionMode?: "grid" | "free";
+  /**
+   * 组件列宽
+   */
   columnWidth?: number;
-}) {
+}
+
+export const CanvasComponentItem = React.memo(function CanvasComponentItem({
+  comp,
+  x,
+  y,
+  width,
+  height,
+  previewTailwind,
+  gridCols,
+  onSelect,
+  onHover,
+  isDimmed,
+  onSelectChild,
+  onDoubleClick,
+  minRowHeight,
+  positionMode = "grid",
+  columnWidth,
+}: ICanvasComponentItem) {
   const isLocked = comp.locked === true;
 
+  // --- 拖拽源绑定 ---
+  // 使用 useDraggable 使该组件可被拖拽移动
+  // attributes: 拖拽时附加到 DOM 上的属性，用于标识拖拽状态
+  // listeners: 拖拽事件监听器（onPointerDown 等），绑定到外层 div
+  // setNodeRef: 将 DOM 节点注册到 dnd-kit 的拖拽系统中
+  // isDragging: 当前是否正在被拖拽（用于视觉反馈）
+  // 若组件被锁定（isLocked），则禁用拖拽
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: `canvas-comp:${comp.id}`,
     data: createComponentDragItem(comp.id),
     disabled: isLocked,
   });
 
+  // --- 容器放置目标绑定 ---
+  // 使用 useDroppable 使该组件（仅容器类型）可作为其他组件的放置目标
+  // setNodeRef(setDropRef): 将同一 DOM 节点注册到放置系统中
+  // isOver: 是否有拖拽项正悬停在该组件上方（用于高亮反馈）
+  // 非容器类型组件不会注册为放置目标（disabled）
   const { setNodeRef: setDropRef, isOver } = useDroppable({
     id: `canvas-container:${comp.id}`,
     data: { parentId: comp.id, type: comp.node.type },
     disabled: !isContainerType(comp.node.type),
   });
 
+  // 判断用户是否按下了 Ctrl/Command/Shift 键（用于多选模式）
   const ctrlDown = useCtrlDown();
 
+  // 合并拖拽源和放置目标的 ref，将同一个 DOM 节点同时注册到两个系统中
   const mergedRef = useCallback((node: HTMLDivElement | null) => {
     setNodeRef(node);
     setDropRef(node);
   }, [setNodeRef, setDropRef]);
 
+  // 鼠标进入 → 通知外层当前组件被悬停（用于显示覆盖层/手柄）
   const handleMouseEnter = useCallback(() => { onHover(comp.id); }, [comp.id, onHover]);
+  // 鼠标离开 → 通知外层取消悬停
   const handleMouseLeave = useCallback(() => { onHover(null); }, [onHover]);
 
+  // 点击组件 → 选中该组件
+  // 阻止事件冒泡，避免触发父级（画布）的取消选中逻辑
+  // 若按住 Ctrl/Meta/Shift，则为追加多选模式
   const handleClick = useCallback((e: RMouseEvent) => {
     e.stopPropagation();
     onSelect(comp.id, e.ctrlKey || e.metaKey || e.shiftKey);
   }, [comp.id, onSelect]);
 
   return (
+    // ---- 外层容器 div ----
+    // mergedRef: 同时注册到拖拽源和放置目标系统
+    // listeners/attributes: 来自 useDraggable 的事件和属性
+    // data-* 属性: 供测试和 DOM 选择器识别该组件
     <div
       ref={mergedRef}
       data-canvas-comp="true"
@@ -87,22 +165,25 @@ export const CanvasComponentItem = React.memo(function CanvasComponentItem({
       data-testid={`canvas-comp-${comp.id}`}
       className={cn(
         previewTailwind,
-        "group relative rounded-md border transition-all duration-100",
-        isSelected && isPrimary
-          ? "border-blue-500 ring-2 ring-blue-200 shadow-md z-20"
-          : isSelected && !isPrimary
-            ? "border-blue-300 border-dashed ring-1 ring-blue-100/50 z-20"
-            : isHovered
-              ? "border-blue-400 ring-1 ring-blue-100 shadow-sm z-10"
-              : "border-transparent",
+        // 基础样式：相对定位、圆角、边框、过渡动画
+        "relative rounded-md border transition-all",
+        // 拖拽中 → 半透明，表示正在被拖动
         isDragging && "opacity-50",
+        // 有拖拽项悬停时：
+        //   容器类型 → 蓝色高亮，提示可放入
+        //   非容器类型 → 红色高亮，提示不可放入
         isOver && isContainerType(comp.node.type)
           ? "ring-2 ring-blue-400 bg-blue-50/30"
           : isOver && !isContainerType(comp.node.type)
             ? "ring-2 ring-red-300 bg-red-50/20"
             : "",
+        // 禁用态 → 半透明且不可交互
         isDimmed && "opacity-30 pointer-events-none",
+        // 默认透明边框，由 BEM Tools 覆盖层提供选中边框
+        "border-transparent",
       )}
+      // 自由布局模式：用绝对定位 + px 值精确控制位置和尺寸
+      // 网格布局模式：用 CSS Grid 的 gridColumn/gridRow 定位（默认）
       style={positionMode === "free" ? {
         position: "absolute" as const,
         left: `${x}px`,
@@ -121,126 +202,20 @@ export const CanvasComponentItem = React.memo(function CanvasComponentItem({
       {...listeners}
       {...attributes}
     >
-      {/* A9: hover 时显示组件名称标签 */}
-      {isHovered && (
-        <div className="absolute left-1 top-1 z-30 rounded bg-gray-900/70 px-1.5 py-0.5 text-[9px] font-medium text-white backdrop-blur-sm">
-          {comp.node.name?.trim() || comp.node.type}
-        </div>
-      )}
-
-      {isOver && (
-        <div className={cn(
-          "absolute right-1 top-1 z-30 rounded px-1.5 py-0.5 text-[9px] font-medium shadow-sm",
-          isContainerType(comp.node.type)
-            ? "bg-blue-500 text-white"
-            : "bg-red-400 text-white",
-        )}>
-          {isContainerType(comp.node.type) ? "+ 可放入" : "⛔ 不允许"}
-        </div>
-      )}
-
+      {/* ---- 内容门控层 ---- */}
+      {/* 按住 Ctrl 时允许点击事件穿透到子组件（用于编辑内部元素）      */}
+      {/* 否则拦截所有指针事件，保证拖拽和选中行为不受干扰              */}
       <div
         className="h-full w-full"
         style={{ pointerEvents: ctrlDown ? "auto" : "none" } as CSSProperties}
         data-ctrl-gate="true"
       >
+        {/* 提供子节点选中上下文，让内部组件能向画布报告选中事件 */}
         <SelectChildContext.Provider value={onSelectChild ?? null}>
+          {/* 渲染组件预览内容（模拟真实组件的 UI 表现） */}
           <UnifiedSimulatedContent comp={comp} variant="root" />
         </SelectChildContext.Provider>
       </div>
-
-      {isSelected && (
-        <div className="absolute -right-1.5 -top-1.5 z-30 flex h-5 w-5 items-center justify-center rounded-full bg-blue-500 text-[10px] font-bold text-white shadow transition-transform duration-150 scale-100">
-          ✓
-        </div>
-      )}
-
-      {/* A8: 选中组件底部实时尺寸 tooltip */}
-      {isSelected && (
-        <div className="absolute -bottom-5 left-1/2 z-30 -translate-x-1/2 whitespace-nowrap rounded bg-gray-900/75 px-2 py-0.5 text-[9px] font-medium text-white backdrop-blur-sm">
-          {width}×{height} | {Math.round(width * (columnWidth ?? CELL_WIDTH))}×{Math.round(height * (minRowHeight ?? CELL_HEIGHT))}px
-        </div>
-      )}
-
-      {isSelected && !isLocked && allResizeDirections.map((dir) => (
-        <div
-          key={dir}
-          data-canvas-resize-handle={dir}
-          data-testid={`canvas-resize-handle-${comp.id}-${dir}`}
-          className="absolute z-10 rounded-full border border-blue-500 bg-white hover:bg-blue-100"
-          style={{ ...resizeHandleStyles[dir], touchAction: "none" }}
-          onPointerDown={(e: RPointerEvent<HTMLDivElement>) => {
-            e.stopPropagation();
-            e.preventDefault();
-            activeResizeCleanupRef.current?.();
-
-            const el = e.currentTarget;
-            const pointerId = e.pointerId;
-            const startClientX = e.clientX;
-            const startClientY = e.clientY;
-
-            const startState = { x, y, width, height, gridCols };
-            let lastSent = { x, y, width, height };
-
-            const syncResize = (ev: PointerEvent) => {
-              if (ev.pointerId !== pointerId) return;
-
-              const rawDx = (ev.clientX - startClientX) / (CELL_WIDTH * zoom);
-              const rawDy = (ev.clientY - startClientY) / (CELL_HEIGHT * zoom);
-              const deltaCols = snapGridDelta(rawDx);
-              const deltaRows = snapGridDelta(rawDy);
-
-              const next = calcResizeNext(dir, startState, deltaCols, deltaRows);
-
-              if (
-                next.x === lastSent.x
-                && next.y === lastSent.y
-                && next.width === lastSent.width
-                && next.height === lastSent.height
-              ) {
-                return;
-              }
-
-              lastSent = next;
-              onResize(comp.id, next.width, next.height, next.x, next.y);
-            };
-
-            const cleanup = () => {
-              try {
-                el.releasePointerCapture(pointerId);
-              } catch {
-                // ignore release error
-              }
-              el.removeEventListener("pointermove", syncResize);
-              el.removeEventListener("pointerup", cleanup);
-              el.removeEventListener("pointercancel", cleanup);
-              el.removeEventListener("lostpointercapture", cleanup);
-              window.removeEventListener("pointermove", syncResize);
-              window.removeEventListener("pointerup", cleanup);
-              window.removeEventListener("pointercancel", cleanup);
-              activeResizeCleanupRef.current = null;
-            };
-
-            el.addEventListener("pointermove", syncResize);
-            el.addEventListener("pointerup", cleanup);
-            el.addEventListener("pointercancel", cleanup);
-            el.addEventListener("lostpointercapture", cleanup);
-            let captured = false;
-            try {
-              el.setPointerCapture(pointerId);
-              captured = el.hasPointerCapture(pointerId);
-            } catch {
-              captured = false;
-            }
-            if (!captured) {
-              window.addEventListener("pointermove", syncResize);
-              window.addEventListener("pointerup", cleanup);
-              window.addEventListener("pointercancel", cleanup);
-            }
-            activeResizeCleanupRef.current = cleanup;
-          }}
-        />
-      ))}
     </div>
   );
 });

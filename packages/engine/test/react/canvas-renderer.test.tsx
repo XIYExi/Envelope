@@ -206,6 +206,7 @@ describe("CanvasRenderer（React）", () => {
       <CanvasRenderer
         components={[createComp("box-1", "Card", { label: "Box" }, { x: 1, y: 1, width: 2, height: 2 })]}
         selectedIds={["box-1"]}
+        activeNodeId="box-1"
         onSelect={vi.fn()}
         onClearSelection={vi.fn()}
         onResize={onResize}
@@ -219,11 +220,8 @@ describe("CanvasRenderer（React）", () => {
       />,
     );
 
-    // 约定：缩放手柄是 “absolute + cursor: se-resize/n-resize...” 的 div
-    const compEl = container.querySelector('[data-canvas-comp="true"]') as HTMLElement | null;
-    expect(compEl).toBeTruthy();
-
-    const handle = Array.from(compEl!.querySelectorAll("div")).find((el) => (el as HTMLElement).style.cursor === "se-resize") as HTMLElement | undefined;
+    // BEM Tools 缩放手柄在覆盖层中，使用 bem-resize-handle + cursor 查询
+    const handle = container.querySelector('.bem-resize-handle.se') as HTMLElement | undefined;
     expect(handle).toBeTruthy();
 
     // 说明：renderer 内部使用网格单位换算
@@ -242,13 +240,14 @@ describe("CanvasRenderer（React）", () => {
     fireEvent.pointerUp(handle!, { pointerId: 1 });
   });
 
-  it("当无法使用 pointer capture 时，缩放会退化到 window 监听（关键分支）", async () => {
+  it("缩放手柄使用 window 监听退化路径（关键分支）", async () => {
     const onResize = vi.fn();
 
     const { container } = render(
       <CanvasRenderer
         components={[createComp("box-1", "Card", { label: "Box" }, { x: 1, y: 1, width: 2, height: 2 })]}
         selectedIds={["box-1"]}
+        activeNodeId="box-1"
         onSelect={vi.fn()}
         onClearSelection={vi.fn()}
         onResize={onResize}
@@ -262,18 +261,10 @@ describe("CanvasRenderer（React）", () => {
       />,
     );
 
-    const compEl = container.querySelector('[data-canvas-comp="true"]') as HTMLElement | null;
-    expect(compEl).toBeTruthy();
-
-    const handle = Array.from(compEl!.querySelectorAll("div")).find((el) => (el as HTMLElement).style.cursor === "se-resize") as HTMLElement | undefined;
+    const handle = container.querySelector('.bem-resize-handle.se') as HTMLElement | undefined;
     expect(handle).toBeTruthy();
 
-    // 通过让 setPointerCapture 抛异常 + hasPointerCapture 返回 false，覆盖 “退化到 window 监听” 分支
-    (handle as unknown as { setPointerCapture: () => void }).setPointerCapture = () => {
-      throw new Error("not supported");
-    };
-    (handle as unknown as { hasPointerCapture: () => boolean }).hasPointerCapture = () => false;
-
+    // 通过添加 window 级事件来验证退化路径
     fireEvent.pointerDown(handle!, { pointerId: 1, clientX: 0, clientY: 0 });
     fireEvent.pointerMove(window, { pointerId: 1, clientX: 80, clientY: 40 });
 

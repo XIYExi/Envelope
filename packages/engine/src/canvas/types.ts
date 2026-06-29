@@ -88,13 +88,13 @@ export interface HistoryEntry {
 
 export type CanvasClipboardItem =
   | {
-      kind: "canvas-component";
-      component: CanvasComponent;
-    }
+    kind: "canvas-component";
+    component: CanvasComponent;
+  }
   | {
-      kind: "component-node";
-      node: ComponentNode;
-    };
+    kind: "component-node";
+    node: ComponentNode;
+  };
 
 export interface CanvasClipboard {
   mode: "copy" | "cut";

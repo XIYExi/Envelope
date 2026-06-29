@@ -26,6 +26,12 @@ export function buildNodeIndex(nodes: ComponentNode[]): Map<string, ComponentNod
   return map;
 }
 
+
+/**
+ * 判断组件类型是否为容器类型
+ * @param type 组件类型
+ * @returns 是否为容器类型
+ */
 export function isContainerType(type: string): boolean {
   if (_materialRegistry) {
     const def = _materialRegistry.get(type);

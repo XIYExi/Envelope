@@ -18,4 +18,6 @@ export * from "./renderer";
 export * from "./ctrl-context";
 export * from "./minimap";
 export * from "./ruler";
+export { BemTools, bemToolsManager } from "./bem-tools/index";
+export type { BemToolsProps, BemToolComponent } from "./bem-tools/index";
 export { buildNodeIndex } from "../shared/canvas-utils";
