@@ -40,6 +40,7 @@ export const useCanvasStore = create<CanvasState & CanvasActions>((set, get) => 
   activeNodeId: null,
   clipboard: null,
   editScope: null,
+  dropTarget: null,
   canUndo: false,
   canRedo: false,
   historyPast: [],
@@ -128,6 +129,8 @@ export const useCanvasStore = create<CanvasState & CanvasActions>((set, get) => 
 
   // ========== Lock/Hide/Z-Order/Align/Distribute ==========
   ...createComponentOpsSlice(set, get),
+
+  setDropTarget: (target) => set({ dropTarget: target }),
 
   // ========== 历史系统 ==========
   undo: () => {

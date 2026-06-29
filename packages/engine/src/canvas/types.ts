@@ -144,6 +144,9 @@ export interface CanvasState {
   /** 定位模式: grid = 12列网格, free = 自由定位（绝对定位） */
   positionMode: "grid" | "free";
 
+  /** 拖拽插入位置信息（由 Dragon.onDragMove 计算，InsertionView 消费） */
+  dropTarget: DropTargetInfo | null;
+
   canUndo: boolean;
   canRedo: boolean;
   historyPast: HistoryEntry[];
@@ -240,6 +243,9 @@ export interface CanvasActions {
 
   setPositionMode: (mode: "grid" | "free") => void;
 
+  /** 设置拖拽插入位置（由 Dragon.onDragMove 调用） */
+  setDropTarget: (target: DropTargetInfo | null) => void;
+
   undo: () => void;
   redo: () => void;
   clearHistory: () => void;
@@ -299,6 +305,8 @@ export interface DropTargetInfo {
   containerId?: string;
   /** 插入位置索引（在容器 children 中的位置） */
   index?: number;
+  /** 最近的一个子组件 ID（用于吸附参考线） */
+  nearNodeId?: string;
   /** 是否有效插入（false 时显示禁止样式） */
   valid?: boolean;
 }

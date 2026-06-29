@@ -27,6 +27,8 @@ export interface ScrollConfig {
   maxSpeed?: number;
   /** 最小滚动速度（px/frame），默认 5 */
   minSpeed?: number;
+  /** 滚动回调：从 rAF 循环中调用，用于 Envelope pan 系统 */
+  onScroll?: (dx: number, dy: number) => void;
 }
 
 /** 默认配置 */
@@ -35,6 +37,7 @@ const DEFAULT_CONFIG: Required<ScrollConfig> = {
   accuracy: 30,
   maxSpeed: 30,
   minSpeed: 5,
+  onScroll: undefined as any,
 };
 
 /**
@@ -77,6 +80,9 @@ export class CanvasScroller {
   private pid: number | undefined;
   /** 当前配置 */
   private config: Required<ScrollConfig>;
+  /** 最近一次 scrolling() 计算出的滚动速度，供 getCurrentScrollDir() 使用 */
+  private _lastAx = 0;
+  private _lastAy = 0;
 
   constructor(config?: Partial<ScrollConfig>) {
     this.config = { ...DEFAULT_CONFIG, ...config };
@@ -91,6 +97,11 @@ export class CanvasScroller {
   setEnabled(flag: boolean) {
     this.config.enabled = flag;
     if (!flag) this.cancel();
+  }
+
+  /** 最近一次 scrolling() 计算出的滚动方向速度，供外部 rAF 过渡使用 */
+  getCurrentScrollDir(): { x: number; y: number } {
+    return { x: this._lastAx, y: this._lastAy };
   }
 
   /**
@@ -138,14 +149,22 @@ export class CanvasScroller {
     // 不需要滚动时直接返回
     if (!ax && !ay) return;
 
+    this._lastAx = ax;
+    this._lastAy = ay;
+
     // rAF 循环：持续递增滚动偏移，直到 cancel() 被调用
     const animate = () => {
-      let sx = scrollable.scrollLeft + ax;
-      let sy = scrollable.scrollTop + ay;
-      // 钳制到有效滚动范围
-      sx = Math.max(0, Math.min(sx, scrollable.scrollWidth - scrollable.clientWidth));
-      sy = Math.max(0, Math.min(sy, scrollable.scrollHeight - scrollable.clientHeight));
-      scrollable.scrollTo(sx, sy);
+      if (this.config.onScroll) {
+        // onScroll 模式：外部回调（如 store.setPan）
+        this.config.onScroll(this._lastAx, this._lastAy);
+      } else {
+        // 降级模式：使用 scrollable.scrollTo
+        let sx = scrollable.scrollLeft + this._lastAx;
+        let sy = scrollable.scrollTop + this._lastAy;
+        sx = Math.max(0, Math.min(sx, scrollable.scrollWidth - scrollable.clientWidth));
+        sy = Math.max(0, Math.min(sy, scrollable.scrollHeight - scrollable.clientHeight));
+        scrollable.scrollTo(sx, sy);
+      }
       this.pid = requestAnimationFrame(animate);
     };
 

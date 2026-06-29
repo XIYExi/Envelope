@@ -20,6 +20,6 @@ export * from "./minimap";
 export * from "./ruler";
 export { BemTools, bemToolsManager } from "./bem-tools/index";
 export type { BemToolsProps, BemToolComponent } from "./bem-tools/index";
-export { CanvasScroller, Detecting } from "./dragon/index";
+export { CanvasScroller, Detecting, Dragon, Location } from "./dragon/index";
 export type { ScrollConfig, ScrollViewport, DetectingListener } from "./dragon/index";
 export { buildNodeIndex } from "../shared/canvas-utils";

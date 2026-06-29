@@ -16,7 +16,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, memo } from "react";
 import { useSearchParams } from "next/navigation";
 import { DndContext, useDroppable, pointerWithin, DragOverlay, type DragEndEvent, type DragMoveEvent, type DragStartEvent, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
 import { createDefaultRegistry } from "@envelope/materials";
-import { useCanvasStore, createComponentNode, CanvasRenderer, VIEWPORT_WIDTHS, CANVAS_CELL_SIZE, CANVAS_CELL_HEIGHT, isContainerType, findNodeLocation, type CanvasSnapshot, type ComponentNode } from "@envelope/engine";
+import { useCanvasStore, createComponentNode, CanvasRenderer, VIEWPORT_WIDTHS, CANVAS_CELL_SIZE, CANVAS_CELL_HEIGHT, isContainerType, findNodeLocation, Dragon, CanvasScroller, type CanvasSnapshot, type ComponentNode, type DropTargetInfo } from "@envelope/engine";
 import { useEditorStore } from "@/stores/editor";
 import { useProjectPagesStore, componentNodesToCanvasComponents } from "@/stores/project-pages";
 import { useProjectFlowsStore } from "@/stores/project-flows";
@@ -256,6 +256,20 @@ export function EditorLayout() {
       activationConstraint: { distance: 5 },
     }),
   );
+
+  // Dragon 拖拽引擎（跨渲染周期保持单例）
+  const dragonRef = useRef<Dragon | null>(null);
+  if (!dragonRef.current) {
+    dragonRef.current = new Dragon({
+      scroller: new CanvasScroller({
+        onScroll: (dx, dy) => {
+          const s = useCanvasStore.getState();
+          s.setPan(s.panX + dx, s.panY + dy);
+        },
+      }),
+    });
+  }
+  const dragon = dragonRef.current;
 
   /**
    * 物料名称 → 物料信息的快速查找表
@@ -622,104 +636,52 @@ export function EditorLayout() {
   }, [clearSelection, copySelected, cutSelected, deleteSelected, isPageMode, pasteClipboard, undo, redo]);
 
 
-  // ===== 自定义 autoScroll：拖拽到画布边缘时自动平移 =====
-  // 由于画布使用 overflow-hidden + transform 实现平移，非原生 scroll，
-  // 因此不能依赖 dnd-kit 的 autoScroll props（依赖原生 scroll 事件），需自行实现。
-  // 原理：onDragMove 中检测鼠标距画布边界的距离，计算出平移方向/速度存入 ref，
-  //       由 requestAnimationFrame 循环持续读取该 ref 并调用 setPan。
-  const scrollDirRef = useRef({ x: 0, y: 0 });
-  const rafRef = useRef<number | null>(null);
-
-  // rAF 循环：持续读取 scrollDirRef 并调用 setPan，实现平滑平移
-  // 注意：必须在 useEffect 中启动首次 tick，否则 rAF 循环永远不会被触发
-  useEffect(() => {
-    function tick() {
-      const dir = scrollDirRef.current;
-      if (dir.x !== 0 || dir.y !== 0) {
-        const state = useCanvasStore.getState();
-        state.setPan(state.panX + dir.x, state.panY + dir.y);
-      }
-      // 持续调度下一帧，当 dir 为 (0,0) 时 tick 为空转，开销可忽略
-      rafRef.current = requestAnimationFrame(tick);
-    }
-    rafRef.current = requestAnimationFrame(tick);
-
-    return () => {
-      if (rafRef.current !== null) {
-        cancelAnimationFrame(rafRef.current);
-        rafRef.current = null;
-      }
-    };
-  }, []);
-
-  // 拖拽移动中检测鼠标是否位于画布边缘，计算需要自动平移的方向和速度
-  // 同时计算拖拽对齐辅助线（B10）
+  // 拖拽移动中计算插入位置、自动滚动、对齐辅助线（B10）
+  // 自动滚动由 Dragon.onDragMove 内部协调 CanvasScroller
+  // 通过 onScroll 回调 → store.setPan 实现
   const handleDragMove = useCallback((event: DragMoveEvent) => {
-    // 仅对画布组件重排或从素材面板拖拽新组件到画布时启用自动平移
     const dragType = event.active.data.current?.type;
     if (dragType !== "canvas-component" && dragType !== "material") {
-      scrollDirRef.current = { x: 0, y: 0 };
+      useCanvasStore.getState().setDropTarget(null);
       setDragAlignInfo(null);
       return;
     }
 
-    const me = event.activatorEvent;
-    if (!(me instanceof MouseEvent)) return;
-
-    // BUG 修复：使用 delta 计算当前鼠标位置，而非 activatorEvent 的起始位置
-    // activatorEvent 在整个拖拽过程中位置不变，会导致 autoScroll 逻辑失效
-    const currentMouseX = me.clientX + event.delta.x;
-    const currentMouseY = me.clientY + event.delta.y;
-
-    // 查找画布容器的 DOM 边界
     const el = document.querySelector<HTMLElement>('[data-role="canvas-viewport"]');
     if (!el) return;
     const rect = el.getBoundingClientRect();
 
-    // 边缘触发阈值（像素）和最大平移速度（像素/帧）
-    const EDGE_THRESHOLD = 30;
-    const MAX_SPEED = 15;
+    const cs = useCanvasStore.getState();
+    const viewportW = VIEWPORT_WIDTHS[cs.viewport];
+    const maxW = typeof cs.pageMaxWidth === "number" && cs.pageMaxWidth > 0 ? cs.pageMaxWidth : viewportW;
+    const effectiveWidth = Math.min(viewportW, maxW);
+    const padding = typeof cs.pagePadding === "number" ? cs.pagePadding : 0;
+    const contentWidth = effectiveWidth - 2 * padding;
+    const colW = Math.max(1, (contentWidth - (cs.gridCols - 1) * cs.gridGap) / cs.gridCols);
 
-    // 计算鼠标距画布四边的距离（基于当前鼠标位置而非起始位置）
-    const distLeft = currentMouseX - rect.left;
-    const distRight = rect.right - currentMouseX;
-    const distTop = currentMouseY - rect.top;
-    const distBottom = rect.bottom - currentMouseY;
+    const result = dragon.onDragMove(
+      event,
+      {
+        zoom: zoomRef2.current,
+        components: componentsRef.current,
+        selectedIds: cs.selectedIds,
+        gridCols: cs.gridCols,
+        positionMode: cs.positionMode,
+      },
+      {
+        width: viewportW,
+        padding,
+        gap: cs.gridGap,
+        cellWidth: CANVAS_CELL_SIZE,
+        cellHeight: CANVAS_CELL_HEIGHT,
+        columnWidth: colW,
+      },
+      rect,
+    );
 
-    let dx = 0;
-    let dy = 0;
-
-    if (distLeft < EDGE_THRESHOLD) {
-      dx = -MAX_SPEED * (1 - distLeft / EDGE_THRESHOLD);
-    } else if (distRight < EDGE_THRESHOLD) {
-      dx = MAX_SPEED * (1 - distRight / EDGE_THRESHOLD);
-    }
-
-    if (distTop < EDGE_THRESHOLD) {
-      dy = -MAX_SPEED * (1 - distTop / EDGE_THRESHOLD);
-    } else if (distBottom < EDGE_THRESHOLD) {
-      dy = MAX_SPEED * (1 - distBottom / EDGE_THRESHOLD);
-    }
-
-    scrollDirRef.current = { x: dx, y: dy };
-
-    // B10: 计算拖拽对齐辅助线网格位置
-    const { delta } = event;
-    const curZoom = zoomRef2.current;
-    if (dragType === "canvas-component") {
-      const draggedNodeId = event.active.data.current?.componentId as string | undefined;
-      const comp = componentsRef.current.find((c) => c.id === draggedNodeId);
-      if (comp) {
-        const gx = comp.position.x + delta.x / (CANVAS_CELL_SIZE * curZoom);
-        const gy = comp.position.y + delta.y / (CANVAS_CELL_HEIGHT * curZoom);
-        setDragAlignInfo({ gridX: gx, gridY: gy, gridWidth: comp.position.width, gridHeight: comp.position.height });
-      }
-    } else if (dragType === "material") {
-      const gx = Math.max(1, Math.round(delta.x / (CANVAS_CELL_SIZE * curZoom)));
-      const gy = Math.max(1, Math.round(delta.y / (CANVAS_CELL_HEIGHT * curZoom)));
-      setDragAlignInfo({ gridX: gx, gridY: gy, gridWidth: 3, gridHeight: 2 });
-    }
-  }, []);
+    setDragAlignInfo(result.alignInfo);
+    useCanvasStore.getState().setDropTarget(result.dropTarget);
+  }, [dragon]);
 
   const [activeDragId, setActiveDragId] = useState<string | null>(null);
   // B10: 拖拽对齐辅助线 — 存储被拖组件的网格坐标用于计算对齐
@@ -728,17 +690,17 @@ export function EditorLayout() {
   } | null>(null);
 
   const handleDragStart = useCallback((event: DragStartEvent) => {
-    const name = event.active.data.current?.materialName as string | undefined
-      ?? event.active.data.current?.componentId as string | undefined;
-    setActiveDragId(name ?? null);
-  }, []);
+    dragon.onDragStart(event);
+    const name = dragon.activeId;
+    setActiveDragId(name);
+  }, [dragon]);
   const handleDragEndWrapper = useCallback((event: DragEndEvent) => {
+    dragon.onDragEnd();
     setActiveDragId(null);
     setDragAlignInfo(null);
-    // 停止 autoScroll 平移
-    scrollDirRef.current = { x: 0, y: 0 };
+    useCanvasStore.getState().setDropTarget(null);
     handleDragEnd(event);
-  }, [handleDragEnd]);
+  }, [handleDragEnd, dragon]);
 
   return (
     <div className="flex h-screen flex-col">
