@@ -18,6 +18,7 @@ export const dialogMaterial: MaterialDefinition = {
     primaryActionText: "Confirm",
     secondaryActionText: "Cancel",
   },
+  bindableEvents: ["onOpenChange"],
   editableProps: [
     {
       key: "showTrigger",

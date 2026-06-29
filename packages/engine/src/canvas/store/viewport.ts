@@ -9,6 +9,8 @@
  */
 
 import type { CanvasState, CanvasActions } from "../types";
+import { VIEWPORT_WIDTHS } from "../types";
+import { CANVAS_CELL_WIDTH, CANVAS_CELL_HEIGHT } from "../../shared/canvas-utils";
 import { withHistory } from "./history";
 
 /** 数值钳制（闭区间） */
@@ -28,6 +30,14 @@ function clampXByWidth(x: number, width: number, gridCols: number): number {
   const rightMostX = Math.max(1, gridCols - w + 1);
   return clamp(Math.round(x), 1, rightMostX);
 }
+
+/** 视口 → gridCols 映射（mobile→4, tablet→8, desktop→12, fluid→12） */
+const VIEWPORT_GRID_COLS: Record<CanvasState["viewport"], number> = {
+  mobile: 4,
+  tablet: 8,
+  desktop: 12,
+  fluid: 12,
+};
 
 /** 视口初始状态 */
 export const viewportInitialState = {
@@ -58,9 +68,22 @@ export function createViewportSlice(
     },
 
     setViewport: (viewport: CanvasState["viewport"]) => {
-      set(withHistory((state) => ({
-        viewport,
-      }))(get(), viewport));
+      set(withHistory((state) => {
+        // 根据视口类型计算对应的 gridCols
+        const nextCols = VIEWPORT_GRID_COLS[viewport];
+        return {
+          viewport,
+          gridCols: nextCols,
+          // 复用 setGridCols 的钳制逻辑：x/width 不能超出新的 gridCols
+          components: state.components.map((c) => {
+            const nextW = clamp(Math.round(c.position.width), 1, nextCols);
+            const nextX = clampXByWidth(c.position.x, nextW, nextCols);
+            const nextY = Math.max(1, Math.round(c.position.y));
+            const nextH = Math.max(1, Math.round(c.position.height));
+            return { ...c, position: { ...c.position, x: nextX, y: nextY, width: nextW, height: nextH } };
+          }),
+        };
+      })(get(), viewport));
     },
 
     setGridCols: (gridCols: number) => {
@@ -100,12 +123,12 @@ export function createViewportSlice(
         const maxX = Math.max(...visible.map((c) => c.position.x + c.position.width));
         const minY = Math.min(...visible.map((c) => c.position.y));
         const maxY = Math.max(...visible.map((c) => c.position.y + c.position.height));
-        const colW = 80;
-        const rowH = 40;
+        const colW = CANVAS_CELL_WIDTH;
+        const rowH = CANVAS_CELL_HEIGHT;
         const gap = state.gridGap;
         const contentW = (maxX - minX + 1) * (colW + gap);
         const contentH = (maxY - minY + 1) * (rowH + gap);
-        const vpW = 800;
+        const vpW = VIEWPORT_WIDTHS[state.viewport];
         const vpH = 600;
         const fitZoom = Math.min(vpW / contentW, vpH / contentH, 2) * 0.9;
         const zoomVal = Math.max(0.25, fitZoom);
@@ -126,12 +149,12 @@ export function createViewportSlice(
         const maxX = Math.max(...selected.map((c) => c.position.x + c.position.width));
         const minY = Math.min(...selected.map((c) => c.position.y));
         const maxY = Math.max(...selected.map((c) => c.position.y + c.position.height));
-        const colW = 80;
-        const rowH = 40;
+        const colW = CANVAS_CELL_WIDTH;
+        const rowH = CANVAS_CELL_HEIGHT;
         const gap = state.gridGap;
         const contentW = (maxX - minX + 1) * (colW + gap);
         const contentH = (maxY - minY + 1) * (rowH + gap);
-        const vpW = 800;
+        const vpW = VIEWPORT_WIDTHS[state.viewport];
         const vpH = 600;
         const fitZoom = Math.min(vpW / contentW, vpH / contentH, 2) * 0.9;
         const zoomVal = Math.max(0.25, fitZoom);

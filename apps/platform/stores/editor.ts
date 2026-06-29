@@ -23,6 +23,8 @@ function takeSnapshot(state: EditorState): EditorSnapshot {
     canvasScale: state.canvasScale,
     leftPanelCollapsed: state.leftPanelCollapsed,
     rightPanelCollapsed: state.rightPanelCollapsed,
+    leftPanelWidth: state.leftPanelWidth,
+    rightPanelWidth: state.rightPanelWidth,
     activePanelTab: state.activePanelTab,
     editorMode: state.editorMode,
     isDirty: state.isDirty,
@@ -43,6 +45,8 @@ export const useEditorStore = create<EditorState & EditorActions>()(
       canvasScale: 1,
       leftPanelCollapsed: false,
       rightPanelCollapsed: false,
+      leftPanelWidth: 192,
+      rightPanelWidth: 288,
       activePanelTab: "components",
       editorMode: "pages" as EditorMode,
       isDirty: false,
@@ -64,6 +68,12 @@ export const useEditorStore = create<EditorState & EditorActions>()(
 
       /** 切换右侧面板 */
       toggleRightPanel: () => set((s) => ({ rightPanelCollapsed: !s.rightPanelCollapsed })),
+
+      /** 设置左侧面板宽度 */
+      setLeftPanelWidth: (width) => set({ leftPanelWidth: width }),
+
+      /** 设置右侧面板宽度 */
+      setRightPanelWidth: (width) => set({ rightPanelWidth: width }),
 
       /** 设置属性面板标签页 */
       setActivePanelTab: (activePanelTab) => set({ activePanelTab }),

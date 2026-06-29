@@ -28,10 +28,11 @@ export function buildNodeIndex(nodes: ComponentNode[]): Map<string, ComponentNod
 
 export function isContainerType(type: string): boolean {
   if (_materialRegistry) {
-    const material = _materialRegistry.get(type);
-    if (material) return material.isContainer === true;
+    const def = _materialRegistry.get(type);
+    if (def) return def.isContainer === true || def.supportsChildren === true;
+    return false;
   }
-  // Fallback: hardcoded list for SSR/test environments where registry is not available
+  // SSR/测试环境回退：从物料定义缓存的容器类型白名单判断
   const FALLBACK_CONTAINER_TYPES = new Set([
     "Box", "Flex", "Container", "Grid",
     "Card", "CardHeader", "CardContent", "CardFooter",

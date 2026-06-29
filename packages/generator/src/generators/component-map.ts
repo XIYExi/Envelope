@@ -116,9 +116,12 @@ function dataBindingAttrs(comp: ComponentNode): string[] {
     if (binding.startsWith("{{") && binding.endsWith("}}")) {
       const inner = binding.slice(2, -2).trim();
       const parts = inner.split(".");
-      if (parts[0] === "searchParams" || parts[0] === "params") {
+      if (parts[0] === "searchParams") {
         const paramName = parts.slice(1).join(".");
         attrs.push(`${prop}={searchParams?.get(${tsStringLiteral(paramName)})}`);
+      } else if (parts[0] === "params") {
+        const paramName = parts.slice(1).join(".");
+        attrs.push(`${prop}={params?.${paramName}}`);
       }
       continue;
     }
@@ -374,6 +377,32 @@ export const COMPONENT_MAP: Record<string, ComponentGenerator> = {
     return `${comment(comp, indent)}${indent}<div${attrStr}>\n${childrenJSX}${indent}</div>`;
   },
 
+  "Grid": (comp, childrenJSX, indent) => {
+    const p = comp.props as Record<string, unknown> | undefined;
+    const cols = propNum(p, "columns", 3);
+    const rows = propNum(p, "rows", 0);
+    const gap = propNum(p, "gap", 4);
+    const autoFlow = propStr(p, "autoFlow", "row");
+    const justifyItems = propStr(p, "justifyItems", "stretch");
+    const alignItems = propStr(p, "alignItems", "stretch");
+    const areas = propStr(p, "areas", "");
+    const tw = cx(comp);
+    const attrs: string[] = [...dataBindingAttrs(comp), ...expressionAttrs(comp)];
+    if (tw) attrs.push(`className={${tsStringLiteral(tw)}}`);
+    const styleParts: string[] = [
+      `gridTemplateColumns: "repeat(${cols}, 1fr)"`,
+    ];
+    if (rows > 0) styleParts.push(`gridTemplateRows: "repeat(${rows}, 1fr)"`);
+    styleParts.push(`gridAutoFlow: ${tsStringLiteral(autoFlow)}`);
+    styleParts.push(`justifyItems: ${tsStringLiteral(justifyItems)}`);
+    styleParts.push(`alignItems: ${tsStringLiteral(alignItems)}`);
+    styleParts.push(`gap: "${gap * 4}px"`);
+    if (areas) styleParts.push(`gridTemplateAreas: ${tsStringLiteral(areas)}`);
+    attrs.push(`style={{ ${styleParts.join(", ")} }}`);
+    const attrStr = attrs.length > 0 ? " " + attrs.join(" ") : "";
+    return `${comment(comp, indent)}${indent}<div${attrStr}>\n${childrenJSX}${indent}</div>`;
+  },
+
   "Section": (comp, childrenJSX, indent) => {
     const tw = cx(comp);
     const attrs: string[] = [...dataBindingAttrs(comp), ...expressionAttrs(comp)];
@@ -461,6 +490,10 @@ export const COMPONENT_MAP: Record<string, ComponentGenerator> = {
     attrs.push(...eventAttrs(comp));
     attrs.push(...flowOutputAttrs(comp));
     if (defaultValue) attrs.push(jsxAttrString("defaultValue", defaultValue));
+    if (p?.cascadeField && p?.cascadeColumn) {
+      attrs.push(`data-cascade-field={${tsStringLiteral(String(p.cascadeField))}}`);
+      attrs.push(`data-cascade-column={${tsStringLiteral(String(p.cascadeColumn))}}`);
+    }
     return `${comment(comp, indent)}${indent}<Select${attrs.length ? " " + attrs.join(" ") : ""}>\n${indent}  <SelectTrigger${tw ? ` ${jsxAttrString("className", tw)}` : ""}>\n${indent}    <SelectValue ${jsxAttrString("placeholder", placeholder)} />\n${indent}  </SelectTrigger>\n${indent}  <SelectContent>\n${optionsJSX || `${indent}    ${childrenJSX}`}\n${indent}  </SelectContent>\n${indent}</Select>`;
   },
 

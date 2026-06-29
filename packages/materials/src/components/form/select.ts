@@ -11,6 +11,7 @@ export const selectMaterial: MaterialDefinition = {
     options: ["Option 1", "Option 2", "Option 3"],
     selectedIndex: -1,
   },
+  bindableEvents: ["onChange"],
   editableProps: [
     {
       key: "name",
@@ -60,6 +61,24 @@ export const selectMaterial: MaterialDefinition = {
       defaultValue: -1,
       group: "Slots",
       order: 5,
+    },
+    {
+      key: "cascadeField",
+      label: "联级父字段",
+      type: "text",
+      comment: "依赖的另一个 Select 的 dataBinding key，用于联级过滤",
+      group: "Data Binding",
+      order: 6,
+      defaultValue: "",
+    },
+    {
+      key: "cascadeColumn",
+      label: "联级列名",
+      type: "text",
+      comment: "子表（当前 Select 数据源）中关联父表的外键列名",
+      group: "Data Binding",
+      order: 7,
+      defaultValue: "",
     },
     {
       key: "className",

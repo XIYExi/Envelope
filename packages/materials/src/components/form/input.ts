@@ -17,6 +17,7 @@ export const inputMaterial: MaterialDefinition = {
   description: "A form input field for text entry.",
   category: "form",
   icon: "Type",
+  bindableEvents: ["onChange", "onFocus", "onBlur"],
   editableProps: [
     // 行为配置
     {

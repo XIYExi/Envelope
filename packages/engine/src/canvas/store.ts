@@ -54,7 +54,7 @@ export const useCanvasStore = create<CanvasState & CanvasActions>((set, get) => 
 
   // ========== 组件移动/缩放 ==========
   moveComponent: (id: string, x: number, y: number) => {
-    /** 根据组件宽度对 x 做右边界钳制 */
+    /** 根据组件宽度对 x 做右边界钳制（仅 grid 模式使用） */
     function clampXByWidth(xVal: number, width: number, gridCols: number): number {
       const w = Math.max(1, width);
       const rightMostX = Math.max(1, gridCols - w + 1);
@@ -63,8 +63,14 @@ export const useCanvasStore = create<CanvasState & CanvasActions>((set, get) => 
     set(withHistory((state, id2, x2, y2) => ({
       components: state.components.map((c) => {
         if (c.id !== id2) return c;
-        const clampedX = clampXByWidth(x2, c.position.width, state.gridCols);
         const clampedY = Math.max(1, Math.round(y2));
+        // free 模式下 x/y 为像素坐标，跳过 grid 钳制，仅做下界保护
+        if (state.positionMode === "free") {
+          const freeX = Math.max(0, Math.round(x2));
+          return { ...c, position: { ...c.position, x: freeX, y: clampedY } };
+        }
+        // grid 模式：保持原有右边界钳制逻辑
+        const clampedX = clampXByWidth(x2, c.position.width, state.gridCols);
         return { ...c, position: { ...c.position, x: clampedX, y: clampedY } };
       }),
     }), { coalesceKey: "move" })(get(), id, x, y));
@@ -75,7 +81,7 @@ export const useCanvasStore = create<CanvasState & CanvasActions>((set, get) => 
     function clamp(value: number, min: number, max: number): number {
       return Math.max(min, Math.min(max, value));
     }
-    /** 根据组件宽度对 x 做右边界钳制 */
+    /** 根据组件宽度对 x 做右边界钳制（仅 grid 模式使用） */
     function clampXByWidth(xVal: number, widthVal: number, gridCols: number): number {
       const w = Math.max(1, widthVal);
       const rightMostX = Math.max(1, gridCols - w + 1);
@@ -85,6 +91,17 @@ export const useCanvasStore = create<CanvasState & CanvasActions>((set, get) => 
       components: state.components.map((c) => {
         if (c.id !== id2) return c;
         const nextHeight = Math.max(1, Math.round(height2));
+        // free 模式下跳过所有 grid 相关钳制，仅做基本下界保护
+        if (state.positionMode === "free") {
+          const freeX = x2 !== undefined ? Math.max(0, Math.round(x2)) : c.position.x;
+          const freeY = y2 !== undefined ? Math.max(1, Math.round(y2)) : c.position.y;
+          const freeWidth = Math.max(1, Math.round(width2));
+          return {
+            ...c,
+            position: { ...c.position, x: freeX, y: freeY, width: freeWidth, height: nextHeight },
+          };
+        }
+        // grid 模式：保持原有钳制逻辑
         const nextXInput = x2 !== undefined ? x2 : c.position.x;
         const nextXPre = clamp(Math.round(nextXInput), 1, state.gridCols);
         const maxWidthByX = Math.max(1, state.gridCols - nextXPre + 1);

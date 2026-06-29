@@ -81,8 +81,8 @@ export function calcDistributePositions(
   );
 
   if (axis === "horizontal") {
-    const first = sorted[0];
-    const last = sorted[sorted.length - 1];
+    const first = sorted[0]!;
+    const last = sorted[sorted.length - 1]!;
     const start = first.position.x;
     const end = last.position.x + last.position.width - 1;
     const totalWidth = sorted.reduce((sum, c) => sum + c.position.width, 0);
@@ -97,8 +97,8 @@ export function calcDistributePositions(
       cursor += c.position.width + gap;
     }
   } else {
-    const first = sorted[0];
-    const last = sorted[sorted.length - 1];
+    const first = sorted[0]!;
+    const last = sorted[sorted.length - 1]!;
     const start = first.position.y;
     const end = last.position.y + last.position.height - 1;
     const totalHeight = sorted.reduce((sum, c) => sum + c.position.height, 0);

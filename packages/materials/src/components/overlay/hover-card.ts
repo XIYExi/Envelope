@@ -13,6 +13,7 @@ export const hoverCardMaterial: MaterialDefinition = {
     triggerText: "Hover me",
     contentText: "Hover card content...",
   },
+  bindableEvents: ["onOpenChange"],
   editableProps: [
     {
       key: "openDelay",

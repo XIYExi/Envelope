@@ -43,6 +43,10 @@ export interface EditorState {
   leftPanelCollapsed: boolean;
   /** 右侧属性面板是否折叠 */
   rightPanelCollapsed: boolean;
+  /** 左侧面板宽度（px） */
+  leftPanelWidth: number;
+  /** 右侧面板宽度（px） */
+  rightPanelWidth: number;
   /** 属性面板当前激活的标签页 */
   activePanelTab: string;
   /** 编辑器当前主模式 */
@@ -74,6 +78,10 @@ export interface EditorSnapshot {
   leftPanelCollapsed: boolean;
   /** 右侧属性面板是否折叠 */
   rightPanelCollapsed: boolean;
+  /** 左侧面板宽度（px） */
+  leftPanelWidth: number;
+  /** 右侧面板宽度（px） */
+  rightPanelWidth: number;
   /** 属性面板当前激活的标签页 */
   activePanelTab: string;
   /** 编辑器当前主模式 */
@@ -96,6 +104,10 @@ export interface EditorActions {
   toggleLeftPanel: () => void;
   /** 切换右侧面板折叠状态 */
   toggleRightPanel: () => void;
+  /** 设置左侧面板宽度 */
+  setLeftPanelWidth: (width: number) => void;
+  /** 设置右侧面板宽度 */
+  setRightPanelWidth: (width: number) => void;
   /** 设置属性面板当前标签页 */
   setActivePanelTab: (tab: string) => void;
   /** 设置编辑器主模式 */

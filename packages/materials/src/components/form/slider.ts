@@ -6,6 +6,7 @@ export const sliderMaterial: MaterialDefinition = {
   description: "An input where the user selects a value from within a range.",
   category: "form",
   icon: "GripHorizontal",
+  bindableEvents: ["onChange"],
   editableProps: [
     {
       key: "defaultValue",

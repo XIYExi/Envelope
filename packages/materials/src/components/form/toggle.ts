@@ -7,6 +7,7 @@ export const toggleMaterial: MaterialDefinition = {
   category: "form",
   icon: "ToggleLeft",
   supportsChildren: true,
+  bindableEvents: ["onChange"],
   editableProps: [
     {
       key: "variant",

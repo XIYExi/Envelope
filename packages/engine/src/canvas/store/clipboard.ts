@@ -298,7 +298,7 @@ export function createClipboardSlice(
           return { ...c, node: res.nextNode };
         });
         return { components };
-      })(get(), nodeId, updates));
+      }, { coalesceKey: "updateNode" })(get(), nodeId, updates));
     },
   };
 }

@@ -51,6 +51,22 @@ function isApiRoute(fullPath: string): boolean {
 }
 
 /**
+ * 提取路由路径中的动态参数名
+ *
+ * 例如 "/posts/[id]" → ["id"]
+ *      "/docs/[category]/[slug]" → ["category", "slug"]
+ */
+function extractDynamicParams(path: string): string[] {
+  const params: string[] = [];
+  const regex = /\[([^\]]+)\]/g;
+  let match;
+  while ((match = regex.exec(path)) !== null) {
+    params.push(match[1]!);
+  }
+  return params;
+}
+
+/**
  * 生成页面组件内容
  */
 function generatePageContent(
@@ -81,11 +97,25 @@ function generatePageContent(
     metadataLines.push("};");
   }
 
+  const dynamicParams = extractDynamicParams(_fullPath);
+  const paramsType = dynamicParams.length > 0
+    ? `{ params: Promise<{ ${dynamicParams.map(p => `${p}: string`).join("; ")} }> }`
+    : "";
+  const funcSignature = paramsType
+    ? `export default async function Page({ params }: ${paramsType}) {`
+    : `export default function Page() {`;
+
+  // 生成 params 解构代码（在函数体首行）
+  const paramsBody = dynamicParams.length > 0
+    ? `  const { ${dynamicParams.join(", ")} } = await params;\n`
+    : "";
+
   return [
     `import type { Metadata } from "next";`,
     metadataLines.join("\n"),
     "",
-    `export default function Page() {`,
+    funcSignature,
+    paramsBody,
     `  return (`,
     `    <main className="container mx-auto p-4">`,
     `      <h1 className="text-2xl font-bold">${jsxText(title)}</h1>`,

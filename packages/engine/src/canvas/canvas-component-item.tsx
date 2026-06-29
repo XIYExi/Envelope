@@ -121,12 +121,10 @@ export const CanvasComponentItem = React.memo(function CanvasComponentItem({
       {...listeners}
       {...attributes}
     >
-      {isContainerType(comp.node.type) && (
-        <div className={cn(
-          "absolute left-1 top-1 z-30 rounded px-1.5 py-0.5 text-[9px] font-medium text-white",
-          isSelected ? "bg-blue-500" : isHovered ? "bg-blue-400/80" : "bg-blue-500/80",
-        )}>
-          {comp.node.type}
+      {/* A9: hover 时显示组件名称标签 */}
+      {isHovered && (
+        <div className="absolute left-1 top-1 z-30 rounded bg-gray-900/70 px-1.5 py-0.5 text-[9px] font-medium text-white backdrop-blur-sm">
+          {comp.node.name?.trim() || comp.node.type}
         </div>
       )}
 
@@ -154,6 +152,13 @@ export const CanvasComponentItem = React.memo(function CanvasComponentItem({
       {isSelected && (
         <div className="absolute -right-1.5 -top-1.5 z-30 flex h-5 w-5 items-center justify-center rounded-full bg-blue-500 text-[10px] font-bold text-white shadow transition-transform duration-150 scale-100">
           ✓
+        </div>
+      )}
+
+      {/* A8: 选中组件底部实时尺寸 tooltip */}
+      {isSelected && (
+        <div className="absolute -bottom-5 left-1/2 z-30 -translate-x-1/2 whitespace-nowrap rounded bg-gray-900/75 px-2 py-0.5 text-[9px] font-medium text-white backdrop-blur-sm">
+          {width}×{height} | {Math.round(width * (columnWidth ?? CELL_WIDTH))}×{Math.round(height * (minRowHeight ?? CELL_HEIGHT))}px
         </div>
       )}
 

@@ -10,6 +10,7 @@ export const radioGroupMaterial: MaterialDefinition = {
   defaultProps: {
     options: ["Option 1", "Option 2"],
   },
+  bindableEvents: ["onChange"],
   editableProps: [
     {
       key: "name",

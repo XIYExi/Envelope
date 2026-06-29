@@ -16,6 +16,7 @@ export const sheetMaterial: MaterialDefinition = {
     descriptionText: "Sheet description...",
     bodyText: "Sheet content...",
   },
+  bindableEvents: ["onOpenChange"],
   editableProps: [
     {
       key: "side",

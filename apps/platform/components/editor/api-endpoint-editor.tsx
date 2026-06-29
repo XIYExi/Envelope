@@ -541,7 +541,7 @@ function rowToEndpointDef(row: ProjectEndpoint): APIEndpointDef {
     corsEnabled: mid.corsEnabled !== false,
     loggingEnabled: mid.loggingEnabled !== false,
     boundFlow: row.flow_id ?? "",
-    customHandler: "",
+    customHandler: (row as any).custom_handler ?? "",
     successStatus: typeof res.successStatus === "number" ? res.successStatus : 200,
     successExample: typeof res.successExample === "string" ? res.successExample : "",
     errorResponses: Array.isArray(res.errorResponses) ? res.errorResponses : [],

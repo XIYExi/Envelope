@@ -14,15 +14,15 @@ import React from "react";
 import type { SimulatedLayoutProps } from "./simulated-components-layout";
 import { cn, pstr, pnum, parr } from "./renderer-utils";
 import { ChildrenSlot } from "./simulated-content";
+import { getMaterialRegistry } from "../shared/canvas-utils";
 
 /** 模拟 DialogContent / SheetContent / AlertDialogContent 组件渲染 */
-export function renderDialogSheetContent({ comp, variant }: SimulatedLayoutProps) {
+export function renderDialogSheetContent({ comp, variant: _variant }: SimulatedLayoutProps) {
   const { type, props } = comp.node;
-  const isCompact = variant === "child";
   return (
-    <div className={cn("flex h-full flex-col rounded-lg border-2 border-primary/30 bg-background shadow-lg", isCompact ? "p-1" : "p-3")}>
-      <div className={cn("font-semibold", isCompact ? "mb-0.5 text-[10px]" : "mb-1 text-xs")}>{pstr(props, "label", type.replace("Content", ""))}</div>
-      <div className={cn("flex-1 text-muted-foreground", isCompact ? "text-[10px]" : "text-xs")}>{comp.node.children && <ChildrenSlot components={comp.node.children} />}</div>
+    <div className="flex h-full flex-col rounded-lg border-2 border-primary/30 bg-background p-3 shadow-lg">
+      <div className="mb-1 text-xs font-semibold">{pstr(props, "label", type.replace("Content", ""))}</div>
+      <div className="flex-1 text-xs text-muted-foreground">{comp.node.children && <ChildrenSlot components={comp.node.children} />}</div>
     </div>
   );
 }
@@ -224,28 +224,32 @@ export function renderCollapsible({ comp, variant: _variant }: SimulatedLayoutPr
 }
 
 /** 默认兜底渲染（未知组件类型或紧凑模式子组件） */
-export function renderFallback({ comp, variant, onSelectChild }: SimulatedLayoutProps) {
-  const { type } = comp.node;
-  const isCompact = variant === "child";
-  if (isCompact) {
-    const children = comp.node.children ?? [];
-    const firstChild = children[0];
-    const childText = firstChild?.type === "Text" ? (firstChild.props as Record<string, unknown> | undefined)?.text : "";
-    return (
-      <div className="rounded bg-muted/30 px-1 py-0.5 text-[10px] text-muted-foreground">
-        <span className="font-medium">{type}</span>
-        {typeof childText === "string" && childText ? <span className="ml-1 text-muted-foreground">· {childText}</span> : null}
-        {children.length > 0 && type !== "Text" ? (
+export function renderFallback({ comp, variant: _variant, onSelectChild }: SimulatedLayoutProps) {
+  const { type, props } = comp.node;
+
+  const registry = getMaterialRegistry();
+  const displayName = registry?.get(type)?.displayName ?? type;
+  const children = comp.node.children ?? [];
+
+  return (
+    <div className="flex h-full min-h-[40px] items-center justify-center rounded border-2 border-dashed border-orange-300 bg-orange-50/30 p-2 text-center">
+      <div className="space-y-1">
+        <span className="inline-block rounded bg-orange-200 px-2 py-0.5 text-[10px] font-medium text-orange-700">
+          {displayName}
+        </span>
+        {props && Object.keys(props).length > 0 && (
+          <div className="text-[9px] text-muted-foreground/60">
+            {Object.entries(props).slice(0, 3).map(([k, v]) => (
+              <span key={k} className="mr-1">{k}={String(v).slice(0, 20)}</span>
+            ))}
+          </div>
+        )}
+        {children.length > 0 && type !== "Text" && (
           <div className="mt-1">
             <ChildrenSlot components={children} onSelectChild={onSelectChild} />
           </div>
-        ) : null}
+        )}
       </div>
-    );
-  }
-  return (
-    <div className="flex h-full items-center justify-center rounded bg-muted/30 text-[10px] font-medium text-muted-foreground">
-      {type}
     </div>
   );
 }

@@ -14,6 +14,7 @@
  */
 
 import type { ComponentNode } from "../schemas/page.schema";
+import type { Patch } from "immer";
 
 /**
  * 画布组件
@@ -71,6 +72,18 @@ export interface CanvasSnapshot {
   editScope?: { rootId: string; path: { id: string; type: string }[] } | null;
   /** 定位模式 */
   positionMode: "grid" | "free";
+}
+
+/**
+ * 历史记录条目 — 存储增量 diff（immer patches）而非全量快照
+ */
+export interface HistoryEntry {
+  /** 操作前的全量快照（用于 hydrate 回退兼容） */
+  snapshot: CanvasSnapshot;
+  /** 正向增量：从当前状态到下一状态的 patches */
+  patches: Patch[];
+  /** 逆向增量：从下一状态回退到当前状态的 patches */
+  inversePatches: Patch[];
 }
 
 export type CanvasClipboardItem =
@@ -133,8 +146,8 @@ export interface CanvasState {
 
   canUndo: boolean;
   canRedo: boolean;
-  historyPast: CanvasSnapshot[];
-  historyFuture: CanvasSnapshot[];
+  historyPast: HistoryEntry[];
+  historyFuture: HistoryEntry[];
   historyLimit: number;
 }
 

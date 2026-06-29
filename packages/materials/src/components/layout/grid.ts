@@ -87,6 +87,15 @@ export const gridMaterial: MaterialDefinition = {
       order: 6,
     },
     {
+      key: "areas",
+      label: "Grid Areas",
+      type: "textarea",
+      comment: "CSS grid-template-areas 命名网格区域，如 \"header header\" \"main sidebar\" \"footer footer\"",
+      group: "Layout",
+      order: 7,
+      defaultValue: "",
+    },
+    {
       key: "className",
       label: "Tailwind Classes",
       type: "tailwind",

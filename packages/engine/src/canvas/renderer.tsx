@@ -29,5 +29,5 @@ export { UnifiedSimulatedContent, ChildrenSlot, SelectChildContext } from "./sim
 export {
   cn, pstr, pnum, pbool, parr, getPreviewTailwindClasses,
   CELL_HEIGHT, CELL_WIDTH, RESIZE_HANDLE_SIZE, RULER_SIZE,
-  COMPACT_STYLES, resizeHandleStyles, allResizeDirections,
+  resizeHandleStyles, allResizeDirections,
 } from "./renderer-utils";

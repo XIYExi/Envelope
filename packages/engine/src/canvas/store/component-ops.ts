@@ -33,19 +33,29 @@ export function createComponentOpsSlice(
     },
 
     batchToggleLock: (ids: string[]) => {
-      set(withHistory((state) => ({
-        components: state.components.map((c) =>
-          ids.includes(c.id) ? { ...c, locked: !c.locked } : c,
-        ),
-      }))(get(), ids));
+      set(withHistory((state) => {
+        // 取第一个匹配组件的当前状态，取反作为目标状态，确保批量操作后所有目标组件状态一致
+        const firstMatch = state.components.find((c) => ids.includes(c.id));
+        const targetLocked = firstMatch ? !firstMatch.locked : true;
+        return {
+          components: state.components.map((c) =>
+            ids.includes(c.id) ? { ...c, locked: targetLocked } : c,
+          ),
+        };
+      })(get(), ids));
     },
 
     batchToggleHidden: (ids: string[]) => {
-      set(withHistory((state) => ({
-        components: state.components.map((c) =>
-          ids.includes(c.id) ? { ...c, hidden: !c.hidden } : c,
-        ),
-      }))(get(), ids));
+      set(withHistory((state) => {
+        // 取第一个匹配组件的当前状态，取反作为目标状态，确保批量操作后所有目标组件状态一致
+        const firstMatch = state.components.find((c) => ids.includes(c.id));
+        const targetHidden = firstMatch ? !firstMatch.hidden : true;
+        return {
+          components: state.components.map((c) =>
+            ids.includes(c.id) ? { ...c, hidden: targetHidden } : c,
+          ),
+        };
+      })(get(), ids));
     },
 
     zIndexMove: (ids: string[], direction: "up" | "down" | "top" | "bottom") => {

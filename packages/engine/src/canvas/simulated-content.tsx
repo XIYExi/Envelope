@@ -59,7 +59,18 @@ export function ChildrenSlot({ components, onSelectChild: explicitOnSelectChild 
           position: { x: 1, y: 1, width: 1, height: 1 },
         };
         return (
-          <UnifiedSimulatedContent key={child.id} comp={childCanvasComp} variant="child" onSelectChild={resolvedOnSelectChild ?? undefined} />
+          <div
+            key={child.id}
+            data-canvas-child={child.id}
+            onClick={(e) => {
+              e.stopPropagation();
+              resolvedOnSelectChild?.(child.id);
+            }}
+            style={{ pointerEvents: "auto" }}
+            className="cursor-pointer rounded hover:ring-1 hover:ring-blue-300"
+          >
+            <UnifiedSimulatedContent comp={childCanvasComp} variant="child" onSelectChild={resolvedOnSelectChild ?? undefined} />
+          </div>
         );
       })}
     </div>

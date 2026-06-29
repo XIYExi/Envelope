@@ -19,6 +19,8 @@ import { useProjectModelsStore } from "@/stores/project-models";
 import { cn } from "@/lib/utils";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { ChevronDown } from "lucide-react";
 import type { ComponentNode, CanvasComponent } from "@envelope/engine";
 
 /**
@@ -390,6 +392,85 @@ export function RightPanel() {
       </div>
 
       <ScrollArea className="flex-1">
+        {/* 画布全局设置折叠区 */}
+        <Collapsible defaultOpen className="border-b px-3 py-2">
+          <CollapsibleTrigger className="flex w-full items-center justify-between text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+            Page Settings
+            <ChevronDown className="h-3 w-3" />
+          </CollapsibleTrigger>
+          <CollapsibleContent className="space-y-2 pt-2">
+            <div>
+              <div className="flex items-center justify-between text-[10px] text-muted-foreground">
+                <span>Zoom</span>
+                <span>{Math.round(zoom * 100)}%</span>
+              </div>
+              <input
+                type="range"
+                min="25"
+                max="200"
+                value={Math.round(zoom * 100)}
+                onChange={(e) => setZoom(Number(e.target.value) / 100)}
+                className="mt-1 w-full"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-[10px] font-medium text-muted-foreground">Background</label>
+              <input
+                type="color"
+                value={pageBackground}
+                onChange={(e) => setPageBackground(e.target.value)}
+                className="h-8 w-full cursor-pointer rounded border"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-[10px] font-medium text-muted-foreground">Padding</label>
+              <select
+                value={pagePadding}
+                onChange={(e) => setPagePadding(Number(e.target.value))}
+                className="h-7 w-full rounded border bg-background px-2 text-xs"
+              >
+                <option value="0">None</option>
+                <option value="8">Small (8px)</option>
+                <option value="16">Medium (16px)</option>
+                <option value="24">Large (24px)</option>
+                <option value="32">X-Large (32px)</option>
+              </select>
+            </div>
+            <div>
+              <label className="mb-1 block text-[10px] font-medium text-muted-foreground">Max Width</label>
+              <select
+                value={pageMaxWidth === null ? "" : String(pageMaxWidth)}
+                onChange={(e) => {
+                  const raw = e.target.value;
+                  setPageMaxWidth(raw === "" ? null : Number(raw));
+                }}
+                className="h-7 w-full rounded border bg-background px-2 text-xs"
+              >
+                <option value="">Auto</option>
+                <option value="640">640px</option>
+                <option value="768">768px</option>
+                <option value="1024">1024px</option>
+                <option value="1280">1280px</option>
+                <option value="1440">1440px</option>
+              </select>
+            </div>
+            <div>
+              <label className="mb-1 block text-[10px] font-medium text-muted-foreground">Min Row Height</label>
+              <select
+                value={minRowHeight}
+                onChange={(e) => setMinRowHeight(Number(e.target.value))}
+                className="h-7 w-full rounded border bg-background px-2 text-xs"
+              >
+                <option value={0}>Auto (content)</option>
+                <option value={20}>20px</option>
+                <option value={40}>40px</option>
+                <option value={60}>60px</option>
+                <option value={80}>80px</option>
+              </select>
+            </div>
+          </CollapsibleContent>
+        </Collapsible>
+
         {active && activeRootComp ? (
           <div className="space-y-4 p-3">
             {/* 组件标识区 */}
@@ -472,84 +553,7 @@ export function RightPanel() {
         )}
       </ScrollArea>
 
-      <Separator />
 
-      {/* 画布全局设置（始终可见） */}
-      <div className="space-y-3 p-3">
-        <div>
-          <div className="flex items-center justify-between text-[10px] text-muted-foreground">
-            <span>Zoom</span>
-            <span>{Math.round(zoom * 100)}%</span>
-          </div>
-          <input
-            type="range"
-            min="25"
-            max="200"
-            value={Math.round(zoom * 100)}
-            onChange={(e) => setZoom(Number(e.target.value) / 100)}
-            className="mt-1 w-full"
-          />
-        </div>
-
-        <div>
-          <label className="mb-1 block text-[10px] font-medium text-muted-foreground">Background</label>
-          <input
-            type="color"
-            value={pageBackground}
-            onChange={(e) => setPageBackground(e.target.value)}
-            className="h-8 w-full cursor-pointer rounded border"
-          />
-        </div>
-
-        <div>
-          <label className="mb-1 block text-[10px] font-medium text-muted-foreground">Padding</label>
-          <select
-            value={pagePadding}
-            onChange={(e) => setPagePadding(Number(e.target.value))}
-            className="h-7 w-full rounded border bg-background px-2 text-xs"
-          >
-            <option value="0">None</option>
-            <option value="8">Small (8px)</option>
-            <option value="16">Medium (16px)</option>
-            <option value="24">Large (24px)</option>
-            <option value="32">X-Large (32px)</option>
-          </select>
-        </div>
-
-        <div>
-          <label className="mb-1 block text-[10px] font-medium text-muted-foreground">Max Width</label>
-          <select
-            value={pageMaxWidth === null ? "" : String(pageMaxWidth)}
-            onChange={(e) => {
-              const raw = e.target.value;
-              setPageMaxWidth(raw === "" ? null : Number(raw));
-            }}
-            className="h-7 w-full rounded border bg-background px-2 text-xs"
-          >
-            <option value="">Auto</option>
-            <option value="640">640px</option>
-            <option value="768">768px</option>
-            <option value="1024">1024px</option>
-            <option value="1280">1280px</option>
-            <option value="1440">1440px</option>
-          </select>
-        </div>
-
-        <div>
-          <label className="mb-1 block text-[10px] font-medium text-muted-foreground">Min Row Height</label>
-          <select
-            value={minRowHeight}
-            onChange={(e) => setMinRowHeight(Number(e.target.value))}
-            className="h-7 w-full rounded border bg-background px-2 text-xs"
-          >
-            <option value={0}>Auto (content)</option>
-            <option value={20}>20px</option>
-            <option value={40}>40px</option>
-            <option value={60}>60px</option>
-            <option value={80}>80px</option>
-          </select>
-        </div>
-      </div>
     </div>
   );
 }

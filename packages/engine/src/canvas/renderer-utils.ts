@@ -102,16 +102,7 @@ export function parr<T = unknown>(props: Record<string, unknown> | undefined, ke
   return Array.isArray(v) ? (v as T[]) : fallback;
 }
 
-/** 紧凑模式样式覆盖表，将根级样式映射为子组件紧凑版 */
-export const COMPACT_STYLES = {
-  buttonSize: "px-2 py-0.5 text-[10px]",
-  inputHeight: "h-6",
-  badgeSize: "px-1.5 py-0 text-[10px]",
-  cardPadding: "p-1",
-  avatarSize: "h-6 w-6",
-  skeletonHeight: "h-3",
-  progressHeight: "h-1.5",
-} as const;
+
 
 /**
  * 各方向缩放手柄的定位样式

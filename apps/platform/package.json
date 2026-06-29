@@ -52,7 +52,9 @@
     "better-sqlite3": "^12.11.1",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.0",
+    "cmdk": "^1.1.1",
     "date-fns": "^4.4.0",
+    "embla-carousel-react": "^8.6.0",
     "fflate": "^0.8.2",
     "input-otp": "^1.4.2",
     "lucide-react": "^0.400.0",
@@ -66,6 +68,7 @@
     "sonner": "^1.7.0",
     "tailwind-merge": "^2.4.0",
     "tailwindcss-animate": "^1.0.7",
+    "vaul": "^1.1.2",
     "ws": "^8.18.0",
     "zod": "^3.23.0",
     "zustand": "^4.5.0"

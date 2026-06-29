@@ -33,6 +33,10 @@ export interface PropertyEditorProps {
   tableOptions?: { name: string; columns: { name: string; type: string }[] }[];
   /** 导航到流程编辑器的回调 */
   onNavigateToFlows?: () => void;
+  /** 校验错误记录，key 为属性字段名 */
+  validationErrors?: Record<string, string>;
+  /** 图片上传端点 URL */
+  uploadEndpoint?: string;
 }
 
 /** 将可编辑属性按 group 字段分组，使用 Map 保证插入顺序 */
@@ -69,10 +73,15 @@ interface FieldWrapperProps {
   tableOptions?: { name: string; columns: { name: string; type: string }[] }[];
   /** 导航到流程编辑器的回调 */
   onNavigateToFlows?: () => void;
+  /** 校验错误记录，key 为属性字段名 */
+  validationErrors?: Record<string, string>;
+  /** 图片上传端点 URL */
+  uploadEndpoint?: string;
 }
 
 /** 文本字段 —— 单行文本输入 */
-function TextField({ prop, value, onChange }: FieldWrapperProps) {
+function TextField({ prop, value, onChange, validationErrors }: FieldWrapperProps) {
+  const error = validationErrors?.[prop.key];
   return (
     <div>
       <FieldLabel label={prop.label} required={prop.required} comment={prop.comment} />
@@ -81,14 +90,16 @@ function TextField({ prop, value, onChange }: FieldWrapperProps) {
         value={typeof value === "string" ? value : ""}
         placeholder={prop.placeholder}
         onChange={(e) => onChange(prop.key, e.target.value)}
-        className="h-7 w-full rounded border bg-background px-2 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
+        className={`h-7 w-full rounded border bg-background px-2 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500 ${error ? "border-destructive ring-1 ring-destructive" : ""}`}
       />
+      {error && <p className="mt-0.5 text-[9px] text-destructive">{error}</p>}
     </div>
   );
 }
 
 /** 数字字段 —— 数值输入，空值时发送 undefined */
-function NumberField({ prop, value, onChange }: FieldWrapperProps) {
+function NumberField({ prop, value, onChange, validationErrors }: FieldWrapperProps) {
+  const error = validationErrors?.[prop.key];
   return (
     <div>
       <FieldLabel label={prop.label} required={prop.required} comment={prop.comment} />
@@ -99,14 +110,16 @@ function NumberField({ prop, value, onChange }: FieldWrapperProps) {
         max={prop.max}
         placeholder={prop.placeholder}
         onChange={(e) => onChange(prop.key, e.target.value === "" ? undefined : Number(e.target.value))}
-        className="h-7 w-full rounded border bg-background px-2 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
+        className={`h-7 w-full rounded border bg-background px-2 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500 ${error ? "border-destructive ring-1 ring-destructive" : ""}`}
       />
+      {error && <p className="mt-0.5 text-[9px] text-destructive">{error}</p>}
     </div>
   );
 }
 
 /** 文本域字段 —— 多行文本输入，支持垂直拖拽调整大小 */
-function TextareaField({ prop, value, onChange }: FieldWrapperProps) {
+function TextareaField({ prop, value, onChange, validationErrors }: FieldWrapperProps) {
+  const error = validationErrors?.[prop.key];
   return (
     <div>
       <FieldLabel label={prop.label} required={prop.required} comment={prop.comment} />
@@ -115,14 +128,16 @@ function TextareaField({ prop, value, onChange }: FieldWrapperProps) {
         placeholder={prop.placeholder}
         rows={3}
         onChange={(e) => onChange(prop.key, e.target.value)}
-        className="w-full resize-y rounded border bg-background px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
+        className={`w-full resize-y rounded border bg-background px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500 ${error ? "border-destructive ring-1 ring-destructive" : ""}`}
       />
+      {error && <p className="mt-0.5 text-[9px] text-destructive">{error}</p>}
     </div>
   );
 }
 
 /** 下拉选择字段 —— 从 options 数组中渲染 <option> 列表 */
-function SelectField({ prop, value, onChange }: FieldWrapperProps) {
+function SelectField({ prop, value, onChange, validationErrors }: FieldWrapperProps) {
+  const error = validationErrors?.[prop.key];
   const options = prop.options ?? [];
   return (
     <div>
@@ -130,7 +145,7 @@ function SelectField({ prop, value, onChange }: FieldWrapperProps) {
       <select
         value={typeof value === "string" ? value : (prop.defaultValue as string | undefined) ?? ""}
         onChange={(e) => onChange(prop.key, e.target.value)}
-        className="h-7 w-full rounded border bg-background px-2 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
+        className={`h-7 w-full rounded border bg-background px-2 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500 ${error ? "border-destructive ring-1 ring-destructive" : ""}`}
       >
         {options.map((opt) => (
           <option key={opt.value} value={opt.value}>
@@ -138,8 +153,34 @@ function SelectField({ prop, value, onChange }: FieldWrapperProps) {
           </option>
         ))}
       </select>
+      {error && <p className="mt-0.5 text-[9px] text-destructive">{error}</p>}
     </div>
   );
+}
+
+/** 默认主题色 HSL 值回退列表，在 SSR 或无法读取 CSS 变量时使用 */
+const defaultThemeColors = [
+  "hsl(222.2 47.4% 11.2%)",
+  "hsl(210 40% 96.1%)",
+  "hsl(210 40% 98%)",
+  "hsl(215.4 16.3% 46.9%)",
+  "hsl(215 20.2% 65.1%)",
+  "hsl(0 72.2% 50.6%)",
+  "hsl(0 0% 100%)",
+  "hsl(222.2 84% 4.9%)",
+];
+
+/** 从 CSS 变量读取 shadcn/ui 动态主题色 */
+function getCSSThemeColors(): string[] {
+  if (typeof document === "undefined") return defaultThemeColors;
+  const style = getComputedStyle(document.documentElement);
+  const colorNames = ["background", "foreground", "card", "popover", "primary", "secondary", "muted", "accent", "destructive", "border", "input", "ring"];
+  const colors: string[] = [];
+  for (const name of colorNames) {
+    const val = style.getPropertyValue(`--${name}`).trim();
+    if (val) colors.push(`hsl(${val})`);
+  }
+  return colors.length > 0 ? colors : defaultThemeColors;
 }
 
 /**
@@ -148,24 +189,17 @@ function SelectField({ prop, value, onChange }: FieldWrapperProps) {
  * 文本输入使用受控组件（内部 state）以避免输入过程中的闪烁，
  * 只在失焦时提交最终值。
  */
-function ColorField({ prop, value, onChange }: FieldWrapperProps) {
+function ColorField({ prop, value, onChange, validationErrors }: FieldWrapperProps) {
   const hexValue = typeof value === "string" ? value : (prop.defaultValue as string) ?? "#000000";
   const [inputValue, setInputValue] = useState(hexValue);
 
   // 同步外部值变化
   useEffect(() => { setInputValue(hexValue); }, [hexValue]);
 
-  /** 主题色预设色板（shadcn/ui 默认主题色） */
-  const themeColors = [
-    "hsl(222.2 47.4% 11.2%)",
-    "hsl(210 40% 96.1%)",
-    "hsl(210 40% 98%)",
-    "hsl(215.4 16.3% 46.9%)",
-    "hsl(215 20.2% 65.1%)",
-    "hsl(0 72.2% 50.6%)",
-    "hsl(0 0% 100%)",
-    "hsl(222.2 84% 4.9%)",
-  ];
+  /** 从 CSS 自定义属性读取 shadcn/ui 主题色 */
+  const themeColors = useMemo(() => getCSSThemeColors(), []);
+
+  const error = validationErrors?.[prop.key];
 
   return (
     <div>
@@ -175,7 +209,7 @@ function ColorField({ prop, value, onChange }: FieldWrapperProps) {
           type="color"
           value={hexValue}
           onChange={(e) => onChange(prop.key, e.target.value)}
-          className="h-7 w-10 cursor-pointer rounded border p-0"
+          className={`h-7 w-10 cursor-pointer rounded border p-0 ${error ? "border-destructive ring-1 ring-destructive" : ""}`}
         />
         <input
           type="text"
@@ -183,9 +217,10 @@ function ColorField({ prop, value, onChange }: FieldWrapperProps) {
           onChange={(e) => setInputValue(e.target.value)}
           onBlur={() => onChange(prop.key, inputValue)}
           placeholder="#000000"
-          className="h-7 flex-1 rounded border bg-background px-2 font-mono text-[10px] focus:outline-none focus:ring-1 focus:ring-blue-500"
+          className={`h-7 flex-1 rounded border bg-background px-2 font-mono text-[10px] focus:outline-none focus:ring-1 focus:ring-blue-500 ${error ? "border-destructive ring-1 ring-destructive" : ""}`}
         />
       </div>
+      {error && <p className="mt-0.5 text-[9px] text-destructive">{error}</p>}
       {/* 主题色预设色板 */}
       <div className="mt-1 flex flex-wrap gap-1">
         {themeColors.map((c, i) => (
@@ -256,10 +291,11 @@ function RadioField({ prop, value, onChange }: FieldWrapperProps) {
 }
 
 /** 图片字段 —— URL 文本输入 + 背景图预览 */
-function ImageField({ prop, value, onChange }: FieldWrapperProps) {
+function ImageField({ prop, value, onChange, uploadEndpoint, validationErrors }: FieldWrapperProps) {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const error = validationErrors?.[prop.key];
 
   /**
    * 选择文件后立即上传到宿主应用的 `/api/media/upload`，并将返回的 url 写回 image 字段。
@@ -274,7 +310,8 @@ function ImageField({ prop, value, onChange }: FieldWrapperProps) {
     try {
       const formData = new FormData();
       formData.append("file", file);
-      const response = await fetch("/api/media/upload", {
+      const endpoint = uploadEndpoint ?? "/api/media/upload";
+      const response = await fetch(endpoint, {
         method: "POST",
         body: formData,
       });
@@ -307,7 +344,7 @@ function ImageField({ prop, value, onChange }: FieldWrapperProps) {
           value={typeof value === "string" ? value : ""}
           placeholder={prop.placeholder ?? "https://..."}
           onChange={(e) => onChange(prop.key, e.target.value)}
-          className="h-7 flex-1 rounded border bg-background px-2 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
+          className={`h-7 flex-1 rounded border bg-background px-2 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500 ${error ? "border-destructive ring-1 ring-destructive" : ""}`}
         />
         <input
           ref={fileInputRef}
@@ -331,6 +368,7 @@ function ImageField({ prop, value, onChange }: FieldWrapperProps) {
         </button>
       </div>
       {uploadError && <p className="mt-0.5 text-[9px] text-destructive">{uploadError}</p>}
+      {error && <p className="mt-0.5 text-[9px] text-destructive">{error}</p>}
       {typeof value === "string" && value.length > 0 && (
         <div className="mt-1 h-12 w-full rounded border bg-muted/30 bg-cover bg-center" style={{ backgroundImage: `url(${value})` }} />
       )}
@@ -876,8 +914,22 @@ const FIELD_COMPONENTS: Record<string, React.FC<FieldWrapperProps>> = {
  * @param values - 当前属性值对象
  * @param onChange - 属性值变更回调，接收字段 key 和新值
  */
-export function PropertyEditor({ editableProps, values, onChange, flowList, tableOptions, onNavigateToFlows }: PropertyEditorProps) {
+export function PropertyEditor({ editableProps, values, onChange, flowList, tableOptions, onNavigateToFlows, validationErrors: externalValidationErrors, uploadEndpoint }: PropertyEditorProps) {
   const grouped = groupProps(editableProps);
+
+  /** 从 editableProps 的 required 标记和当前值计算校验错误 */
+  const validationErrors = useMemo(() => {
+    const errors: Record<string, string> = { ...externalValidationErrors };
+    for (const prop of editableProps) {
+      if (prop.required) {
+        const val = values[prop.key] ?? prop.defaultValue;
+        if (val === undefined || val === null || val === "") {
+          errors[prop.key] = `${prop.label} 不能为空`;
+        }
+      }
+    }
+    return errors;
+  }, [editableProps, values, externalValidationErrors]);
 
   // 从 localStorage 读取分组折叠状态
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(() => {
@@ -958,6 +1010,8 @@ export function PropertyEditor({ editableProps, values, onChange, flowList, tabl
                         flowList={flowList}
                         tableOptions={tableOptions}
                         onNavigateToFlows={onNavigateToFlows}
+                        validationErrors={validationErrors}
+                        uploadEndpoint={uploadEndpoint}
                       />
                     );
                   })}

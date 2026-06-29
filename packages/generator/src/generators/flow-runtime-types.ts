@@ -3,6 +3,9 @@ export type ProjectEndpoint = {
   method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
   path: string;
   flow_id: string | null;
+  custom_handler?: string | null;
+  /** U11: 请求定义（包含 requestBodySchema 等） */
+  request_schema?: Record<string, unknown> | null;
 };
 
 export type ProjectFlow = {

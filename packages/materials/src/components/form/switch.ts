@@ -6,6 +6,7 @@ export const switchMaterial: MaterialDefinition = {
   description: "A control that toggles between checked and unchecked states.",
   category: "form",
   icon: "ToggleLeft",
+  bindableEvents: ["onChange"],
   editableProps: [
     {
       key: "name",

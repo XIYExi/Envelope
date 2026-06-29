@@ -6,6 +6,7 @@ export const textareaMaterial: MaterialDefinition = {
   description: "A multi-line text input for longer form content.",
   category: "form",
   icon: "Text",
+  bindableEvents: ["onChange", "onFocus", "onBlur"],
   editableProps: [
     {
       key: "name",

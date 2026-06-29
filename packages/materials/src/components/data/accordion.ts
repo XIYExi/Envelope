@@ -14,6 +14,7 @@ export const accordionMaterial: MaterialDefinition = {
   },
   supportsChildren: true,
   isContainer: true,
+  bindableEvents: ["onChange", "onValueChange"],
   editableProps: [
     {
       key: "type",

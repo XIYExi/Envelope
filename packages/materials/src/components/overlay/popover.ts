@@ -13,6 +13,7 @@ export const popoverMaterial: MaterialDefinition = {
     triggerText: "Open",
     contentText: "Popover content...",
   },
+  bindableEvents: ["onOpenChange"],
   editableProps: [
     {
       key: "showTrigger",

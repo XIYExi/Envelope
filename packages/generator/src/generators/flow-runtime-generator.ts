@@ -696,12 +696,29 @@ function generateEndpointRouteContent(endpoints: ProjectEndpoint[]): string {
   const lines: string[] = [];
   lines.push(`import { NextResponse } from "next/server";`);
   lines.push(`import { runFlow } from "@/lib/flows/runtime";`);
+
+  // U11: 检查是否有端点需要 body schema 校验
+  const needsBodyValidation = endpoints.some((ep) => {
+    const schema = ep.request_schema as Record<string, unknown> | null | undefined;
+    const bodyStr = schema?.requestBodySchema;
+    return typeof bodyStr === "string" && bodyStr.trim().length > 0;
+  });
+  if (needsBodyValidation) {
+    lines.push(`import { z } from "zod";`);
+  }
   lines.push(``);
 
   for (const endpoint of endpoints) {
     const method = endpoint.method.toUpperCase() as ProjectEndpoint["method"];
     const flowId = endpoint.flow_id;
     const flowIdLiteral = flowId ? tsStringLiteral(flowId) : null;
+
+    // U10: 自定义处理器 — 直接输出用户编写的 handler 代码
+    if (endpoint.custom_handler) {
+      lines.push(endpoint.custom_handler);
+      lines.push(``);
+      continue;
+    }
 
     if (!flowIdLiteral) {
       lines.push(`export async function ${method}(request: Request) {`);
@@ -725,6 +742,21 @@ function generateEndpointRouteContent(endpoints: ProjectEndpoint[]): string {
 
     lines.push(`export async function ${method}(request: Request, ctx?: { params?: Record<string, string> }) {`);
     lines.push(`  const body = await request.json().catch(() => ({}));`);
+
+    // U11: body schema 校验 — 当用户填写了 requestBodySchema 时启用
+    const reqSchema = endpoint.request_schema as Record<string, unknown> | null | undefined;
+    const bodySchemaStr = reqSchema?.requestBodySchema;
+    const hasBodySchema = typeof bodySchemaStr === "string" && bodySchemaStr.trim().length > 0;
+    if (hasBodySchema) {
+      lines.push(`  const parsed = z.object({}).passthrough().safeParse(body);`);
+      lines.push(`  if (!parsed.success) {`);
+      lines.push(`    return NextResponse.json(`);
+      lines.push(`      { error: "请求体校验失败", details: parsed.error.issues },`);
+      lines.push(`      { status: 400 },`);
+      lines.push(`    );`);
+      lines.push(`  }`);
+    }
+
     lines.push(`  const result = await runFlow(${flowIdLiteral}, { body, params: ctx?.params ?? {} });`);
     lines.push(`  return NextResponse.json(result);`);
     lines.push(`}`);

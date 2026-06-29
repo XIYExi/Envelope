@@ -18,6 +18,7 @@ export const tabsMaterial: MaterialDefinition = {
   },
   supportsChildren: true,
   isContainer: true,
+  bindableEvents: ["onChange", "onValueChange"],
   editableProps: [
     {
       key: "defaultValue",

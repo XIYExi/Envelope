@@ -12,6 +12,8 @@
  * @date 2026-06-25
  */
 
+"use client";
+
 import { useState } from "react";
 import type { Node } from "@xyflow/react";
 import type { FlowExecutionResult, NodeExecutionState } from "../thing-model/types";

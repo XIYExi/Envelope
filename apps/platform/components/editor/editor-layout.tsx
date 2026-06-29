@@ -16,7 +16,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, memo } from "react";
 import { useSearchParams } from "next/navigation";
 import { DndContext, useDroppable, pointerWithin, DragOverlay, type DragEndEvent, type DragMoveEvent, type DragStartEvent, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
 import { createDefaultRegistry } from "@envelope/materials";
-import { useCanvasStore, createComponentNode, CanvasRenderer, VIEWPORT_WIDTHS, CANVAS_CELL_SIZE, CANVAS_CELL_HEIGHT, isContainerType, type CanvasSnapshot, type ComponentNode } from "@envelope/engine";
+import { useCanvasStore, createComponentNode, CanvasRenderer, VIEWPORT_WIDTHS, CANVAS_CELL_SIZE, CANVAS_CELL_HEIGHT, isContainerType, findNodeLocation, type CanvasSnapshot, type ComponentNode } from "@envelope/engine";
 import { useEditorStore } from "@/stores/editor";
 import { useProjectPagesStore, componentNodesToCanvasComponents } from "@/stores/project-pages";
 import { useProjectFlowsStore } from "@/stores/project-flows";
@@ -24,6 +24,7 @@ import { EditorToolbar } from "./editor-toolbar";
 import { MaterialPanel } from "./material-panel";
 import { RightPanel } from "./right-panel";
 import { LeftPanel } from "./left-panel";
+import { ResizeHandle } from "./ResizeHandle";
 import { DataModelEditor } from "./data-model-editor";
 import { RoutingEditor } from "./routing-editor";
 import { ApiEndpointEditor } from "./api-endpoint-editor";
@@ -76,6 +77,20 @@ const CanvasDropZone = memo(function CanvasDropZone({ dragAlignInfo }: {
   panXRef.current = panX;
   const panYRef = useRef(panY);
   panYRef.current = panY;
+
+  /** 双击容器组件时构建从根到目标的面包屑路径 */
+  const handleDoubleClickComponent = useCallback((compId: string) => {
+    const path: { id: string; type: string }[] = [];
+    let currentId: string | null = compId;
+    while (currentId) {
+      const loc = findNodeLocation(components, currentId);
+      if (!loc) break;
+      path.unshift({ id: loc.node.id, type: loc.node.type });
+      if (loc.kind === "root") break;
+      currentId = loc.parentId;
+    }
+    enterChildEdit(compId, path);
+  }, [components, enterChildEdit]);
 
   /** 合并 Droppable 的 ref 与本地 dropZoneRef */
   const combinedRef = useCallback(
@@ -134,7 +149,7 @@ const CanvasDropZone = memo(function CanvasDropZone({ dragAlignInfo }: {
         onSelect={selectComponent}
         onClearSelection={clearSelection}
         onSelectChild={(nodeId) => selectNode(nodeId)}
-        onDoubleClickComponent={(compId) => enterChildEdit(compId, [])}
+        onDoubleClickComponent={handleDoubleClickComponent}
         onExitChildEdit={() => useCanvasStore.getState().exitChildEdit()}
         onResize={resizeComponent}
         onHover={setHoveredId}
@@ -169,6 +184,8 @@ export function EditorLayout() {
 
   const {
     leftPanelCollapsed, rightPanelCollapsed,
+    leftPanelWidth, rightPanelWidth,
+    setLeftPanelWidth, setRightPanelWidth,
     editorMode,
   } = useEditorStore();
   const {
@@ -649,6 +666,11 @@ export function EditorLayout() {
     const me = event.activatorEvent;
     if (!(me instanceof MouseEvent)) return;
 
+    // BUG 修复：使用 delta 计算当前鼠标位置，而非 activatorEvent 的起始位置
+    // activatorEvent 在整个拖拽过程中位置不变，会导致 autoScroll 逻辑失效
+    const currentMouseX = me.clientX + event.delta.x;
+    const currentMouseY = me.clientY + event.delta.y;
+
     // 查找画布容器的 DOM 边界
     const el = document.querySelector<HTMLElement>('[data-role="canvas-viewport"]');
     if (!el) return;
@@ -658,11 +680,11 @@ export function EditorLayout() {
     const EDGE_THRESHOLD = 30;
     const MAX_SPEED = 15;
 
-    // 计算鼠标距画布四边的距离，越靠近边缘平移速度越快
-    const distLeft = me.clientX - rect.left;
-    const distRight = rect.right - me.clientX;
-    const distTop = me.clientY - rect.top;
-    const distBottom = rect.bottom - me.clientY;
+    // 计算鼠标距画布四边的距离（基于当前鼠标位置而非起始位置）
+    const distLeft = currentMouseX - rect.left;
+    const distRight = rect.right - currentMouseX;
+    const distTop = currentMouseY - rect.top;
+    const distBottom = rect.bottom - currentMouseY;
 
     let dx = 0;
     let dy = 0;
@@ -732,8 +754,14 @@ export function EditorLayout() {
         >
           <div className="flex flex-1 overflow-hidden">
             {!leftPanelCollapsed ? <LeftPanel collapsed={leftPanelCollapsed} /> : null}
+            {!leftPanelCollapsed && (
+              <ResizeHandle edge="right" panelWidth={leftPanelWidth} collapsed={false} minWidth={160} maxWidth={400} onResize={(w) => setLeftPanelWidth?.(w)} />
+            )}
             <MaterialPanel collapsed={leftPanelCollapsed} onAddMaterial={handleAddMaterial} />
             <CanvasDropZone dragAlignInfo={dragAlignInfo} />
+            {!rightPanelCollapsed && (
+              <ResizeHandle edge="left" panelWidth={rightPanelWidth} collapsed={false} minWidth={200} maxWidth={480} onResize={(w) => setRightPanelWidth?.(w)} />
+            )}
             {!rightPanelCollapsed ? <RightPanel /> : null}
           </div>
           <DragOverlay dropAnimation={null}>

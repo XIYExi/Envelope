@@ -8,7 +8,6 @@
  */
 
 import type { CanvasState, CanvasActions } from "../types";
-import { withHistory } from "./history";
 import { findNodeLocation } from "./tree-ops";
 
 export function createSelectionSlice(
@@ -16,46 +15,43 @@ export function createSelectionSlice(
   get: () => CanvasState & CanvasActions,
 ) {
   return {
+    // 选中操作不入历史栈，符合 Figma 等业界惯例
     selectComponent: (id: string, multi = false) => {
-      set(withHistory((state) => {
-        if (multi) {
-          const already = state.selectedIds.includes(id);
-          const nextSelectedIds = already ? state.selectedIds.filter((s) => s !== id) : [...state.selectedIds, id];
-          return {
-            selectedIds: nextSelectedIds,
-            activeNodeId: nextSelectedIds.length === 1 ? nextSelectedIds[0]! : null,
-          };
-        }
-        return { selectedIds: [id], activeNodeId: id };
-      }, { coalesceKey: "select" })(get(), id, multi));
+      const state = get();
+      if (multi) {
+        const already = state.selectedIds.includes(id);
+        const nextSelectedIds = already ? state.selectedIds.filter((s) => s !== id) : [...state.selectedIds, id];
+        set({
+          selectedIds: nextSelectedIds,
+          activeNodeId: nextSelectedIds.length === 1 ? nextSelectedIds[0]! : null,
+        });
+        return;
+      }
+      set({ selectedIds: [id], activeNodeId: id });
     },
 
+    // 选中操作不入历史栈，符合 Figma 等业界惯例
     selectNode: (nodeId: string) => {
-      set(withHistory((state) => {
-        const loc = findNodeLocation(state.components, nodeId);
-        if (!loc) return {};
-        return {
-          selectedIds: [loc.rootId],
-          activeNodeId: nodeId,
-        };
-      })(get(), nodeId));
+      const loc = findNodeLocation(get().components, nodeId);
+      if (!loc) return;
+      set({
+        selectedIds: [loc.rootId],
+        activeNodeId: nodeId,
+      });
     },
 
+    // 选中操作不入历史栈，符合 Figma 等业界惯例
     clearSelection: () => {
-      set(withHistory((state) => ({
-        selectedIds: [] as string[],
-        activeNodeId: null,
-      }))(get()));
+      set({ selectedIds: [] as string[], activeNodeId: null });
     },
 
+    // 选中操作不入历史栈，符合 Figma 等业界惯例
     selectAll: () => {
-      set(withHistory((state) => {
-        const visibleIds = state.components
-          .filter((c) => !c.hidden)
-          .map((c) => c.id);
-        const firstId = visibleIds[0] ?? null;
-        return { selectedIds: visibleIds, activeNodeId: firstId };
-      })(get()));
+      const visibleIds = get().components
+        .filter((c) => !c.hidden)
+        .map((c) => c.id);
+      const firstId = visibleIds[0] ?? null;
+      set({ selectedIds: visibleIds, activeNodeId: firstId });
     },
 
     getSelectedComponents: () => {

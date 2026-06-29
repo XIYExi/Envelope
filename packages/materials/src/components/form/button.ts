@@ -43,6 +43,7 @@ export const buttonMaterial: MaterialDefinition = {
   category: "form",
   icon: "SquareMousePointer",
   supportsChildren: true,
+  bindableEvents: ["onClick"],
   editableProps: [
     // ========== 行为配置 ==========
     {

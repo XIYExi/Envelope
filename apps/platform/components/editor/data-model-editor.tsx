@@ -278,6 +278,12 @@ export function DataModelEditor() {
   const addCustomPolicy = useProjectModelsStore((s) => s.addCustomPolicy);
   const removePolicy = useProjectModelsStore((s) => s.removePolicy);
   const setTables = useProjectModelsStore((s) => s.setTables);
+  const scheduleAutosave = useProjectModelsStore((s) => s.scheduleAutosave);
+  const flushAutosave = useProjectModelsStore((s) => s.flushAutosave);
+  const cancelAutosave = useProjectModelsStore((s) => s.cancelAutosave);
+  const dirty = useProjectModelsStore((s) => s.dirty);
+  const isSaving = useProjectModelsStore((s) => s.isSaving);
+  const changeSeq = useProjectModelsStore((s) => s.changeSeq);
 
   const [selectedTableId, setSelectedTableId] = useState<string | null>(null);
 
@@ -288,6 +294,17 @@ export function DataModelEditor() {
     const synced = editorTables.map(editorTableToTableInfo);
     setTables(synced);
   }, [editorTables, setTables]);
+
+  // ── 自动保存：changeSeq 每次递增时调度防抖保存 ─────────────────
+  useEffect(() => {
+    if (changeSeq === 0) return;
+    scheduleAutosave();
+  }, [changeSeq, scheduleAutosave]);
+
+  // 组件卸载时取消未完成的自动保存任务
+  useEffect(() => {
+    return () => { cancelAutosave(); };
+  }, [cancelAutosave]);
 
   // ── Table CRUD ──────────────────────────────────────────────────────────
 
@@ -320,14 +337,27 @@ export function DataModelEditor() {
       <div className="flex w-64 shrink-0 flex-col border-r bg-background">
         <div className="flex items-center justify-between border-b px-3 py-2">
           <span className={sectionHeaderClass}>Tables</span>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-6 w-6"
-            onClick={addTable}
-          >
-            <Plus className="h-3.5 w-3.5" />
-          </Button>
+          <div className="flex items-center gap-1">
+            {dirty && (
+              <button
+                onClick={() => void flushAutosave()}
+                className="h-5 rounded bg-blue-500 px-1.5 text-[10px] text-white hover:bg-blue-600 disabled:opacity-50"
+                disabled={isSaving}
+                title={isSaving ? "保存中…" : "立即保存"}
+                type="button"
+              >
+                {isSaving ? "…" : "保存"}
+              </button>
+            )}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6"
+              onClick={addTable}
+            >
+              <Plus className="h-3.5 w-3.5" />
+            </Button>
+          </div>
         </div>
         <ScrollArea className="flex-1">
           <div className="space-y-0.5 p-2">

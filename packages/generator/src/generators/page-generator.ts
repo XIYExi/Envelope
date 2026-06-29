@@ -162,6 +162,7 @@ function generateDataBindings(components: ComponentNode[]): string {
   // 收集唯一的表名
   const tables = new Set<string>();
   let needsSearchParams = false;
+  let needsParams = false;
 
   const walk = (comps: ComponentNode[]) => {
     for (const comp of comps) {
@@ -170,8 +171,11 @@ function generateDataBindings(components: ComponentNode[]): string {
           // 搜索参数绑定: {{searchParams.xxx}} / {{params.xxx}}
           if (binding.startsWith("{{") && binding.endsWith("}}")) {
             const inner = binding.slice(2, -2).trim();
-            if (inner.startsWith("searchParams") || inner.startsWith("params")) {
+            if (inner.startsWith("searchParams")) {
               needsSearchParams = true;
+            }
+            if (inner.startsWith("params")) {
+              needsParams = true;
             }
             continue;
           }
@@ -189,7 +193,7 @@ function generateDataBindings(components: ComponentNode[]): string {
   };
   walk(components);
 
-  if (tables.size === 0 && !needsSearchParams) {
+  if (tables.size === 0 && !needsSearchParams && !needsParams) {
     return "";
   }
 
@@ -207,6 +211,13 @@ function generateDataBindings(components: ComponentNode[]): string {
   if (needsSearchParams) {
     lines.push(`  // L5: URL 查询参数绑定`);
     lines.push(`  const searchParams = useSearchParams();`);
+    lines.push(``);
+  }
+
+  // U9: 动态路由参数绑定 — 从 props.params 中提取
+  if (needsParams) {
+    lines.push(`  // U9: 动态路由参数绑定`);
+    lines.push(`  const params = await paramsPromise;`);
     lines.push(``);
   }
 
@@ -378,13 +389,23 @@ export function generatePageCode(
   // 收集数据绑定表名（用于表达式上下文）
   const collectedTableNames = collectDataBindingTableNames(components);
 
-  // 检查是否有搜索参数绑定（在 import 阶段之前需要知道）
+  // 检查是否有搜索参数/路由参数绑定（在 import 阶段之前需要知道）
   const needsSearchParams = hasDeepComponents(
     components,
     (c) => {
       if (!c.dataBindings) return false;
       return Object.values(c.dataBindings).some(
-        (v) => (v.startsWith("{{searchParams") || v.startsWith("{{params")) && v.endsWith("}}"),
+        (v) => v.startsWith("{{searchParams") && v.endsWith("}}"),
+      );
+    },
+  );
+
+  const needsParams = hasDeepComponents(
+    components,
+    (c) => {
+      if (!c.dataBindings) return false;
+      return Object.values(c.dataBindings).some(
+        (v) => v.startsWith("{{params") && v.endsWith("}}"),
       );
     },
   );
@@ -467,7 +488,11 @@ export function generatePageCode(
   }
 
   // ── Page component ──
-  lines.push(`export default function Page() {`);
+  if (needsParams) {
+    lines.push(`export default async function Page({ params: paramsPromise }: { params: Promise<Record<string, string>> }) {`);
+  } else {
+    lines.push(`export default function Page() {`);
+  }
 
   // useEffect for title (client mode)
   if (useClient) {

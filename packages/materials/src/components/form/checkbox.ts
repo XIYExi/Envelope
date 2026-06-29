@@ -7,6 +7,7 @@ export const checkboxMaterial: MaterialDefinition = {
   category: "form",
   icon: "CheckSquare",
   supportsChildren: true,
+  bindableEvents: ["onChange"],
   editableProps: [
     {
       key: "name",

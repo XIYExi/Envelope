@@ -13,6 +13,7 @@ export const collapsibleMaterial: MaterialDefinition = {
     showTrigger: true,
     showContent: true,
   },
+  bindableEvents: ["onOpenChange"],
   editableProps: [
     {
       key: "defaultOpen",

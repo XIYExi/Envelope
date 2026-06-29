@@ -14,7 +14,7 @@ import React from "react";
 import type { CSSProperties } from "react";
 import type { CanvasComponent } from "./types";
 import type { ComponentNode } from "../schemas/page.schema";
-import { cn, pstr, pnum, parr, COMPACT_STYLES } from "./renderer-utils";
+import { cn, pstr, pnum, parr } from "./renderer-utils";
 import { ChildrenSlot } from "./simulated-content";
 
 export interface SimulatedLayoutProps {
@@ -24,9 +24,8 @@ export interface SimulatedLayoutProps {
 }
 
 /** 模拟 Card 组件渲染 */
-export function renderCard({ comp, variant }: SimulatedLayoutProps) {
+export function renderCard({ comp, variant: _variant }: SimulatedLayoutProps) {
   const { props } = comp.node;
-  const isCompact = variant === "child";
   const children = comp.node.children ?? [];
   const hasChildren = children.length > 0;
   const showHeader = props?.showHeader !== false;
@@ -36,8 +35,8 @@ export function renderCard({ comp, variant }: SimulatedLayoutProps) {
   const contentText = pstr(props, "contentText", "Content");
   const footerText = pstr(props, "footerText", "Footer");
   return (
-    <div className={cn("flex h-full flex-col rounded-lg border bg-card", isCompact ? COMPACT_STYLES.cardPadding : "p-3")}>
-      <div className={cn("font-semibold text-muted-foreground", isCompact ? "mb-0.5 text-[10px]" : "mb-1 text-xs")}>{pstr(props, "label", "Card")}</div>
+    <div className="flex h-full flex-col rounded-lg border bg-card p-3">
+      <div className="mb-1 text-xs font-semibold text-muted-foreground">{pstr(props, "label", "Card")}</div>
       <div className="flex-1">
         {hasChildren ? (
           <ChildrenSlot components={children} />
@@ -194,10 +193,9 @@ export function renderTable({ comp, variant: _variant }: SimulatedLayoutProps) {
 }
 
 /** 模拟 Box 组件渲染 */
-export function renderBox({ comp, variant }: SimulatedLayoutProps) {
-  const isCompact = variant === "child";
+export function renderBox({ comp, variant: _variant }: SimulatedLayoutProps) {
   return (
-    <div className={cn("flex items-center justify-center rounded border-2 border-dashed border-muted-foreground/30 bg-muted/10 text-[10px] text-muted-foreground", isCompact ? "min-h-0" : "h-full min-h-[60px]")}>
+    <div className="flex h-full min-h-[60px] items-center justify-center rounded border-2 border-dashed border-muted-foreground/30 bg-muted/10 text-[10px] text-muted-foreground">
       {comp.node.children && comp.node.children.length > 0 ? (
         <div className="w-full p-2"><ChildrenSlot components={comp.node.children} /></div>
       ) : (
@@ -208,13 +206,12 @@ export function renderBox({ comp, variant }: SimulatedLayoutProps) {
 }
 
 /** 模拟 Flex 组件渲染 */
-export function renderFlex({ comp, variant }: SimulatedLayoutProps) {
+export function renderFlex({ comp, variant: _variant }: SimulatedLayoutProps) {
   const { props } = comp.node;
-  const isCompact = variant === "child";
   const gap = pnum(props, "gap", 4);
   return (
     <div className={cn(
-      isCompact ? "flex rounded border-2 border-dashed border-muted-foreground/30 bg-muted/5 p-1" : "flex h-full min-h-[60px] rounded border-2 border-dashed border-muted-foreground/30 bg-muted/10 p-2",
+      "flex h-full min-h-[60px] rounded border-2 border-dashed border-muted-foreground/30 bg-muted/10 p-2",
       pstr(props, "direction", "row") === "column" ? "flex-col" : "flex-row",
       (props?.wrap === true || pstr(props, "wrap", "") === "wrap") ? "flex-wrap" : "",
       pstr(props, "justify", "start") === "center" ? "justify-center" : pstr(props, "justify", "start") === "end" ? "justify-end" : pstr(props, "justify", "start") === "between" ? "justify-between" : pstr(props, "justify", "start") === "around" ? "justify-around" : pstr(props, "justify", "start") === "evenly" ? "justify-evenly" : "justify-start",
@@ -230,15 +227,14 @@ export function renderFlex({ comp, variant }: SimulatedLayoutProps) {
 }
 
 /** 模拟 Container 组件渲染 */
-export function renderContainer({ comp, variant }: SimulatedLayoutProps) {
+export function renderContainer({ comp, variant: _variant }: SimulatedLayoutProps) {
   const { props } = comp.node;
-  const isCompact = variant === "child";
   const paddingX = pnum(props, "paddingX", 16);
   const paddingY = pnum(props, "paddingY", 16);
   const marginTop = pnum(props, "marginTop", 0);
   const marginBottom = pnum(props, "marginBottom", 0);
   return (
-    <div className={cn("flex flex-col rounded border-2 border-dashed border-muted-foreground/20 bg-background", isCompact ? "min-h-0" : "h-full min-h-[60px]")}>
+    <div className="flex h-full min-h-[60px] flex-col rounded border-2 border-dashed border-muted-foreground/20 bg-background">
       <div className="border-b border-dashed px-2 py-1 text-[9px] font-medium text-muted-foreground/60">Container</div>
       <div className="flex-1" style={{ maxWidth: pnum(props, "maxWidth", 1200) > 0 ? `${pnum(props, "maxWidth", 1200)}px` : undefined, margin: `0 auto`, width: "100%", paddingLeft: `${paddingX}px`, paddingRight: `${paddingX}px`, paddingTop: `${paddingY}px`, paddingBottom: `${paddingY}px`, marginTop: `${marginTop}px`, marginBottom: `${marginBottom}px` } as CSSProperties}>
         {comp.node.children && comp.node.children.length > 0 ? (
@@ -254,19 +250,16 @@ export function renderContainer({ comp, variant }: SimulatedLayoutProps) {
 }
 
 /** 模拟 Grid 组件渲染 */
-export function renderGrid({ comp, variant }: SimulatedLayoutProps) {
+export function renderGrid({ comp, variant: _variant }: SimulatedLayoutProps) {
   const { props } = comp.node;
-  const isCompact = variant === "child";
   const gap = pnum(props, "gap", 4);
   const rows = pnum(props, "rows", 0);
   const autoFlow = pstr(props, "autoFlow", "row");
   const justifyItems = pstr(props, "justifyItems", "stretch");
   const alignItems = pstr(props, "alignItems", "stretch");
+  const areas = pstr(props, "areas", "");
   return (
-    <div className={cn(
-      "rounded border-2 border-dashed border-muted-foreground/30 bg-muted/10",
-      isCompact ? "p-1" : "h-full min-h-[60px] p-2",
-    )}>
+    <div className="h-full min-h-[60px] rounded border-2 border-dashed border-muted-foreground/30 bg-muted/10 p-2">
       <div className="mb-1 text-[9px] font-medium text-muted-foreground/60">
         Grid ({pstr(props, "columns", "3")} cols{rows > 0 ? ` x ${rows} rows` : ""})
       </div>
@@ -279,6 +272,7 @@ export function renderGrid({ comp, variant }: SimulatedLayoutProps) {
           justifyItems: justifyItems,
           alignItems: alignItems,
           gap: `${gap * 4}px`,
+          ...(areas ? { gridTemplateAreas: areas } : {}),
         } as CSSProperties}
       >
         {comp.node.children && comp.node.children.length > 0 ? (
