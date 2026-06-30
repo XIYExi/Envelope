@@ -16,7 +16,7 @@
  * @author xiye
  * @date 2026/6/14
  */
-import type { MaterialRegistry, MaterialDefinition, ComponentCategory } from "./types/material";
+import type { MaterialRegistry, MaterialDefinition, ComponentCategory, MetadataTransducer } from "./types/material";
 import { materialDefinitionSchema } from "./types/material";
 
 /**
@@ -51,6 +51,9 @@ export function createRegistry(options?: RegistryOptions): MaterialRegistry {
   /** 物料存储 Map，key 为物料名称 */
   const components = new Map<string, MaterialDefinition>();
 
+  /** 物料元数据转换器列表 */
+  const transducers: MetadataTransducer[] = [];
+
   /**
    * 处理重复注册
    *
@@ -84,7 +87,10 @@ export function createRegistry(options?: RegistryOptions): MaterialRegistry {
    * @param def - 物料定义对象
    */
   const register = (def: MaterialDefinition): void => {
-    const parsed = materialDefinitionSchema.safeParse(def);
+    // 先执行 transducer 管道，再校验
+    const pipeline = pipe(...transducers);
+    const transformed = pipeline(def);
+    const parsed = materialDefinitionSchema.safeParse(transformed);
     if (!parsed.success) {
       const msg = `物料 "${def.name}" 校验失败: ${JSON.stringify(parsed.error.flatten())}`;
       if (options?.strictMode) {
@@ -205,5 +211,36 @@ export function createRegistry(options?: RegistryOptions): MaterialRegistry {
     has(name: string): boolean {
       return components.has(name);
     },
+
+    /**
+     * 注册物料元数据转换器
+     *
+     * 注册后的 transducer 会在每次 register() 时自动执行。
+     * 多个 transducer 按 level 升序排列后链式执行。
+     *
+     * @param fn - 转换器函数
+     */
+    registerTransducer: (fn: MetadataTransducer): void => {
+      transducers.push(fn);
+    },
+  };
+}
+
+/**
+ * 管道执行函数
+ *
+ * 按 level 升序排列多个 transducer，依次链式执行。
+ * 函数式编程的管道模式（Pipeline Pattern）：
+ * pipe(f1, f2, f3)(input) → f3(f2(f1(input)))
+ *
+ * @param transducers - 按优先级排列的转换器列表
+ * @returns 组合后的转换函数
+ */
+function pipe(...transducers: MetadataTransducer[]): (meta: MaterialDefinition) => MaterialDefinition {
+  return (meta: MaterialDefinition) => {
+    const sorted = [...transducers].sort(
+      (a, b) => (a.level ?? 100) - (b.level ?? 100),
+    );
+    return sorted.reduce((acc, fn) => fn(acc), meta);
   };
 }

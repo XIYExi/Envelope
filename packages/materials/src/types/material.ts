@@ -219,6 +219,53 @@ export const materialDefinitionSchema = z.object({
   bindableEvents: z.array(z.string()).optional(),
   /** 自定义画布预览渲染函数，覆盖默认 simulated 占位渲染 */
   previewRender: z.any().optional(),
+
+  /**
+   * 嵌套规则配置
+   *
+   * 定义组件可以放在哪些父组件内、可以包含哪些子组件。
+   * 用于拖拽时校验插入位置的合法性。
+   * 不设置表示不做额外限制（但仍受 isContainer/supportsChildren 约束）。
+   *
+   * @reference lowcode-engine: types/src/shell/type/metadata.ts IPublicTypeNestingRule
+   */
+  nestingRules: z.object({
+    /** 允许的父组件类型白名单。例如 ['Card', 'Tabs'] 表示此组件只能放在 Card 或 Tabs 内。空数组或不设置表示不限制 */
+    parentWhitelist: z.array(z.string()).optional(),
+    /** 允许的子组件类型白名单。例如 ['CardHeader', 'CardContent'] 表示此容器只能包含这些子组件。空数组表示不接受任何子组件 */
+    childWhitelist: z.array(z.string()).optional(),
+  }).optional(),
+
+  /**
+   * 禁用行为列表
+   *
+   * 声明此组件在编辑器中禁用的交互行为。
+   * 例如 ['delete'] 表示此组件不可删除，['copy', 'move', 'lock', 'delete'] 表示全部禁用。
+   * 设置 ['*'] 表示禁用所有交互行为。
+   * 不设置表示不限制。
+   *
+   * @reference lowcode-engine: types/src/shell/type/metadata.ts disableBehaviors
+   */
+  disableBehaviors: z.array(z.enum(['copy', 'move', 'lock', 'delete', 'hide'])).optional(),
+
+  /**
+   * 物料拖拽预设列表
+   *
+   * 定义组件从物料面板拖入画布时的预设配置。
+   * 可以为同一个组件定义多个预设（如 Button 的 "主要按钮"、"危险按钮"、"链接按钮"），
+   * 拖拽时默认使用第一个预设。
+   * 不设置表示使用 defaultProps 初始化。
+   *
+   * @reference lowcode-engine: types/src/shell/type/snippet.ts IPublicTypeSnippet
+   */
+  snippets: z.array(z.object({
+    /** 预设名称，用于在物料面板中展示（如 "主要按钮"、"危险按钮"） */
+    title: z.string().optional(),
+    /** 预设的 props 配置，拖入画布时作为组件初始属性 */
+    props: z.record(z.unknown()).optional(),
+    /** 预设的子组件模板，拖入画布时自动展开 */
+    children: z.array(z.record(z.unknown())).optional(),
+  })).optional(),
 });
 
 /**
@@ -238,6 +285,77 @@ export type MaterialDefinition = z.infer<typeof materialDefinitionSchema>;
  */
 export function getDefaultValue<T = unknown>(prop: EditableProp): T {
   return prop.defaultValue as T;
+}
+
+/**
+ * 嵌套规则类型
+ *
+ * 从 materialDefinitionSchema 中的 nestingRules 字段推导。
+ */
+export type NestingRule = z.infer<typeof materialDefinitionSchema.shape.nestingRules>;
+
+/**
+ * 禁用行为类型
+ *
+ * 编辑器中可禁用的组件交互行为枚举：
+ * - copy: 禁用复制
+ * - move: 禁用移动
+ * - lock: 禁用锁定
+ * - delete: 禁用删除
+ * - hide: 禁用隐藏
+ */
+export type BehaviorKind = 'copy' | 'move' | 'lock' | 'delete' | 'hide';
+
+/**
+ * 拖拽预设
+ *
+ * 定义组件从物料面板拖入画布时的初始化配置。
+ * 可以为同一个组件定义多个预设方案。
+ */
+export interface Snippet {
+  /** 预设名称（如 "主要按钮"、"危险按钮"） */
+  title?: string;
+  /** 预设属性配置，作为组件的初始 props */
+  props?: Record<string, unknown>;
+  /** 预设子组件模板，拖入时自动展开 */
+  children?: Record<string, unknown>[];
+}
+
+/**
+ * 组件操作定义
+ *
+ * 描述组件在编辑器中可执行的交互操作。
+ * 用于操作工具栏（border-selecting.tsx）和右键菜单的动态渲染。
+ */
+export interface ComponentAction {
+  /** 操作名称，与 BehaviorKind 对应 */
+  name: string;
+  /** 操作显示标签（如 "复制"、"删除"） */
+  label: string;
+  /** 操作图标名称（Lucide 图标名） */
+  icon: string;
+  /** 操作快捷提示文本 */
+  shortcut?: string;
+  /** 条件函数：仅当满足条件时显示此操作（可选）；'always' 表示始终显示 */
+  condition?: 'always' | ((component: Record<string, unknown>) => boolean);
+}
+
+/**
+ * 物料元数据转换器
+ *
+ * 接收原始物料定义，返回转换后的物料定义。
+ * 多个 transducer 通过管道（pipeline）模式链式执行。
+ * level 决定执行顺序（数字越小越先执行）。
+ *
+ * @reference lowcode-engine: types/src/shell/type/metadata-transducer.ts IPublicTypeMetadataTransducer
+ */
+export interface MetadataTransducer {
+  /** 转换函数：接收上一阶段的物料定义，返回转换后的物料定义 */
+  (prev: MaterialDefinition): MaterialDefinition;
+  /** 执行优先级（0-9: 系统级, 10-99: 内置插件级, 100+: 应用级）；默认 100 */
+  level?: number;
+  /** 转换器唯一标识 */
+  id?: string;
 }
 
 /**
@@ -295,4 +413,15 @@ export interface MaterialRegistry {
    * @returns 是否已注册
    */
   has: (name: string) => boolean;
+
+  /**
+   * 注册物料元数据转换器
+   *
+   * 注册后的 transducer 会在每次 register() 时自动执行。
+   * 多个 transducer 按 level 升序排列后链式执行。
+   * 可用于全局修改物料定义（如自动推断嵌套规则、修正字段格式等）。
+   *
+   * @param fn - 转换器函数，接收并返回 MaterialDefinition
+   */
+  registerTransducer: (fn: MetadataTransducer) => void;
 }

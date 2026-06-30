@@ -83,5 +83,12 @@ export { hoverCardMaterial, hoverCardTriggerMaterial, hoverCardContentMaterial }
 export { drawerMaterial, drawerTriggerMaterial, drawerContentMaterial, drawerHeaderMaterial } from "./components/overlay";
 export { collapsibleMaterial, collapsibleTriggerMaterial, collapsibleContentMaterial } from "./components/overlay";
 
+// ========== 物料管道（Material Pipeline） ==========
+export { NestingValidator } from "./nesting-validator";
+export type { MaterialLookup } from "./nesting-validator";
+export { buildAvailableActions } from "./available-actions";
+export type { ComponentAction, BehaviorKind, NestingRule, MetadataTransducer, Snippet } from "./types/material";
+export { componentDefaults, BUILTIN_TRANSDUCERS } from "./builtin-transducers";
+
 export const PACKAGE_NAME = "@envelope/materials";
 export const VERSION = "3.0.0";
