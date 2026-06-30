@@ -1,57 +1,75 @@
 /**
  * 左侧导航面板 — 编辑器模式切换
  *
- * 提供项目级模式导航：页面编辑、数据模型、路由、流程、API 端点。
- * 下方保留组件库、主题、设置等占位（Coming Soon）。
+ * 提供项目级模式导航：页面编辑由内置项驱动，
+ * 数据模型、路由、流程、API 端点由插件骨架系统驱动。
+ * 新增编辑器模式只需注册插件，无需修改此组件。
  *
  * @author xiye
  * @date 2026-06-14
  */
 "use client";
 
+import { useMemo } from "react";
 import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { useEditorStore } from "@/stores/editor";
 import type { EditorMode } from "@/stores/editor.types";
-import { FileText, Database, Workflow, Globe, Plug, Puzzle, Palette, Settings } from "lucide-react";
+import { FileText, Database, Globe, Workflow, Plug, Puzzle, Palette, Settings } from "lucide-react";
 import { PageTreePanel } from "./page-tree-panel";
+import type { SkeletonItem } from "@envelope/engine";
 
 /** 左侧面板 Props */
 interface LeftPanelProps {
   /** 面板是否处于折叠态（由父组件控制显隐） */
   collapsed: boolean;
+  /** 插件注册的 left-nav 骨架项列表 */
+  pluginNavItems?: SkeletonItem[];
 }
 
 /** 导航项定义 */
 interface NavItemDef {
   /** 编辑器模式标识 */
-  id: EditorMode;
+  id: string;
   /** 显示文本 */
   label: string;
   /** 图标（Lucide React 组件） */
   icon: React.ReactNode;
-  /** 是否标记为开发中（禁用交互） */
-  comingSoon?: boolean;
 }
 
-/** 主导航项配置 */
-const NAV_ITEMS: NavItemDef[] = [
-  { id: "pages", label: "Pages", icon: <FileText className="h-3.5 w-3.5" /> },
-  { id: "data-models", label: "Data Models", icon: <Database className="h-3.5 w-3.5" /> },
-  { id: "routing", label: "Routing", icon: <Globe className="h-3.5 w-3.5" /> },
-  { id: "flows", label: "Flows", icon: <Workflow className="h-3.5 w-3.5" /> },
-  { id: "api", label: "API Endpoints", icon: <Plug className="h-3.5 w-3.5" /> },
-];
+/** Lucide 图标名到组件的映射表 */
+const ICON_MAP: Record<string, React.ReactNode> = {
+  Database: <Database className="h-3.5 w-3.5" />,
+  Globe:    <Globe className="h-3.5 w-3.5" />,
+  Workflow: <Workflow className="h-3.5 w-3.5" />,
+  Plug:     <Plug className="h-3.5 w-3.5" />,
+};
 
 /**
  * 左侧导航面板
  *
- * 模式切换时直接调用 setEditorMode，不主动重置其他状态。
- * 各子编辑器自行在挂载时初始化所需状态。
+ * 导航项由两部分组成：
+ * 1. 内置项（pages）— 始终显示在顶部
+ * 2. 插件项（由 PluginManager skeleton 动态注册）— 显示在内置项下方
+ *
+ * 新增编辑器模式只需注册插件，left-panel.tsx 零改动。
  */
-export function LeftPanel({ collapsed }: LeftPanelProps) {
+export function LeftPanel({ collapsed, pluginNavItems }: LeftPanelProps) {
   const { editorMode, setEditorMode } = useEditorStore();
+
+  // 合并内置项 + 插件项
+  const navItems = useMemo(() => {
+    const builtin: NavItemDef[] = [
+      { id: "pages", label: "Pages", icon: <FileText className="h-3.5 w-3.5" /> },
+    ];
+    const pluginItems: NavItemDef[] = (pluginNavItems ?? []).map((item) => ({
+      id: item.name,
+      label: item.label,
+      icon: ICON_MAP[item.icon ?? ''] ?? <Puzzle className="h-3.5 w-3.5" />,
+    }));
+    return [...builtin, ...pluginItems];
+  }, [pluginNavItems]);
 
   if (collapsed) return null;
 
@@ -63,41 +81,19 @@ export function LeftPanel({ collapsed }: LeftPanelProps) {
       <ScrollArea className="flex-1">
         <div className="p-2">
           <div className="space-y-0.5">
-            {NAV_ITEMS.map((item) => (
+            {navItems.map((item) => (
               <button
                 key={item.id}
-                onClick={() => !item.comingSoon && setEditorMode(item.id)}
-                disabled={item.comingSoon}
+                onClick={() => setEditorMode(item.id as EditorMode)}
                 className={cn(
                   "flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs transition-colors hover:bg-accent",
                   editorMode === item.id && "bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300",
-                  item.comingSoon && "cursor-not-allowed opacity-40 hover:bg-transparent",
                 )}
               >
                 <span className="shrink-0 text-muted-foreground">{item.icon}</span>
                 <span className="flex-1 truncate">{item.label}</span>
-                {item.comingSoon && (
-                  <span className="shrink-0 text-[9px] text-muted-foreground">Soon</span>
-                )}
               </button>
             ))}
-          </div>
-
-          <Separator className="my-3" />
-
-          <div className="space-y-0.5">
-            <button className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs opacity-40 cursor-not-allowed hover:bg-transparent" disabled>
-              <span className="shrink-0 text-muted-foreground"><Puzzle className="h-3.5 w-3.5" /></span>
-              <span className="flex-1 truncate">Components</span>
-            </button>
-            <button className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs opacity-40 cursor-not-allowed hover:bg-transparent" disabled>
-              <span className="shrink-0 text-muted-foreground"><Palette className="h-3.5 w-3.5" /></span>
-              <span className="flex-1 truncate">Theme</span>
-            </button>
-            <button className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs opacity-40 cursor-not-allowed hover:bg-transparent" disabled>
-              <span className="shrink-0 text-muted-foreground"><Settings className="h-3.5 w-3.5" /></span>
-              <span className="flex-1 truncate">Settings</span>
-            </button>
           </div>
 
           {/* G10: Pages 模式下渲染页面树面板 */}

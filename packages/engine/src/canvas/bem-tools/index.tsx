@@ -123,7 +123,7 @@ export function BemTools(props: BemToolsProps) {
         positionMode={positionMode}
       />
 
-      {/* 组件选中工具 */}
+      {/* 组件选中工具 — 工具栏按钮由 buildAvailableActions 动态驱动 */}
       <BorderSelecting
         components={components}
         selectedIds={selectedIds}

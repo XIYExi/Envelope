@@ -10,9 +10,16 @@
  */
 "use client";
 
-import React, { useCallback } from "react";
+import React, { useCallback, useMemo } from "react";
 import type { CanvasComponent } from "../types";
 import { computePixelRect } from "./shared";
+import { createDefaultRegistry, buildAvailableActions } from "@envelope/materials";
+import { Copy, Trash2, Lock, Unlock, Move, EyeOff } from "lucide-react";
+
+/** Lucide 图标映射表：操作名称 → React 图标组件 */
+const ACTION_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
+  Copy, Trash2, Lock, Unlock, Move, EyeOff,
+};
 
 /**
  * 组件选中框容器属性
@@ -62,6 +69,16 @@ export function BorderSelecting({
   const selected = components.filter(c => selectedIds.includes(c.id) && !c.hidden);
   if (selected.length === 0) return null;
 
+  /** 通用操作回调：根据 actionName dispatch 到对应的存储操作 */
+  const handleAction = useCallback((actionName: string, id: string) => {
+    switch (actionName) {
+      case 'delete': onDeleteComponent(id); break;
+      case 'copy':   onCopyComponent(id); break;
+      case 'lock':   onLockToggle(id); break;
+      case 'unlock': onLockToggle(id); break;
+    }
+  }, [onDeleteComponent, onCopyComponent, onLockToggle]);
+
   return (
     <>
       {selected.map(comp => {
@@ -82,9 +99,7 @@ export function BorderSelecting({
             cellWidth={cellWidth}
             cellHeight={cellHeight}
             positionMode={positionMode}
-            onDelete={onDeleteComponent}
-            onCopy={onCopyComponent}
-            onLockToggle={onLockToggle}
+            onAction={handleAction}
           />
         );
       })}
@@ -112,12 +127,8 @@ interface BorderBoxProps {
   cellHeight: number;
   /** 布局模式 */
   positionMode: "grid" | "free";
-  /** 删除组件点击事件处理函数 */
-  onDelete: (id: string) => void;
-  /** 复制组件点击事件处理函数 */
-  onCopy: (id: string) => void;
-  /** 锁定组件点击事件处理函数 */
-  onLockToggle: (id: string) => void;
+  /** 操作按钮点击回调，actionName 对应 ComponentAction.name */
+  onAction: (actionName: string, id: string) => void;
 }
 
 /**
@@ -129,30 +140,24 @@ interface BorderBoxProps {
 const BorderBox = React.memo(function BorderBox({
   comp, isPrimary,
   columnWidth, gridGap, pagePadding, cellWidth, cellHeight, positionMode,
-  onDelete, onCopy, onLockToggle,
+  onAction,
 }: BorderBoxProps) {
   // 将组件网格坐标转换为像素坐标
   const rect = computePixelRect(comp.position, columnWidth, gridGap, pagePadding, cellWidth, cellHeight, positionMode);
   if (!rect) return null;
 
-  // 判断组件是否被锁定
-  const isLocked = comp.locked === true;
+  // 根据物料定义动态计算可用操作列表
+  const registry = useMemo(() => createDefaultRegistry(), []);
+  const actions = useMemo(() => {
+    const def = registry.get(comp.node.type);
+    return def ? buildAvailableActions(def, comp as unknown as Record<string, unknown>) : [];
+  }, [comp.node.type, comp.locked, comp.hidden]);
 
-  // ——— 工具栏按钮事件 ——— 阻止冒泡以免触发画布取消选中
-  const handleDelete = useCallback((e: React.MouseEvent) => {
+  // —— 工具栏按钮点击 —— 阻止冒泡以免触发画布取消选中
+  const handleAction = useCallback((actionName: string) => (e: React.MouseEvent) => {
     e.stopPropagation();
-    onDelete(comp.id);
-  }, [comp.id, onDelete]);
-
-  const handleCopy = useCallback((e: React.MouseEvent) => {
-    e.stopPropagation();
-    onCopy(comp.id);
-  }, [comp.id, onCopy]);
-
-  const handleLock = useCallback((e: React.MouseEvent) => {
-    e.stopPropagation();
-    onLockToggle(comp.id);
-  }, [comp.id, onLockToggle]);
+    onAction(actionName, comp.id);
+  }, [comp.id, onAction]);
 
   return (
     // 选中框外层容器：绝对定位覆盖在组件上方
@@ -173,8 +178,8 @@ const BorderBox = React.memo(function BorderBox({
         transition: "all 0.08s ease-out",
       }}
     >
-      {/* 主选中组件的顶部操作工具栏 */}
-      {isPrimary && (
+      {/* 主选中组件的顶部操作工具栏 — 由 buildAvailableActions 动态渲染 */}
+      {isPrimary && actions.length > 0 && (
         <div
           className="bem-border-toolbar"
           style={{
@@ -187,22 +192,18 @@ const BorderBox = React.memo(function BorderBox({
             pointerEvents: "auto",
           }}
         >
-          <ToolbarBtn
-            label={isLocked ? "解锁" : "锁定"}
-            icon={isLocked ? "🔓" : "🔒"}
-            onClick={handleLock}
-          />
-          <ToolbarBtn
-            label="复制"
-            icon="📋"
-            onClick={handleCopy}
-          />
-          <ToolbarBtn
-            label="删除"
-            icon="🗑"
-            onClick={handleDelete}
-            danger
-          />
+          {actions.map((action) => {
+            const IconComp = ACTION_ICONS[action.icon];
+            return (
+              <ToolbarBtn
+                key={action.name}
+                label={action.label}
+                icon={IconComp ? <IconComp className="h-3 w-3" /> : null}
+                onClick={handleAction(action.name)}
+                danger={action.name === 'delete'}
+              />
+            );
+          })}
         </div>
       )}
 
@@ -268,7 +269,7 @@ const BorderBox = React.memo(function BorderBox({
  */
 function ToolbarBtn({ label, icon, onClick, danger }: {
   label: string;
-  icon: string;
+  icon: React.ReactNode;
   onClick: (e: React.MouseEvent) => void;
   danger?: boolean;
 }) {

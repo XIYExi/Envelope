@@ -15,8 +15,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState, memo } from "react";
 import { useSearchParams } from "next/navigation";
 import { DndContext, useDroppable, pointerWithin, DragOverlay, type DragEndEvent, type DragMoveEvent, type DragStartEvent, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
-import { createDefaultRegistry } from "@envelope/materials";
-import { useCanvasStore, createComponentNode, CanvasRenderer, VIEWPORT_WIDTHS, CANVAS_CELL_SIZE, CANVAS_CELL_HEIGHT, isContainerType, findNodeLocation, Dragon, CanvasScroller, type CanvasSnapshot, type ComponentNode, type DropTargetInfo } from "@envelope/engine";
+import { createDefaultRegistry, NestingValidator } from "@envelope/materials";
+import { useCanvasStore, createComponentNode, CanvasRenderer, VIEWPORT_WIDTHS, CANVAS_CELL_SIZE, CANVAS_CELL_HEIGHT, isContainerType, findNodeLocation, Dragon, CanvasScroller, PluginManager, createModuleEventBus, EventBus, type CanvasSnapshot, type ComponentNode, type DropTargetInfo } from "@envelope/engine";
+import type { EditorEventMap } from "@envelope/engine";
 import { useEditorStore } from "@/stores/editor";
 import { useProjectPagesStore, componentNodesToCanvasComponents } from "@/stores/project-pages";
 import { useProjectFlowsStore } from "@/stores/project-flows";
@@ -25,10 +26,10 @@ import { MaterialPanel } from "./material-panel";
 import { RightPanel } from "./right-panel";
 import { LeftPanel } from "./left-panel";
 import { ResizeHandle } from "./ResizeHandle";
-import { DataModelEditor } from "./data-model-editor";
-import { RoutingEditor } from "./routing-editor";
-import { ApiEndpointEditor } from "./api-endpoint-editor";
-import { ProjectFlowEditor } from "./project-flow-editor";
+import { DataModelPlugin } from "./data-model-plugin";
+import { RoutingPlugin } from "./routing-plugin";
+import { FlowPlugin } from "./flow-plugin";
+import { ApiPlugin } from "./api-plugin";
 import { useFlowBindingStore } from "@envelope/flow";
 import { Input } from "@/components/ui/input";
 import {
@@ -42,6 +43,7 @@ import {
   AlertDialogCancel,
 } from "@/components/ui/alert-dialog";
 import { KeyboardShortcutsDialog } from "./keyboard-shortcuts-dialog";
+import { toast } from "@/components/ui/use-toast";
 
 /**
  * 画布放置区域组件
@@ -251,6 +253,11 @@ export function EditorLayout() {
 
   const registry = useMemo(() => createDefaultRegistry(), []);
 
+  // 编辑器模式切换时通过 EventBus 通知各模块
+  useEffect(() => {
+    editorBusRef.current?.emit('editor:modeChange', { mode: editorMode });
+  }, [editorMode]);
+
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: { distance: 5 },
@@ -270,6 +277,24 @@ export function EditorLayout() {
     });
   }
   const dragon = dragonRef.current;
+
+  // 编辑器级事件总线（跨渲染周期保持单例）
+  const editorBusRef = useRef<EventBus<EditorEventMap> | null>(null);
+  if (!editorBusRef.current) {
+    editorBusRef.current = createModuleEventBus<EditorEventMap>('Editor');
+  }
+
+  // 插件管理器（跨渲染周期保持单例）
+  const pluginManagerRef = useRef<PluginManager | null>(null);
+  if (!pluginManagerRef.current) {
+    const pm = new PluginManager();
+    pm.register('DataModelPlugin', DataModelPlugin, { name: 'DataModelPlugin', slots: ['main-area', 'left-nav'] });
+    pm.register('RoutingPlugin',   RoutingPlugin,   { name: 'RoutingPlugin',   slots: ['main-area', 'left-nav'] });
+    pm.register('FlowPlugin',      FlowPlugin,      { name: 'FlowPlugin',      slots: ['main-area', 'left-nav'] });
+    pm.register('ApiPlugin',       ApiPlugin,       { name: 'ApiPlugin',       slots: ['main-area', 'left-nav'] });
+    pm.init();
+    pluginManagerRef.current = pm;
+  }
 
   /**
    * 物料名称 → 物料信息的快速查找表
@@ -392,6 +417,28 @@ export function EditorLayout() {
         const material = registry.get(materialName);
         const category = materialMap.get(materialName)?.category ?? material?.category ?? "layout";
         const defaultProps = material?.defaultProps ?? {};
+
+        // 校验嵌套合法性：拖入 canvas-drop-zone 时 parent 为根级（无容器约束），跳过校验
+        // 拖入容器时需要校验，容器 ID 从 overId 解析
+        if (overId.startsWith("canvas-container:")) {
+          const containerId = overId.replace(/^canvas-container:/, "");
+          const containerComp = curComponents.find((c) => c.id === containerId);
+          if (containerComp && materialName) {
+            const allowed = NestingValidator.checkChildAllowed(
+              containerComp.node.type, materialName,
+              (name) => registry.get(name),
+            );
+            if (!allowed) {
+              toast({
+                title: "无法放置",
+                description: `"${materialName}" 不能放在 "${containerComp.node.type}" 内部`,
+                variant: "destructive",
+              });
+              return;
+            }
+          }
+        }
+
         const node = createComponentNode(materialName, category, { ...defaultProps });
         // B9: 直接计算位置后一次性插入，避免先 append 末尾再 moveComponent 的两步闪跳
         const x = Math.max(1, Math.round(delta.x / (CANVAS_CELL_SIZE * curZoom)));
@@ -401,10 +448,17 @@ export function EditorLayout() {
           index: curComponents.length,
           position: { x, y, width: 3, height: 2 },
         });
+        // 通过 EventBus 通知其他模块组件已放置
+        editorBusRef.current?.emit('canvas:drop', { component: node, target: null });
         return;
       }
+
+      // 画布内组件移动完成后通知（仅通知移动，不重复 emit drop）
+      if (dragType === "canvas-component" && draggedNodeId) {
+        editorBusRef.current?.emit('canvas:drop', { component: { id: draggedNodeId }, target: null });
+      }
     },
-    [insertNode, materialMap, moveComponent, moveNode, parseTreeDropTarget, registry],
+    [insertNode, materialMap, moveComponent, moveNode, parseTreeDropTarget, registry, editorBusRef],
   );
 
   const handleAddMaterial = useCallback(
@@ -737,12 +791,18 @@ export function EditorLayout() {
         </DndContext>
       ) : (
         <div className="flex flex-1 overflow-hidden">
-          {!leftPanelCollapsed ? <LeftPanel collapsed={leftPanelCollapsed} /> : null}
+          {!leftPanelCollapsed ? (
+            <LeftPanel
+              collapsed={leftPanelCollapsed}
+              pluginNavItems={pluginManagerRef.current?.getSkeleton().getItems('left-nav') ?? []}
+            />
+          ) : null}
           <div className="flex-1 overflow-hidden">
-            {editorMode === "data-models" && <DataModelEditor />}
-            {editorMode === "routing" && <RoutingEditor />}
-            {editorMode === "flows" && <ProjectFlowEditor />}
-            {editorMode === "api" && <ApiEndpointEditor />}
+            {(() => {
+              const mainItems = pluginManagerRef.current?.getSkeleton().getItems('main-area') ?? [];
+              const CurrentComponent = mainItems.find((i) => i.name === editorMode)?.component;
+              return CurrentComponent ? <CurrentComponent /> : null;
+            })()}
           </div>
           {!rightPanelCollapsed ? <RightPanel /> : null}
         </div>
