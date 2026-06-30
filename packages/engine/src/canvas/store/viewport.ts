@@ -10,7 +10,7 @@
 
 import type { CanvasState, CanvasActions } from "../types";
 import { VIEWPORT_WIDTHS } from "../types";
-import { CANVAS_CELL_WIDTH, CANVAS_CELL_HEIGHT } from "../../shared/canvas-utils";
+import { CANVAS_CELL_WIDTH, CANVAS_CELL_HEIGHT, computeColumnWidth } from "../../shared/canvas-utils";
 import { withHistory } from "./history";
 
 /** 数值钳制（闭区间） */
@@ -123,12 +123,12 @@ export function createViewportSlice(
         const maxX = Math.max(...visible.map((c) => c.position.x + c.position.width));
         const minY = Math.min(...visible.map((c) => c.position.y));
         const maxY = Math.max(...visible.map((c) => c.position.y + c.position.height));
-        const colW = CANVAS_CELL_WIDTH;
+        const vpW = VIEWPORT_WIDTHS[state.viewport];
+        const colW = computeColumnWidth({ viewportWidth: vpW, pageMaxWidth: state.pageMaxWidth, pagePadding: state.pagePadding, gridCols: state.gridCols, gridGap: state.gridGap });
         const rowH = CANVAS_CELL_HEIGHT;
         const gap = state.gridGap;
         const contentW = (maxX - minX + 1) * (colW + gap);
         const contentH = (maxY - minY + 1) * (rowH + gap);
-        const vpW = VIEWPORT_WIDTHS[state.viewport];
         const vpH = 600;
         const fitZoom = Math.min(vpW / contentW, vpH / contentH, 2) * 0.9;
         const zoomVal = Math.max(0.25, fitZoom);
@@ -149,12 +149,12 @@ export function createViewportSlice(
         const maxX = Math.max(...selected.map((c) => c.position.x + c.position.width));
         const minY = Math.min(...selected.map((c) => c.position.y));
         const maxY = Math.max(...selected.map((c) => c.position.y + c.position.height));
-        const colW = CANVAS_CELL_WIDTH;
+        const vpW = VIEWPORT_WIDTHS[state.viewport];
+        const colW = computeColumnWidth({ viewportWidth: vpW, pageMaxWidth: state.pageMaxWidth, pagePadding: state.pagePadding, gridCols: state.gridCols, gridGap: state.gridGap });
         const rowH = CANVAS_CELL_HEIGHT;
         const gap = state.gridGap;
         const contentW = (maxX - minX + 1) * (colW + gap);
         const contentH = (maxY - minY + 1) * (rowH + gap);
-        const vpW = VIEWPORT_WIDTHS[state.viewport];
         const vpH = 600;
         const fitZoom = Math.min(vpW / contentW, vpH / contentH, 2) * 0.9;
         const zoomVal = Math.max(0.25, fitZoom);

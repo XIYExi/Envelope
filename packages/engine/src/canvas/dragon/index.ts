@@ -16,4 +16,7 @@ export { Location } from "./location";
 export type { LocationConfig } from "./location";
 export { Dragon } from "./dragon";
 export type { DragContext, DragMoveResult } from "./dragon";
+export { OffsetObserver } from "./offset-observer";
+export type { CanvasViewportState, OffsetResult } from "./offset-observer";
+export type { DragSensor } from "./sensor";
 

@@ -119,5 +119,32 @@ export function pickTextFromNode(node: { props?: Record<string, unknown>; type?:
 }
 
 // Canvas grid constants (single source of truth)
+// NOTE: CANVAS_CELL_WIDTH is a reference baseline only.
+// Actual CSS Grid column width is DYNAMIC and depends on viewport/pageMaxWidth/gridCols/gap/padding.
+// Use computeColumnWidth() for all delta-to-grid conversions and position calculations.
 export const CANVAS_CELL_WIDTH = 80;
 export const CANVAS_CELL_HEIGHT = 40;
+
+/**
+ * 计算 CSS Grid 实际列宽（px）
+ *
+ * CSS Grid 使用 `repeat(gridCols, 1fr)` 布局，
+ * 列宽 = (可用空间 - (gridCols-1) * gap) / gridCols
+ *
+ * 这是 delta-to-grid 换算的唯一正确分母。
+ * 所有拖拽操作、zoom 计算、位置推算必须使用此函数。
+ */
+export function computeColumnWidth(opts: {
+  viewportWidth: number;
+  pageMaxWidth: number | null;
+  pagePadding: number;
+  gridCols: number;
+  gridGap: number;
+}): number {
+  const maxW = typeof opts.pageMaxWidth === "number" && opts.pageMaxWidth > 0 ? opts.pageMaxWidth : opts.viewportWidth;
+  const effectiveWidth = Math.min(opts.viewportWidth, maxW);
+  const padding = typeof opts.pagePadding === "number" ? opts.pagePadding : 0;
+  const contentWidth = effectiveWidth - 2 * padding;
+  const gap = opts.gridGap ?? 0;
+  return Math.max(1, (contentWidth - (opts.gridCols - 1) * gap) / opts.gridCols);
+}

@@ -49,6 +49,8 @@ interface BorderSelectingProps {
   onCopyComponent: (id: string) => void;
   /** 锁定组件点击事件处理函数 */
   onLockToggle: (id: string) => void;
+  /** 是否正在拖拽组件（拖拽中隐藏工具栏，参考 dragging 标志） */
+  isDragging?: boolean;
 }
 
 /**
@@ -60,7 +62,7 @@ interface BorderSelectingProps {
 export function BorderSelecting({
   components, selectedIds, activeNodeId,
   columnWidth, gridGap, pagePadding, cellWidth, cellHeight, positionMode,
-  onDeleteComponent, onCopyComponent, onLockToggle,
+  onDeleteComponent, onCopyComponent, onLockToggle, isDragging,
 }: BorderSelectingProps) {
   // 没有选中项时直接返回
   if (selectedIds.length === 0) return null;
@@ -100,6 +102,7 @@ export function BorderSelecting({
             cellHeight={cellHeight}
             positionMode={positionMode}
             onAction={handleAction}
+            isDragging={isDragging}
           />
         );
       })}
@@ -129,6 +132,8 @@ interface BorderBoxProps {
   positionMode: "grid" | "free";
   /** 操作按钮点击回调，actionName 对应 ComponentAction.name */
   onAction: (actionName: string, id: string) => void;
+  /** 是否正在拖拽（拖拽中隐藏工具栏，参考 dragging 标志） */
+  isDragging?: boolean;
 }
 
 /**
@@ -140,7 +145,7 @@ interface BorderBoxProps {
 const BorderBox = React.memo(function BorderBox({
   comp, isPrimary,
   columnWidth, gridGap, pagePadding, cellWidth, cellHeight, positionMode,
-  onAction,
+  onAction, isDragging,
 }: BorderBoxProps) {
   // 将组件网格坐标转换为像素坐标
   const rect = computePixelRect(comp.position, columnWidth, gridGap, pagePadding, cellWidth, cellHeight, positionMode);
@@ -178,18 +183,19 @@ const BorderBox = React.memo(function BorderBox({
         transition: "all 0.08s ease-out",
       }}
     >
-      {/* 主选中组件的顶部操作工具栏 — 由 buildAvailableActions 动态渲染 */}
-      {isPrimary && actions.length > 0 && (
+      {/* 主选中组件的顶部操作工具栏 — 拖拽中隐藏，位置自适应 */}
+      {isPrimary && actions.length > 0 && !isDragging && (
         <div
           className="bem-border-toolbar"
           style={{
             position: "absolute",
-            top: -26,
-            right: 0,
             display: "flex",
             gap: 2,
-            // 工具栏可点击（突破父级 pointerEvents: none）
             pointerEvents: "auto",
+            // 位置自适应：顶部空间足够 → 上方；否则 → 下方（参考 Toolbar SPACE_HEIGHT 逻辑）
+            ...(rect.y > 23
+              ? { top: -22, right: 0 }
+              : { bottom: -22, right: 0 }),
           }}
         >
           {actions.map((action) => {

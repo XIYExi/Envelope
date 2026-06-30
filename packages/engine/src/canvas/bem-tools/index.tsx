@@ -4,10 +4,11 @@
 
 "use client";
 
-import type { CanvasComponent, DropTargetInfo } from "../types";
+import type { CanvasComponent, DropTargetInfo, DomRectEntry } from "../types";
 import { bemToolsManager } from "./manager";
 import { BorderSelecting } from "./border-selecting";
 import { BorderDetecting } from "./border-detecting";
+import { BorderContainer } from "./border-container";
 import { BorderResizing } from "./border-resizing";
 import { InsertionView } from "./insertion";
 
@@ -60,6 +61,14 @@ export interface BemToolsProps {
    */
   zoom: number;
   /**
+   * 水平平移偏移量（px）
+   */
+  panX: number;
+  /**
+   * 垂直平移偏移量（px）
+   */
+  panY: number;
+  /**
    * 组件位置模式
    */
   positionMode: "grid" | "free";
@@ -83,13 +92,39 @@ export interface BemToolsProps {
    * BEM: 拖拽插入位置信息
    */
   dropTarget: DropTargetInfo | null;
+  /**
+   * 画布组件 DOM 矩形注册表（id → 实际像素矩形），
+   * 由 CanvasRenderer 的 ResizeObserver 批量采集。
+   */
+  domRects: Record<string, DomRectEntry>;
+  /**
+   * 缩放开始时回调（禁用悬停检测）
+   */
+  onResizeStart?: () => void;
+  /**
+   * 缩放结束时回调（恢复悬停检测）
+   */
+  onResizeEnd?: () => void;
+  /**
+   * 画布是否正在滚动/平移中（抑制悬停框闪烁）
+   */
+  isScrolling?: boolean;
+  /**
+   * 是否正在拖拽组件（抑制悬停框、隐藏选中工具栏）
+   */
+  isDragging?: boolean;
+  /**
+   * 是否正在缩放组件（抑制悬停框闪烁）
+   */
+  isResizing?: boolean;
 }
 
 export function BemTools(props: BemToolsProps) {
   const {
     components, selectedIds, activeNodeId, hoveredId,
     columnWidth, gridGap, pagePadding, cellWidth, cellHeight, gridCols,
-    zoom, positionMode, onResize, onDeleteComponent, onCopyComponent, onLockToggle, dropTarget,
+    zoom, panX, panY, positionMode, onResize, onDeleteComponent, onCopyComponent, onLockToggle, dropTarget, domRects,
+    onResizeStart, onResizeEnd, isScrolling, isDragging, isResizing,
   } = props;
 
   // 当前选中组件实例
@@ -110,7 +145,7 @@ export function BemTools(props: BemToolsProps) {
         overflow: "visible",
       }}
     >
-      {/* 组件悬停检测工具 */}
+      {/* 组件悬停检测工具 — 拖拽/滚动/缩放时抑制显示，参考 vp.scrolling + dragon.dragging */}
       <BorderDetecting
         hoveredId={hoveredId}
         components={components}
@@ -121,9 +156,25 @@ export function BemTools(props: BemToolsProps) {
         cellWidth={cellWidth}
         cellHeight={cellHeight}
         positionMode={positionMode}
+        isScrolling={isScrolling}
+        isDragging={isDragging}
+        isResizing={isResizing}
       />
 
-      {/* 组件选中工具 — 工具栏按钮由 buildAvailableActions 动态驱动 */}
+      {/* 容器边界指示器 — 拖拽时显示目标容器边界 */}
+      <BorderContainer
+        dropTarget={dropTarget}
+        components={components}
+        columnWidth={columnWidth}
+        gridGap={gridGap}
+        pagePadding={pagePadding}
+        cellWidth={cellWidth}
+        cellHeight={cellHeight}
+        positionMode={positionMode}
+        domRects={domRects}
+      />
+
+      {/* 组件选中工具 — 工具栏按钮由 buildAvailableActions 动态驱动，拖拽中隐藏工具栏 */}
       <BorderSelecting
         components={components}
         selectedIds={selectedIds}
@@ -137,6 +188,7 @@ export function BemTools(props: BemToolsProps) {
         onDeleteComponent={onDeleteComponent}
         onCopyComponent={onCopyComponent}
         onLockToggle={onLockToggle}
+        isDragging={isDragging}
       />
 
       {/* 组件缩放工具 */}
@@ -150,6 +202,8 @@ export function BemTools(props: BemToolsProps) {
         zoom={zoom}
         positionMode={positionMode}
         onResize={onResize}
+        onResizeStart={onResizeStart}
+        onResizeEnd={onResizeEnd}
       />
 
       {/* 拖拽插入位置指示器 */}

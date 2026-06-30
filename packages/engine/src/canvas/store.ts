@@ -31,6 +31,7 @@ import { createComponentCrudSlice } from "./store/component-crud";
 import { createSelectionSlice } from "./store/selection";
 import { createClipboardSlice } from "./store/clipboard";
 import { createComponentOpsSlice } from "./store/component-ops";
+import { domRectsInitialState, createDomRectsSlice } from "./store/dom-rects";
 import { generateId as genId } from "./store/tree-ops";
 
 // 全局 NodeManager 和 SelectionManager 实例
@@ -54,9 +55,14 @@ export const useCanvasStore = create<CanvasState & CanvasActions>((set, get) => 
 
   // 视口初始状态
   ...viewportInitialState,
+  // DomRects 初始状态
+  ...domRectsInitialState,
 
   // ========== 视口操作 ==========
   ...createViewportSlice(set, get),
+
+  // ========== DOM Rects 注册表 ==========
+  ...createDomRectsSlice(set as any, get as any),
 
   // ========== 组件移动/缩放 ==========
   moveComponent: (id: string, x: number, y: number) => {

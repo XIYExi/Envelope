@@ -4,61 +4,105 @@
  * 当鼠标悬浮在某个组件上时，在其上方绘制蓝色虚线边框 + 组件名标签。
  * 已选中的组件不显示悬停框（选中框已提供视觉反馈）。
  *
+ * 参考 lowcode-engine `builtin-simulator/bem-tools/border-detecting.tsx`：
+ * - 拖拽/画布滚动时抑制悬停显示（onHoverHook / viewport.scrolling 等效检查）
+ * - 被锁定祖先包裹的子组件显示锁定状态标签
+ *
  * @author xiye
- * @version 1.0.0
- * @date 2026-06-29
+ * @version 2.0.0
+ * @date 2026-06-30
+ * @reference lowcode-engine-main/packages/designer/src/builtin-simulator/bem-tools/border-detecting.tsx
  */
 "use client";
 
+import React from "react";
 import type { CanvasComponent } from "../types";
 import { computePixelRect } from "./shared";
 
 interface BorderDetectingProps {
-  /** 当前鼠标悬停所在的组件 ID */
   hoveredId: string | null;
-  /** 画布上所有组件实例 */
   components: CanvasComponent[];
-  /** 已选中组件 ID 列表（已选中的不重复显示悬停框） */
   selectedIds: string[];
-  /** 每列宽度（px） */
   columnWidth: number;
-  /** 网格间距（px） */
   gridGap: number;
-  /** 页面内边距（px） */
   pagePadding: number;
-  /** 单元格基准宽度（px） */
   cellWidth: number;
-  /** 单元格基准高度（px） */
   cellHeight: number;
-  /** 布局模式 */
   positionMode: "grid" | "free";
+  /** 画布是否正在滚动/平移中（拖拽平移时抑制悬停框，参考 vp.scrolling） */
+  isScrolling?: boolean;
+  /** 是否正在拖拽组件（拖拽过程中抑制悬停框，参考 dragon.dragging） */
+  isDragging?: boolean;
+  /** 是否正在缩放组件（缩放过程中抑制悬停框，参考 dragResizeEngine.isResizing） */
+  isResizing?: boolean;
+}
+
+/**
+ * 检查 hover 的组件或其任意祖先是否被锁定。
+ * 锁定属性在 CanvasComponent 层（非 ComponentNode），需要沿根组件链查找。
+ * 参考 lowcode-engine getClosestNode(current, n => n.isLocked) 的等效逻辑。
+ */
+function findLockedAncestor(
+  compId: string,
+  comps: CanvasComponent[],
+): string | null {
+  // 检查根组件是否被锁定
+  const rootComp = comps.find(c => c.id === compId);
+  if (rootComp?.locked) {
+    return compId;
+  }
+
+  // 检查是否为某个容器组件的嵌套子节点，查找其根组件是否被锁定
+  function findRootForNode(nodeId: string, rootNode: CanvasComponent["node"]): string | null {
+    if (rootNode.id === nodeId) return rootNode.id;
+    for (const child of rootNode.children ?? []) {
+      const found = findRootForNode(nodeId, child);
+      if (found) return rootNode.id;
+    }
+    return null;
+  }
+
+  for (const comp of comps) {
+    const rootId = findRootForNode(compId, comp.node);
+    if (rootId && rootId !== compId) {
+      // 找到了包含该节点的根组件
+      if (comp.locked) return comp.id;
+    }
+  }
+  return null;
 }
 
 export function BorderDetecting({
   hoveredId, components, selectedIds,
   columnWidth, gridGap, pagePadding, cellWidth, cellHeight, positionMode,
+  isScrolling, isDragging, isResizing,
 }: BorderDetectingProps) {
-  // 没有悬停目标 → 不渲染
-  if (!hoveredId)
-    return null;
+  // 无悬停目标 → 不渲染
+  if (!hoveredId) return null;
 
-  // 如果悬停的组件已经被选中，用选中框代替悬停框
-  if (selectedIds.includes(hoveredId))
-    return null;
+  // 画布滚动/平移中 → 抑制悬停框，避免闪烁（参考 vp.scrolling 检查）
+  if (isScrolling) return null;
 
-  // 查找被悬停的组件实例
+  // 组件拖拽中 → 抑制悬停框，避免闪烁（参考 dragon.dragging 检查）
+  if (isDragging) return null;
+
+  // 组件缩放中 → 抑制悬停框，避免闪烁（参考 dragResizeEngine.isResizing）
+  if (isResizing) return null;
+
+  // 已选中 → 选中框已提供视觉反馈，不重复显示悬停框
+  if (selectedIds.includes(hoveredId)) return null;
+
   const comp = components.find(c => c.id === hoveredId);
-  // 找不到或已隐藏 → 不渲染
-  if (!comp || comp.hidden)
-    return null;
+  if (!comp || comp.hidden) return null;
 
-  // 计算组件的像素坐标和尺寸
   const rect = computePixelRect(comp.position, columnWidth, gridGap, pagePadding, cellWidth, cellHeight, positionMode);
-  if (!rect)
-    return null;
+  if (!rect) return null;
+
+  // 查找最近锁定祖先（参考 getClosestNode → n.isLocked）
+  const lockedAncestorId = findLockedAncestor(hoveredId, components);
+  const isDescendantOfLocked = !!lockedAncestorId;
 
   return (
-    // 悬停框：蓝色虚线边框，覆盖在组件上方
     <div
       className="bem-border-detecting"
       style={{
@@ -67,14 +111,13 @@ export function BorderDetecting({
         top: rect.y,
         width: rect.width,
         height: rect.height,
-        border: "1.5px dashed #3b82f6",
+        border: isDescendantOfLocked ? "1.5px dashed #f59e0b" : "1.5px dashed #3b82f6",
         borderRadius: "6px",
         pointerEvents: "none",
         zIndex: 10,
         transition: "all 0.08s ease-out",
       }}
     >
-      {/* 悬停标签：左上角显示组件名称或类型 */}
       <div
         className="bem-border-detecting-label"
         style={{
@@ -84,7 +127,7 @@ export function BorderDetecting({
           fontSize: 9,
           fontWeight: 600,
           color: "#fff",
-          backgroundColor: "rgba(59,130,246,0.85)",
+          backgroundColor: isDescendantOfLocked ? "rgba(245,158,11,0.85)" : "rgba(59,130,246,0.85)",
           padding: "1px 6px",
           borderRadius: 3,
           lineHeight: "16px",
@@ -94,6 +137,23 @@ export function BorderDetecting({
       >
         {comp.node.name?.trim() || comp.node.type}
       </div>
+      {/* 被锁定祖先包裹时显示锁定状态标签（参考 lc-borders-status） */}
+      {isDescendantOfLocked && (
+        <div
+          className="bem-border-detecting-status"
+          style={{
+            position: "absolute",
+            left: 4,
+            top: 20,
+            fontSize: 8,
+            fontWeight: 500,
+            color: "#f59e0b",
+            pointerEvents: "none",
+          }}
+        >
+          🔒 已锁定
+        </div>
+      )}
     </div>
   );
 }

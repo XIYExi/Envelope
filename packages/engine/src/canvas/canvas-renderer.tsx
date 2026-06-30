@@ -20,7 +20,7 @@
 import React, { forwardRef, useCallback, useMemo, useRef, useState, useEffect, type CSSProperties, type MouseEvent as RMouseEvent } from "react";
 import { cn, CELL_HEIGHT, CELL_WIDTH, RULER_SIZE, getPreviewTailwindClasses } from "./renderer-utils";
 import type { CanvasComponent, DropTargetInfo } from "./types";
-import { isContainerType } from "../shared/canvas-utils";
+import { isContainerType, computeColumnWidth } from "../shared/canvas-utils";
 import { Minimap } from "./minimap";
 import { HorizontalRuler, VerticalRuler } from "./ruler";
 import { CanvasComponentItem } from "./canvas-component-item";
@@ -29,6 +29,35 @@ import { BreadcrumbBar } from "./breadcrumb-bar";
 import { computeAlignGuides, SmartGuideOverlay } from "./smart-guides";
 import { MarqueeOverlay } from "./marquee-overlay";
 import { BemTools } from "./bem-tools";
+import { useCanvasStore } from "./store";
+
+/** 采集 DOM 元素矩形并上报 store，坐标归一化到 canvas-grid 局部未缩放空间 */
+function collectDomRects(gridContainer: HTMLElement, zoom: number): Array<{ id: string; rect: { top: number; left: number; width: number; height: number; bottom: number; right: number } }> {
+  const entries: Array<{ id: string; rect: any }> = [];
+  const comps = gridContainer.querySelectorAll('[data-canvas-comp="true"]');
+  const children = gridContainer.querySelectorAll('[data-canvas-child]');
+  const all = [...comps, ...children] as HTMLElement[];
+  if (all.length === 0) return entries;
+  const gridRect = gridContainer.getBoundingClientRect();
+  const z = zoom > 0 ? zoom : 1;
+  for (const el of all) {
+    const cid = el.getAttribute('data-canvas-comp-id') ?? el.getAttribute('data-canvas-child');
+    if (!cid) continue;
+    const r = el.getBoundingClientRect();
+    entries.push({
+      id: cid,
+      rect: {
+        top:    (r.top    - gridRect.top)    / z,
+        left:   (r.left   - gridRect.left)   / z,
+        width:   r.width                      / z,
+        height:  r.height                     / z,
+        bottom: (r.bottom - gridRect.top)    / z,
+        right:  (r.right  - gridRect.left)   / z,
+      },
+    });
+  }
+  return entries;
+}
 
 /**
  * CanvasRenderer 组件的 Props
@@ -92,6 +121,14 @@ export interface CanvasRendererProps {
   onLockToggle?: (id: string) => void;
   /** 拖拽插入位置信息 */
   dropTarget?: DropTargetInfo | null;
+  /** 缩放开始回调（禁用悬停检测） */
+  onResizeStart?: () => void;
+  /** 缩放结束回调（恢复悬停检测） */
+  onResizeEnd?: () => void;
+  /** 是否正在拖拽组件 */
+  isDragging?: boolean;
+  /** 是否正在缩放中 */
+  isResizing?: boolean;
 }
 
 /**
@@ -106,7 +143,7 @@ export const CanvasRenderer = forwardRef<HTMLDivElement, CanvasRendererProps>(
     zoom, viewportWidth, panX, panY, onPan, gridCols, gridGap,
     pageBackground, pagePadding, pageMaxWidth, minRowHeight, dragAlignInfo,
     positionMode = "grid",
-    onDeleteComponent, onCopyComponent, onLockToggle, dropTarget,
+    onDeleteComponent, onCopyComponent, onLockToggle, dropTarget, onResizeStart, onResizeEnd, isDragging, isResizing,
   }, ref) {
     const activeNodeId = activeNodeIdProp ?? null;
     const containerRef = useRef<HTMLDivElement>(null);
@@ -128,13 +165,71 @@ export const CanvasRenderer = forwardRef<HTMLDivElement, CanvasRendererProps>(
     onClearSelectionRef.current = onClearSelection;
 
     const columnWidth = useMemo(() => {
-      const maxW = typeof pageMaxWidth === "number" && pageMaxWidth > 0 ? pageMaxWidth : viewportWidth;
-      const effectiveWidth = Math.min(viewportWidth, maxW);
-      const padding = typeof pagePadding === "number" ? pagePadding : 0;
-      const contentWidth = effectiveWidth - 2 * padding;
-      const gap = gridGap ?? 0;
-      return Math.max(1, (contentWidth - (gridCols - 1) * gap) / gridCols);
+      // 网格实际宽度 = viewportWidth - 标尺宽度(20px)，CSS Grid 的 1fr 按此宽度计算
+      const actualGridWidth = viewportWidth - RULER_SIZE;
+      return computeColumnWidth({ viewportWidth: actualGridWidth, pageMaxWidth: pageMaxWidth ?? null, pagePadding: pagePadding ?? 0, gridCols, gridGap: gridGap ?? 0 });
     }, [viewportWidth, pageMaxWidth, pagePadding, gridCols, gridGap]);
+
+    // ═══ DOM Rects ResizeObserver — 实时采集组件实际像素位置 ═══
+    const observerRef = useRef<ResizeObserver | null>(null);
+    useEffect(() => {
+      const gridEl = ref && 'current' in ref ? (ref as React.RefObject<HTMLDivElement>).current : null;
+      if (!gridEl) return;
+      const canvasBg = gridEl.querySelector('[data-canvas-bg="true"]') as HTMLElement | null;
+      if (!canvasBg) return;
+      const grid = canvasBg.querySelector('[data-testid="canvas-grid"]') as HTMLElement | null;
+      if (!grid) return;
+
+      const observer = new ResizeObserver(() => {
+        const entries = collectDomRects(grid, zoom);
+        if (entries.length > 0) {
+          useCanvasStore.getState().batchRegisterDomRects(entries as any);
+        }
+      });
+      observerRef.current = observer;
+
+      observer.observe(grid);
+      observer.observe(canvasBg);
+      for (const el of grid.querySelectorAll<HTMLElement>('[data-canvas-comp="true"], [data-canvas-child]')) {
+        observer.observe(el);
+        el.setAttribute('data-ro-observed', '1');
+      }
+
+      // 初始采集一次
+      const initial = collectDomRects(grid, zoom);
+      if (initial.length > 0) {
+        useCanvasStore.getState().batchRegisterDomRects(initial as any);
+      }
+
+      return () => {
+        observer.disconnect();
+        observerRef.current = null;
+      };
+    }, [components.length, zoom, panX, panY, gridCols, gridGap, pagePadding, positionMode]);
+
+    // 组件增减时同步观察新 DOM 节点
+    useEffect(() => {
+      if (!observerRef.current) return;
+      const canvasBg = (ref as React.RefObject<HTMLDivElement>).current?.querySelector('[data-canvas-bg="true"]') as HTMLElement | null;
+      if (!canvasBg) return;
+      const grid = canvasBg.querySelector('[data-testid="canvas-grid"]') as HTMLElement | null;
+      if (!grid) return;
+      let added = false;
+      for (const el of grid.querySelectorAll<HTMLElement>('[data-canvas-comp="true"]:not([data-ro-observed]), [data-canvas-child]:not([data-ro-observed])')) {
+        observerRef.current.observe(el);
+        el.setAttribute('data-ro-observed', '1');
+        added = true;
+      }
+      if (added) {
+        const entries = collectDomRects(grid, zoom);
+        if (entries.length > 0) {
+          useCanvasStore.getState().batchRegisterDomRects(entries as any);
+        }
+      }
+    }, [components]);
+
+    // 从 store 订阅 domRects（实时 DOM 矩形）
+    const domRects = useCanvasStore((s) => s.domRects);
 
     // B10: 拖拽对齐辅助线计算
     const alignGuides = useMemo(() => {
@@ -301,6 +396,8 @@ export const CanvasRenderer = forwardRef<HTMLDivElement, CanvasRendererProps>(
                 zoom={zoom}
                 panX={panX}
               />
+              {/* BEM Tools 坐标基准容器：Grid 和 BEM Tools 共享同一坐标系 */}
+              <div style={{ position: "relative" }}>
               <div
                 data-testid="canvas-grid"
                 className={cn("relative", positionMode === "free" ? "" : "grid")}
@@ -405,7 +502,16 @@ export const CanvasRenderer = forwardRef<HTMLDivElement, CanvasRendererProps>(
                 onCopyComponent={onCopyComponent ?? (() => { })}
                 onLockToggle={onLockToggle ?? (() => { })}
                 dropTarget={dropTarget ?? null}
+                domRects={domRects}
+                panX={panX}
+                panY={panY}
+                onResizeStart={onResizeStart}
+                onResizeEnd={onResizeEnd}
+                isScrolling={isPanning}
+                isDragging={isDragging}
+                isResizing={isResizing}
               />
+              </div>
             </div>
           </div>
         </div>

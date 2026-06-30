@@ -20,8 +20,9 @@ import type { DragStartEvent, DragMoveEvent } from "@dnd-kit/core";
 import { CanvasScroller } from "./scroller";
 import { Detecting } from "./detecting";
 import { Location } from "./location";
-import { CANVAS_CELL_WIDTH, CANVAS_CELL_HEIGHT } from "../../shared/canvas-utils";
-import type { CanvasComponent, DropTargetInfo } from "../types";
+import type { DragSensor } from "./sensor";
+import { CANVAS_CELL_WIDTH, CANVAS_CELL_HEIGHT, computeColumnWidth } from "../../shared/canvas-utils";
+import type { CanvasComponent, DropTargetInfo, DomRectEntry } from "../types";
 
 /**
  * 拖拽上下文：从 DragStartEvent 中解析出的拖拽信息
@@ -96,6 +97,9 @@ export class Dragon {
   /** 插入位置计算引擎 */
   readonly location: Location;
 
+  /** 感应器列表（Phase 1 占位，未来支持多画布） */
+  private sensors: DragSensor[] = [];
+
   constructor(opts?: { scroller?: CanvasScroller; detecting?: Detecting }) {
     this.scroller = opts?.scroller ?? new CanvasScroller();
     this.detecting = opts?.detecting ?? new Detecting();
@@ -117,6 +121,17 @@ export class Dragon {
   /** 当前拖拽的素材名称或组件 ID */
   get activeId(): string | null {
     return this._activeId;
+  }
+
+  /** 注册拖拽感应器（未来多模拟器支持） */
+  addSensor(sensor: DragSensor): void {
+    this.sensors.push(sensor);
+  }
+
+  /** 移除拖拽感应器 */
+  removeSensor(sensor: DragSensor): void {
+    const i = this.sensors.indexOf(sensor);
+    if (i > -1) this.sensors.splice(i, 1);
   }
 
   // ========== 拖拽生命周期 ==========
@@ -163,6 +178,8 @@ export class Dragon {
       selectedIds: string[];
       gridCols: number;
       positionMode: "grid" | "free";
+      domRects?: Record<string, DomRectEntry>;
+      gridRect?: DOMRect;
     },
     viewport: {
       width: number;
@@ -178,16 +195,16 @@ export class Dragon {
       return { alignInfo: null, dropTarget: null };
     }
 
-    const { zoom, components, selectedIds, gridCols, positionMode } = state;
+    const { zoom, components, selectedIds, gridCols, positionMode, domRects, gridRect } = state;
 
     // 1. 计算对齐信息（delta → 网格坐标）
-    const alignInfo = this.computeAlignInfo(event, zoom, components, gridCols);
+    const alignInfo = this.computeAlignInfo(event, zoom, components, gridCols, viewport.columnWidth);
 
     // 2. 计算插入位置（通过 Location 引擎）
     //    需要将全局鼠标坐标转换为画布内部坐标
     const dropTarget = this.computeDropTarget(
       event, components, selectedIds,
-      viewport, positionMode, viewportRect,
+      viewport, positionMode, viewportRect, domRects, gridRect, zoom,
     );
 
     return { alignInfo, dropTarget };
@@ -212,20 +229,23 @@ export class Dragon {
   /**
    * 将拖拽的像素偏移量转换为网格坐标增量
    *
-   * 公式：gridUnits = deltaPixels / (cellSize * zoom)
+   * 公式：gridUnits = deltaPixels / (columnWidth * zoom)
    *
    * @param deltaX - dnd-kit event.delta.x（像素）
    * @param deltaY - dnd-kit event.delta.y（像素）
    * @param zoom - 当前缩放比例
+   * @param columnWidth - 实际 CSS Grid 列宽（px），默认 CANVAS_CELL_WIDTH
    * @param origin - 起始网格坐标（可选，有则返回绝对坐标）
    */
   deltaToGrid(
     deltaX: number,
     deltaY: number,
     zoom: number,
+    columnWidth?: number,
     origin?: { x: number; y: number },
   ): { dx: number; dy: number } {
-    const dx = deltaX / (CANVAS_CELL_WIDTH * zoom);
+    const colW = (columnWidth && columnWidth > 0) ? columnWidth : CANVAS_CELL_WIDTH;
+    const dx = deltaX / (colW * zoom);
     const dy = deltaY / (CANVAS_CELL_HEIGHT * zoom);
 
     if (origin) {
@@ -245,13 +265,16 @@ export class Dragon {
     zoom: number,
     components: CanvasComponent[],
     gridCols: number,
+    columnWidth: number,
   ): { gridX: number; gridY: number; gridWidth: number; gridHeight: number } | null {
     const materName = this._dragData?.materialName as string | undefined;
     const compId = this._dragData?.componentId as string | undefined;
 
+    const colW = (columnWidth && columnWidth > 0) ? columnWidth : CANVAS_CELL_WIDTH;
+
     if (materName) {
       // 素材拖拽：默认宽 3 高 2
-      const gx = Math.max(1, Math.round(event.delta.x / (CANVAS_CELL_WIDTH * zoom)));
+      const gx = Math.max(1, Math.round(event.delta.x / (colW * zoom)));
       const gy = Math.max(1, Math.round(event.delta.y / (CANVAS_CELL_HEIGHT * zoom)));
       return { gridX: gx, gridY: gy, gridWidth: 3, gridHeight: 2 };
     }
@@ -260,8 +283,8 @@ export class Dragon {
       // 已有组件拖拽：在起始网格坐标上叠加偏移
       const comp = components.find(c => c.id === compId);
       if (!comp) return null;
-      const gx = comp.position.x + event.delta.x / (CANVAS_CELL_WIDTH * zoom);
-      const gy = comp.position.y + event.delta.y / (CANVAS_CELL_HEIGHT * zoom);
+      const gx = Math.round(comp.position.x + event.delta.x / (colW * zoom));
+      const gy = Math.round(comp.position.y + event.delta.y / (CANVAS_CELL_HEIGHT * zoom));
       return { gridX: gx, gridY: gy, gridWidth: comp.position.width, gridHeight: comp.position.height };
     }
 
@@ -281,18 +304,22 @@ export class Dragon {
     viewport: { width: number; padding: number; gap: number; cellWidth: number; cellHeight: number; columnWidth: number },
     positionMode: "grid" | "free",
     viewportRect?: DOMRect,
+    domRects?: Record<string, DomRectEntry>,
+    gridRect?: DOMRect,
+    zoom?: number,
   ): DropTargetInfo | null {
     const me = event.activatorEvent as MouseEvent;
     const currentMouseX = me.clientX + event.delta.x;
     const currentMouseY = me.clientY + event.delta.y;
 
-    // 如果有视口矩形，将全局坐标转换为画布内部坐标
+    // 将全局鼠标坐标归一化到 canvas-grid 局部未缩放空间
+    // 与 collectDomRects 产出的 domRects 坐标系统一致
     let canvasX = currentMouseX;
     let canvasY = currentMouseY;
-    if (viewportRect) {
-      const panX = 0;  // pan 偏移由外部传递
-      canvasX = currentMouseX - viewportRect.left;
-      canvasY = currentMouseY - viewportRect.top;
+    if (gridRect) {
+      const z = (zoom && zoom > 0) ? zoom : 1;
+      canvasX = (currentMouseX - gridRect.left) / z;
+      canvasY = (currentMouseY - gridRect.top) / z;
     }
 
     return this.location.compute({
@@ -307,6 +334,7 @@ export class Dragon {
       cellWidth: viewport.cellWidth,
       positionMode,
       selectedIds,
+      domRects,
     });
   }
 }

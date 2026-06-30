@@ -228,7 +228,7 @@ describe("CanvasRenderer（React）", () => {
     // - 横向 1 格 = 80px（CELL_WIDTH）
     // - 纵向 1 格 = 40px（CELL_HEIGHT）
     fireEvent.pointerDown(handle!, { pointerId: 1, clientX: 0, clientY: 0 });
-    fireEvent.pointerMove(handle!, { pointerId: 1, clientX: 80, clientY: 40 });
+    fireEvent.pointerMove(document, { pointerId: 1, clientX: 80, clientY: 40 });
 
     await waitFor(() => {
       expect(onResize).toHaveBeenCalled();
@@ -237,7 +237,7 @@ describe("CanvasRenderer（React）", () => {
     // se 方向：只会增加 width/height，不会改变 x/y
     expect(onResize).toHaveBeenLastCalledWith("box-1", 3, 3, 1, 1);
 
-    fireEvent.pointerUp(handle!, { pointerId: 1 });
+    fireEvent.pointerUp(document, { pointerId: 1 });
   });
 
   it("缩放手柄使用 window 监听退化路径（关键分支）", async () => {
@@ -266,7 +266,7 @@ describe("CanvasRenderer（React）", () => {
 
     // 通过添加 window 级事件来验证退化路径
     fireEvent.pointerDown(handle!, { pointerId: 1, clientX: 0, clientY: 0 });
-    fireEvent.pointerMove(window, { pointerId: 1, clientX: 80, clientY: 40 });
+    fireEvent.pointerMove(document, { pointerId: 1, clientX: 80, clientY: 40 });
 
     await waitFor(() => {
       expect(onResize).toHaveBeenCalled();
@@ -274,6 +274,6 @@ describe("CanvasRenderer（React）", () => {
 
     expect(onResize).toHaveBeenLastCalledWith("box-1", 3, 3, 1, 1);
 
-    fireEvent.pointerUp(window, { pointerId: 1 });
+    fireEvent.pointerUp(document, { pointerId: 1 });
   });
 });

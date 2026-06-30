@@ -17,6 +17,22 @@ import type { ComponentNode } from "../schemas/page.schema";
 import type { Patch } from "immer";
 
 /**
+ * 组件 DOM 矩形条目（替代 DOMRect 纯数据表示）
+ *
+ * 用于 Zustand store 中存储画布组件的实际 DOM 像素矩形。
+ * 由 CanvasRenderer 的 ResizeObserver 批量采集，
+ * 供 BEM Tools / OffsetObserver / Location 引擎查询。
+ */
+export interface DomRectEntry {
+  top: number;
+  left: number;
+  width: number;
+  height: number;
+  bottom: number;
+  right: number;
+}
+
+/**
  * 画布组件
  *
  * 将 ComponentNode 与画布上的位置和尺寸绑定。
@@ -147,6 +163,9 @@ export interface CanvasState {
   /** 拖拽插入位置信息（由 Dragon.onDragMove 计算，InsertionView 消费） */
   dropTarget: DropTargetInfo | null;
 
+  /** 画布组件 DOM 矩形注册表（id → 实际像素矩形）。由 CanvasRenderer 的 ResizeObserver 批量更新，供 BEM Tools 和 Location 引擎查询。 */
+  domRects: Record<string, DomRectEntry>;
+
   canUndo: boolean;
   canRedo: boolean;
   historyPast: HistoryEntry[];
@@ -245,6 +264,13 @@ export interface CanvasActions {
 
   /** 设置拖拽插入位置（由 Dragon.onDragMove 调用） */
   setDropTarget: (target: DropTargetInfo | null) => void;
+
+  /** 注册单个组件 DOM 矩形 */
+  registerDomRect: (id: string, rect: DomRectEntry) => void;
+  /** 注销单个组件 DOM 矩形 */
+  unregisterDomRect: (id: string) => void;
+  /** 批量注册多个组件 DOM 矩形 */
+  batchRegisterDomRects: (entries: Array<{ id: string; rect: DomRectEntry }>) => void;
 
   undo: () => void;
   redo: () => void;

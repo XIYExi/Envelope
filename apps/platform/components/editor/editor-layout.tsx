@@ -16,7 +16,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, memo } from "react";
 import { useSearchParams } from "next/navigation";
 import { DndContext, useDroppable, pointerWithin, DragOverlay, type DragEndEvent, type DragMoveEvent, type DragStartEvent, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
 import { createDefaultRegistry, NestingValidator } from "@envelope/materials";
-import { useCanvasStore, createComponentNode, CanvasRenderer, VIEWPORT_WIDTHS, CANVAS_CELL_SIZE, CANVAS_CELL_HEIGHT, isContainerType, findNodeLocation, Dragon, CanvasScroller, PluginManager, createModuleEventBus, EventBus, type CanvasSnapshot, type ComponentNode, type DropTargetInfo } from "@envelope/engine";
+import { useCanvasStore, createComponentNode, CanvasRenderer, VIEWPORT_WIDTHS, CANVAS_CELL_SIZE, CANVAS_CELL_HEIGHT, isContainerType, findNodeLocation, Dragon, CanvasScroller, PluginManager, createModuleEventBus, EventBus, computeColumnWidth, RULER_SIZE, type CanvasSnapshot, type ComponentNode, type DropTargetInfo } from "@envelope/engine";
 import type { EditorEventMap } from "@envelope/engine";
 import { useEditorStore } from "@/stores/editor";
 import { useProjectPagesStore, componentNodesToCanvasComponents } from "@/stores/project-pages";
@@ -43,7 +43,7 @@ import {
   AlertDialogCancel,
 } from "@/components/ui/alert-dialog";
 import { KeyboardShortcutsDialog } from "./keyboard-shortcuts-dialog";
-import { toast } from "@/components/ui/use-toast";
+import { toast } from "sonner";
 
 /**
  * 画布放置区域组件
@@ -51,8 +51,9 @@ import { toast } from "@/components/ui/use-toast";
  * 注册为 DnD Kit 的可放置区域，接收从素材面板拖来的组件。
  * 处理 Ctrl+滚轮缩放，渲染 CanvasRenderer 并传递所有画布状态。
  */
-const CanvasDropZone = memo(function CanvasDropZone({ dragAlignInfo }: {
+const CanvasDropZone = memo(function CanvasDropZone({ dragAlignInfo, dragon }: {
   dragAlignInfo: { gridX: number; gridY: number; gridWidth: number; gridHeight: number } | null;
+  dragon: Dragon | null;
 }) {
   const {
     components, selectedIds, activeNodeId, selectComponent, clearSelection,
@@ -63,6 +64,7 @@ const CanvasDropZone = memo(function CanvasDropZone({ dragAlignInfo }: {
   } = useCanvasStore();
 
   const [hoveredId, setHoveredId] = useState<string | null>(null);
+  const [isResizing, setIsResizing] = useState(false);
 
   const viewportWidth = VIEWPORT_WIDTHS[viewport];
   const dropZoneRef = useRef<HTMLDivElement | null>(null);
@@ -154,7 +156,7 @@ const CanvasDropZone = memo(function CanvasDropZone({ dragAlignInfo }: {
         onDoubleClickComponent={handleDoubleClickComponent}
         onExitChildEdit={() => useCanvasStore.getState().exitChildEdit()}
         onResize={resizeComponent}
-        onHover={setHoveredId}
+        onHover={(id) => { if (!isResizing) setHoveredId(id); }}
         zoom={zoom}
         viewportWidth={viewportWidth}
         panX={panX}
@@ -168,6 +170,10 @@ const CanvasDropZone = memo(function CanvasDropZone({ dragAlignInfo }: {
         minRowHeight={minRowHeight}
         dragAlignInfo={dragAlignInfo}
         positionMode={positionMode}
+        onResizeStart={() => { setIsResizing(true); if (dragon) dragon.detecting.enable = false; }}
+        onResizeEnd={() => { setIsResizing(false); if (dragon) dragon.detecting.enable = true; }}
+        isDragging={dragon?.isDragging ?? false}
+        isResizing={isResizing}
       />
     </div>
   );
@@ -394,8 +400,11 @@ export function EditorLayout() {
         if (overId === "canvas-drop-zone") {
           const comp = curComponents.find((c) => c.id === draggedNodeId);
           if (comp) {
-            const newX = comp.position.x + delta.x / (CANVAS_CELL_SIZE * curZoom);
-            const newY = comp.position.y + delta.y / (CANVAS_CELL_HEIGHT * curZoom);
+            const cs = useCanvasStore.getState();
+            const viewportW = VIEWPORT_WIDTHS[cs.viewport];
+            const dynColW = computeColumnWidth({ viewportWidth: viewportW - RULER_SIZE, pageMaxWidth: cs.pageMaxWidth, pagePadding: cs.pagePadding ?? 0, gridCols: cs.gridCols, gridGap: cs.gridGap });
+            const newX = Math.round(comp.position.x + delta.x / (dynColW * curZoom));
+            const newY = Math.round(comp.position.y + delta.y / (CANVAS_CELL_HEIGHT * curZoom));
             moveComponent(draggedNodeId, newX, newY);
           }
           return;
@@ -429,10 +438,8 @@ export function EditorLayout() {
               (name) => registry.get(name),
             );
             if (!allowed) {
-              toast({
-                title: "无法放置",
-                description: `"${materialName}" 不能放在 "${containerComp.node.type}" 内部`,
-                variant: "destructive",
+              toast.error(`"${materialName}" 不能放在 "${containerComp.node.type}" 内部`, {
+                description: `无法放置`,
               });
               return;
             }
@@ -440,8 +447,11 @@ export function EditorLayout() {
         }
 
         const node = createComponentNode(materialName, category, { ...defaultProps });
-        // B9: 直接计算位置后一次性插入，避免先 append 末尾再 moveComponent 的两步闪跳
-        const x = Math.max(1, Math.round(delta.x / (CANVAS_CELL_SIZE * curZoom)));
+        // 使用动态列宽计算网格坐标（而非 CANVAS_CELL_SIZE=80 硬编码）
+        const cs = useCanvasStore.getState();
+        const viewportW = VIEWPORT_WIDTHS[cs.viewport];
+        const dynColW = computeColumnWidth({ viewportWidth: viewportW - RULER_SIZE, pageMaxWidth: cs.pageMaxWidth, pagePadding: cs.pagePadding ?? 0, gridCols: cs.gridCols, gridGap: cs.gridGap });
+        const x = Math.max(1, Math.round(delta.x / (dynColW * curZoom)));
         const y = Math.max(1, Math.round(delta.y / (CANVAS_CELL_HEIGHT * curZoom)));
         insertNode(node, {
           parentId: null,
@@ -707,11 +717,12 @@ export function EditorLayout() {
 
     const cs = useCanvasStore.getState();
     const viewportW = VIEWPORT_WIDTHS[cs.viewport];
-    const maxW = typeof cs.pageMaxWidth === "number" && cs.pageMaxWidth > 0 ? cs.pageMaxWidth : viewportW;
-    const effectiveWidth = Math.min(viewportW, maxW);
     const padding = typeof cs.pagePadding === "number" ? cs.pagePadding : 0;
-    const contentWidth = effectiveWidth - 2 * padding;
-    const colW = Math.max(1, (contentWidth - (cs.gridCols - 1) * cs.gridGap) / cs.gridCols);
+    const colW = computeColumnWidth({ viewportWidth: viewportW - RULER_SIZE, pageMaxWidth: cs.pageMaxWidth, pagePadding: padding, gridCols: cs.gridCols, gridGap: cs.gridGap });
+
+    // 获取 canvas-grid 的 bounding rect 用于 Location 坐标归一化
+    const gridEl = document.querySelector<HTMLElement>('[data-testid="canvas-grid"]');
+    const gridRect = gridEl?.getBoundingClientRect();
 
     const result = dragon.onDragMove(
       event,
@@ -721,6 +732,8 @@ export function EditorLayout() {
         selectedIds: cs.selectedIds,
         gridCols: cs.gridCols,
         positionMode: cs.positionMode,
+        domRects: cs.domRects,
+        gridRect,
       },
       {
         width: viewportW,
@@ -774,7 +787,7 @@ export function EditorLayout() {
               <ResizeHandle edge="right" panelWidth={leftPanelWidth} collapsed={false} minWidth={160} maxWidth={400} onResize={(w) => setLeftPanelWidth?.(w)} />
             )}
             <MaterialPanel collapsed={leftPanelCollapsed} onAddMaterial={handleAddMaterial} />
-            <CanvasDropZone dragAlignInfo={dragAlignInfo} />
+            <CanvasDropZone dragAlignInfo={dragAlignInfo} dragon={dragon} />
             {!rightPanelCollapsed && (
               <ResizeHandle edge="left" panelWidth={rightPanelWidth} collapsed={false} minWidth={200} maxWidth={480} onResize={(w) => setRightPanelWidth?.(w)} />
             )}
