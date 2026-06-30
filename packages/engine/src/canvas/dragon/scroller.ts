@@ -110,16 +110,16 @@ export class CanvasScroller {
    * 计算鼠标到画布四边的距离，如果进入阈值区域则启动滚动动画，
    * 否则不做任何操作。
    *
-   * @param clientX - 鼠标在视口中的 X 坐标（clientX）
-   * @param clientY - 鼠标在视口中的 Y 坐标（clientY）
+   * @param clientX - 鼠标在视口中的 X 坐标（clientX/globalX）
+   * @param clientY - 鼠标在视口中的 Y 坐标（clientY/globalY）
    * @param viewport - 可滚动视口的 DOMRect（getBoundingClientRect）
-   * @param scrollable - 可滚动容器的抽象接口
+   * @param scrollable - 可滚动容器的抽象接口（onScroll 模式下可省略）
    */
   scrolling(
     clientX: number,
     clientY: number,
     viewport: DOMRect,
-    scrollable: ScrollViewport,
+    scrollable?: ScrollViewport,
   ) {
     if (!this.config.enabled) return;
     this.cancel();
@@ -157,7 +157,7 @@ export class CanvasScroller {
       if (this.config.onScroll) {
         // onScroll 模式：外部回调（如 store.setPan）
         this.config.onScroll(this._lastAx, this._lastAy);
-      } else {
+      } else if (scrollable) {
         // 降级模式：使用 scrollable.scrollTo
         let sx = scrollable.scrollLeft + this._lastAx;
         let sy = scrollable.scrollTop + this._lastAy;

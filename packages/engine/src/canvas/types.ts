@@ -336,3 +336,81 @@ export interface DropTargetInfo {
   /** 是否有效插入（false 时显示禁止样式） */
   valid?: boolean;
 }
+
+/**
+ * 拖拽对象（对齐 lowcode-engine IPublicModelDragObject 的最小子集）
+ *
+ * 由 Dragon 在 onDragStart 时从 dnd-kit active.data.current 解析得到，
+ * 贯穿整个拖拽生命周期，dragEnd 时供外层提交使用。
+ */
+export interface DragObject {
+  /** 拖拽类型 */
+  type: "material" | "canvas-component";
+  /** 素材名称（type === "material" 时） */
+  materialName?: string;
+  /** 画布组件 ID（type === "canvas-component" 时） */
+  componentId?: string;
+  /** 原始 data 引用（保留扩展字段） */
+  data?: Record<string, unknown>;
+}
+
+/**
+ * locate 事件（对齐 lowcode-engine ILocateEvent 的最小子集）
+ *
+ * 统一使用 globalX/globalY（视口 client 坐标），
+ * Dragon 内部所有 locate/scroller 计算只消费这两个坐标。
+ */
+export interface LocateEvent {
+  /** 事件类型标识 */
+  type: "LocateEvent";
+  /** 鼠标在视口的 X 坐标（clientX） */
+  globalX: number;
+  /** 鼠标在视口的 Y 坐标（clientY） */
+  globalY: number;
+  /** 拖拽对象 */
+  dragObject: DragObject;
+}
+
+/**
+ * DropLocation 详情（对齐 lowcode-engine IPublicTypeLocationDetail 的最小子集）
+ *
+ * 描述"插入到哪个容器的哪个位置"的语义信息。
+ */
+export interface DropLocationDetail {
+  /** 详情类型，目前只支持 Children（容器子级插入） */
+  type: "Children";
+  /** 插入索引（在容器 children 中的位置） */
+  index: number;
+  /** 最近的子组件 ID（用于 before/after 参考） */
+  nearNodeId?: string;
+  /** 插入类型：cover=覆盖容器, before/after=在 nearNodeId 前后 */
+  insertType?: "cover" | "before" | "after";
+  /** 是否垂直插入（决定指示线方向） */
+  isVertical?: boolean;
+  /** 是否有效插入 */
+  valid: boolean;
+  /** 渲染用像素矩形（画布内部坐标系，与 DropTargetInfo.rect 同源） */
+  rect?: { x: number; y: number; width: number; height: number };
+}
+
+/**
+ * DropLocation（语义对象，Dragon 持有）
+ *
+ * 对齐 lowcode-engine `designer/src/designer/location.ts DropLocation`。
+ * dragMove 时持续更新，dragEnd 时清空；外层提交动作基于此对象。
+ *
+ * 与 DropTargetInfo 的关系：
+ * - DropTargetInfo = 渲染对象（InsertionView/BorderContainer 消费）
+ * - DropLocation = 语义对象（dragEnd 提交消费）
+ * - DropLocation.detail.rect + insertType → DropTargetInfo
+ */
+export interface DropLocation {
+  /** 目标容器 ID（root 时为 null） */
+  targetContainerId: string | null;
+  /** 插入详情 */
+  detail: DropLocationDetail;
+  /** 触发此 location 的 locate 事件 */
+  event: LocateEvent;
+  /** 来源标识（本轮固定 "canvas"，后续可扩展 "tree"/"outline"） */
+  source: "canvas";
+}

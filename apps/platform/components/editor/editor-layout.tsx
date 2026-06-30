@@ -12,11 +12,11 @@
  */
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState, memo } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, memo } from "react";
 import { useSearchParams } from "next/navigation";
 import { DndContext, useDroppable, pointerWithin, DragOverlay, type DragEndEvent, type DragMoveEvent, type DragStartEvent, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
 import { createDefaultRegistry, NestingValidator } from "@envelope/materials";
-import { useCanvasStore, createComponentNode, CanvasRenderer, VIEWPORT_WIDTHS, CANVAS_CELL_SIZE, CANVAS_CELL_HEIGHT, isContainerType, findNodeLocation, Dragon, CanvasScroller, PluginManager, createModuleEventBus, EventBus, computeColumnWidth, RULER_SIZE, type CanvasSnapshot, type ComponentNode, type DropTargetInfo } from "@envelope/engine";
+import { useCanvasStore, createComponentNode, CanvasRenderer, VIEWPORT_WIDTHS, CANVAS_CELL_SIZE, CANVAS_CELL_HEIGHT, isContainerType, findNodeLocation, Dragon, CanvasScroller, PluginManager, createModuleEventBus, EventBus, computeColumnWidth, RULER_SIZE, type CanvasSnapshot, type ComponentNode, type DropTargetInfo, type DropLocation, type DragObject } from "@envelope/engine";
 import type { EditorEventMap } from "@envelope/engine";
 import { useEditorStore } from "@/stores/editor";
 import { useProjectPagesStore, componentNodesToCanvasComponents } from "@/stores/project-pages";
@@ -298,9 +298,23 @@ export function EditorLayout() {
     pm.register('RoutingPlugin',   RoutingPlugin,   { name: 'RoutingPlugin',   slots: ['main-area', 'left-nav'] });
     pm.register('FlowPlugin',      FlowPlugin,      { name: 'FlowPlugin',      slots: ['main-area', 'left-nav'] });
     pm.register('ApiPlugin',       ApiPlugin,       { name: 'ApiPlugin',       slots: ['main-area', 'left-nav'] });
-    pm.init();
     pluginManagerRef.current = pm;
   }
+  const pluginManager = pluginManagerRef.current!;
+  const skeleton = pluginManager.getSkeleton();
+
+  // 订阅 skeleton 变更：插件 init 时 register 会触发 version 递增 → React rerender
+  useSyncExternalStore(skeleton.subscribe, skeleton.getVersion, skeleton.getVersion);
+
+  // PluginManager.init() 在 effect 中执行，避免 render 阶段触发 async 副作用
+  const pluginInitRef = useRef(false);
+  useEffect(() => {
+    if (pluginInitRef.current) return;
+    pluginInitRef.current = true;
+    pluginManager.init().catch((err) => {
+      console.error('[EditorLayout] plugin init failed:', err);
+    });
+  }, [pluginManager]);
 
   /**
    * 物料名称 → 物料信息的快速查找表
@@ -345,14 +359,17 @@ export function EditorLayout() {
    * 3. 从素材面板拖拽新组件到画布（material → canvas-drop-zone）
    *
    * 均使用 event.delta 计算精确的网格坐标，缩放校正基于当前 zoom。
+   *
+   * Phase B: canvas-container 路径优先使用 Dragon 的 dropLocation 提供精确 index，
+   * 若 dropLocation 不可用则回退到无 index 的 moveNode（保持向后兼容）。
    */
   const handleDragEnd = useCallback(
-    (event: DragEndEvent) => {
+    (event: DragEndEvent, dropLocation?: DropLocation | null, dragObject?: DragObject | null) => {
       const { active, over } = event;
       if (!over) return;
       const overId = String(over.id);
 
-      // G10: 页面拖拽重排
+      // G10: 页面拖拽重排（不纳入 Dragon，保持 editor-layout 直接处理）
       if (active.data.current?.type === "page") {
         if (overId.startsWith("page-drop:")) {
           const parts = overId.split(":");
@@ -414,7 +431,11 @@ export function EditorLayout() {
           if (containerId) {
             const container = curComponents.find((c) => c.id === containerId);
             if (container && canComponentAcceptChildren(container.node.type)) {
-              moveNode(draggedNodeId, { parentId: containerId });
+              // Phase B: 优先使用 Dragon dropLocation 的精确 index
+              const locIndex = (dropLocation && dropLocation.targetContainerId === containerId && dropLocation.detail.insertType !== "cover")
+                ? dropLocation.detail.index
+                : undefined;
+              moveNode(draggedNodeId, { parentId: containerId, index: locIndex });
             }
           }
           return;
@@ -715,6 +736,11 @@ export function EditorLayout() {
     if (!el) return;
     const rect = el.getBoundingClientRect();
 
+    // 统一计算 globalX/globalY（对齐 lowcode LocateEvent.globalX/globalY）
+    const me = event.activatorEvent as MouseEvent;
+    const globalX = me ? me.clientX + event.delta.x : 0;
+    const globalY = me ? me.clientY + event.delta.y : 0;
+
     const cs = useCanvasStore.getState();
     const viewportW = VIEWPORT_WIDTHS[cs.viewport];
     const padding = typeof cs.pagePadding === "number" ? cs.pagePadding : 0;
@@ -733,7 +759,6 @@ export function EditorLayout() {
         gridCols: cs.gridCols,
         positionMode: cs.positionMode,
         domRects: cs.domRects,
-        gridRect,
       },
       {
         width: viewportW,
@@ -744,6 +769,9 @@ export function EditorLayout() {
         columnWidth: colW,
       },
       rect,
+      gridRect,
+      globalX,
+      globalY,
     );
 
     setDragAlignInfo(result.alignInfo);
@@ -762,11 +790,14 @@ export function EditorLayout() {
     setActiveDragId(name);
   }, [dragon]);
   const handleDragEndWrapper = useCallback((event: DragEndEvent) => {
+    // 在 onDragEnd 清空状态前读取 dropLocation/dragObject（对齐 lowcode Designer.dropLocation）
+    const dropLocation = dragon.getDropLocation();
+    const dragObject = dragon.getDragObject();
     dragon.onDragEnd();
     setActiveDragId(null);
     setDragAlignInfo(null);
     useCanvasStore.getState().setDropTarget(null);
-    handleDragEnd(event);
+    handleDragEnd(event, dropLocation, dragObject);
   }, [handleDragEnd, dragon]);
 
   return (
@@ -782,7 +813,7 @@ export function EditorLayout() {
           sensors={sensors}
         >
           <div className="flex flex-1 overflow-hidden">
-            {!leftPanelCollapsed ? <LeftPanel collapsed={leftPanelCollapsed} /> : null}
+            {!leftPanelCollapsed ? <LeftPanel collapsed={leftPanelCollapsed} pluginNavItems={skeleton.getItems('left-nav')} width={leftPanelWidth} /> : null}
             {!leftPanelCollapsed && (
               <ResizeHandle edge="right" panelWidth={leftPanelWidth} collapsed={false} minWidth={160} maxWidth={400} onResize={(w) => setLeftPanelWidth?.(w)} />
             )}
@@ -791,7 +822,7 @@ export function EditorLayout() {
             {!rightPanelCollapsed && (
               <ResizeHandle edge="left" panelWidth={rightPanelWidth} collapsed={false} minWidth={200} maxWidth={480} onResize={(w) => setRightPanelWidth?.(w)} />
             )}
-            {!rightPanelCollapsed ? <RightPanel /> : null}
+            {!rightPanelCollapsed ? <RightPanel width={rightPanelWidth} /> : null}
           </div>
           <DragOverlay dropAnimation={null}>
             {activeDragId && (
@@ -807,17 +838,24 @@ export function EditorLayout() {
           {!leftPanelCollapsed ? (
             <LeftPanel
               collapsed={leftPanelCollapsed}
-              pluginNavItems={pluginManagerRef.current?.getSkeleton().getItems('left-nav') ?? []}
+              pluginNavItems={skeleton.getItems('left-nav')}
+              width={leftPanelWidth}
             />
           ) : null}
+          {!leftPanelCollapsed && (
+            <ResizeHandle edge="right" panelWidth={leftPanelWidth} collapsed={false} minWidth={160} maxWidth={400} onResize={(w) => setLeftPanelWidth?.(w)} />
+          )}
           <div className="flex-1 overflow-hidden">
             {(() => {
-              const mainItems = pluginManagerRef.current?.getSkeleton().getItems('main-area') ?? [];
+              const mainItems = skeleton.getItems('main-area');
               const CurrentComponent = mainItems.find((i) => i.name === editorMode)?.component;
               return CurrentComponent ? <CurrentComponent /> : null;
             })()}
           </div>
-          {!rightPanelCollapsed ? <RightPanel /> : null}
+          {!rightPanelCollapsed && (
+            <ResizeHandle edge="left" panelWidth={rightPanelWidth} collapsed={false} minWidth={200} maxWidth={480} onResize={(w) => setRightPanelWidth?.(w)} />
+          )}
+          {!rightPanelCollapsed ? <RightPanel width={rightPanelWidth} /> : null}
         </div>
       )}
       {/* F2 内联重命名输入框 */}

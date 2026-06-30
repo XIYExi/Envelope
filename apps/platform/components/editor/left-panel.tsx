@@ -26,6 +26,8 @@ interface LeftPanelProps {
   collapsed: boolean;
   /** 插件注册的 left-nav 骨架项列表 */
   pluginNavItems?: SkeletonItem[];
+  /** 面板宽度（px），由父组件从 store 传入 */
+  width?: number;
 }
 
 /** 导航项定义 */
@@ -55,7 +57,7 @@ const ICON_MAP: Record<string, React.ReactNode> = {
  *
  * 新增编辑器模式只需注册插件，left-panel.tsx 零改动。
  */
-export function LeftPanel({ collapsed, pluginNavItems }: LeftPanelProps) {
+export function LeftPanel({ collapsed, pluginNavItems, width }: LeftPanelProps) {
   const { editorMode, setEditorMode } = useEditorStore();
 
   // 合并内置项 + 插件项
@@ -74,7 +76,10 @@ export function LeftPanel({ collapsed, pluginNavItems }: LeftPanelProps) {
   if (collapsed) return null;
 
   return (
-    <div className="flex w-48 flex-col border-r bg-background">
+    <div
+      className="flex flex-col border-r bg-background"
+      style={width !== undefined ? { width } : undefined}
+    >
       <div className="flex h-9 items-center border-b px-3">
         <span className="text-xs font-medium text-muted-foreground">Project</span>
       </div>

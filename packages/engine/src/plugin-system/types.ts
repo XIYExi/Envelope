@@ -109,6 +109,10 @@ export interface SkeletonAPI {
   unregister(slot: SkeletonSlot, name: string): void;
   /** 获取指定插槽的所有骨架项（已排序） */
   getItems(slot: SkeletonSlot): SkeletonItem[];
+  /** 订阅骨架变更，返回取消订阅函数（供 useSyncExternalStore 使用） */
+  subscribe(listener: () => void): () => void;
+  /** 获取当前版本号（每次 register/unregister 递增，供 useSyncExternalStore 做 snapshot 对比） */
+  getVersion(): number;
 }
 
 /**

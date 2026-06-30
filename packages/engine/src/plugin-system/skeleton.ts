@@ -33,15 +33,19 @@ export function createSkeleton(): SkeletonAPI {
     ["toolbar", []],
   ]);
 
+  /** 变更版本号，每次 register/unregister 递增 */
+  let version = 0;
+
+  /** 订阅者集合 */
+  const listeners = new Set<() => void>();
+
+  /** 通知所有订阅者 */
+  function notify(): void {
+    version++;
+    listeners.forEach((l) => l());
+  }
+
   return {
-    /**
-     * 注册一个骨架项到指定插槽
-     *
-     * 同名项不可重复注册。注册后可通过 getItems() 查询。
-     *
-     * @param slot - 目标插槽名称
-     * @param item - 骨架项定义
-     */
     register(slot: SkeletonSlot, item: SkeletonItem): void {
       const items = slots.get(slot);
       if (!items) {
@@ -56,14 +60,9 @@ export function createSkeleton(): SkeletonAPI {
       }
 
       items.push(item);
+      notify();
     },
 
-    /**
-     * 从指定插槽移除一个骨架项
-     *
-     * @param slot - 目标插槽名称
-     * @param name - 要移除的骨架项名称
-     */
     unregister(slot: SkeletonSlot, name: string): void {
       const items = slots.get(slot);
       if (!items) return;
@@ -71,15 +70,10 @@ export function createSkeleton(): SkeletonAPI {
       const index = items.findIndex((i) => i.name === name);
       if (index !== -1) {
         items.splice(index, 1);
+        notify();
       }
     },
 
-    /**
-     * 获取指定插槽的所有骨架项（已按 priority 排序）
-     *
-     * @param slot - 目标插槽名称
-     * @returns 排序后的骨架项列表
-     */
     getItems(slot: SkeletonSlot): SkeletonItem[] {
       const items = slots.get(slot);
       if (!items) return [];
@@ -88,6 +82,17 @@ export function createSkeleton(): SkeletonAPI {
         const pb = b.priority ?? 999;
         return pa - pb;
       });
+    },
+
+    subscribe(listener: () => void): () => void {
+      listeners.add(listener);
+      return () => {
+        listeners.delete(listener);
+      };
+    },
+
+    getVersion(): number {
+      return version;
     },
   };
 }

@@ -215,7 +215,13 @@ function BatchPropertyEditor({ components, registry, onBatchChange }: {
  *
  * U2: 面板折叠由父组件通过条件渲染控制，不再通过 CSS 隐藏
  */
-export function RightPanel() {
+/** 右侧面板 Props */
+interface RightPanelProps {
+  /** 面板宽度（px），由父组件从 store 传入 */
+  width?: number;
+}
+
+export function RightPanel({ width }: RightPanelProps = {}) {
   const {
     zoom, setZoom, components, selectedIds, activeNodeId,
     setPageBackground, pageBackground, pagePadding, setPagePadding, pageMaxWidth, setPageMaxWidth,
@@ -381,8 +387,8 @@ export function RightPanel() {
       data-testid="right-panel"
       className={cn(
         "flex flex-col border-l bg-background transition-all duration-200",
-        "w-72",
       )}
+      style={width !== undefined ? { width } : undefined}
     >
       <div className="flex h-9 items-center border-b px-3">
         <span className="text-xs font-medium text-muted-foreground">Properties</span>
