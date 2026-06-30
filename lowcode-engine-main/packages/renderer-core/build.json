@@ -1,0 +1,10 @@
+{
+  "plugins": [
+    [
+      "@alilc/build-plugin-lce",
+      {
+        "babelPlugins": ["@babel/plugin-transform-typescript"]
+      }
+    ]
+  ]
+}

@@ -1,0 +1,432 @@
+import { create } from "zustand";
+import type { ProjectPage } from "@/lib/supabase/types";
+import { pageSchema, type PageSchema, type ComponentNode, syncAggregateSlotsPropsToChildren, syncAggregateSlotsChildrenToProps } from "@envelope/engine";
+import type { CanvasComponent, CanvasState } from "@envelope/engine";
+
+export interface EditorProjectPage {
+  path: string;
+  title: string;
+  description: string;
+  schema: PageSchema;
+  metadata: Record<string, unknown>;
+  sort_order: number;
+  is_published: boolean;
+}
+
+interface ProjectPagesState {
+  projectId: string | null;
+  pages: EditorProjectPage[];
+  currentPath: string | null;
+  initializedProjectId: string | null;
+  isLoading: boolean;
+  isSaving: boolean;
+  dirty: boolean;
+  changeSeq: number;
+  lastSavedAt: number | null;
+  error: string | null;
+}
+
+interface ProjectPagesActions {
+  loadByProjectId: (projectId: string) => Promise<void>;
+  save: () => Promise<void>;
+  scheduleAutosave: (delayMs?: number) => void;
+  flushAutosave: () => Promise<void>;
+  cancelAutosave: () => void;
+  setCurrentPath: (path: string) => void;
+  syncCurrentPageFromCanvas: (canvas: Pick<CanvasState, "components" | "pageBackground" | "pagePadding" | "pageMaxWidth">) => void;
+  setInitializedProjectId: (projectId: string | null) => void;
+  markClean: () => void;
+  markDirty: () => void;
+  getCurrentPage: () => EditorProjectPage | null;
+  /** G10: 新增页面 */
+  addPage: () => void;
+  /** G10: 删除指定路径的页面 */
+  removePage: (path: string) => void;
+  /** G10: 重命名页面的 title */
+  renamePage: (path: string, newTitle: string) => void;
+  /** G10: 重新排序页面（fromIndex → toIndex） */
+  reorderPages: (fromIndex: number, toIndex: number) => void;
+  /** G10: 复制页面 */
+  duplicatePage: (path: string) => void;
+}
+
+function createDefaultPage(path: string): EditorProjectPage {
+  const title = path === "/" ? "Home" : path.replace(/^\//, "") || "Page";
+  return {
+    path,
+    title,
+    description: "",
+    schema: {
+      version: "3.0.0",
+      title,
+      path,
+      padding: 16,
+      components: [],
+    },
+    metadata: {},
+    sort_order: 0,
+    is_published: false,
+  };
+}
+
+function toEditorPage(row: ProjectPage): EditorProjectPage {
+  const parsed = pageSchema.safeParse(row.schema ?? {});
+  const fallback = createDefaultPage(row.path);
+  const schema: PageSchema = parsed.success
+    ? {
+        ...parsed.data,
+        title: parsed.data.title || row.title,
+        path: parsed.data.path || row.path,
+      }
+    : {
+        ...fallback.schema,
+        title: row.title,
+        path: row.path,
+      };
+
+  return {
+    path: row.path,
+    title: row.title,
+    description: row.description ?? "",
+    schema,
+    metadata: (row.metadata ?? {}) as Record<string, unknown>,
+    sort_order: row.sort_order ?? 0,
+    is_published: row.is_published ?? false,
+  };
+}
+
+export function componentNodesToCanvasComponents(nodes: ComponentNode[]): CanvasComponent[] {
+  return nodes.map((n, idx) => {
+    /**
+     * 聚合组件 slots 初始化（props → children）
+     *
+     * 从数据库加载的 PageSchema 可能仍然是“slots 存在于 props”的旧形态，
+     * 这里统一在进入画布前做一次规范化，确保编辑器内部始终拥有 children tree。
+     *
+     * @author xiye
+     * @date 2026-06-22
+     * @since 3.0.0
+     */
+    const normalized = syncAggregateSlotsPropsToChildren(n);
+    const x = n.grid?.col ?? 1;
+    const y = n.grid?.row ?? idx + 1;
+    const width = n.grid?.colSpan ?? 3;
+    const height = n.grid?.rowSpan ?? 2;
+    return {
+      id: normalized.id,
+      node: normalized,
+      position: { x, y, width, height },
+    };
+  });
+}
+
+export function canvasComponentsToComponentNodes(components: CanvasComponent[]): ComponentNode[] {
+  return components.map((c) => {
+    /**
+     * 聚合组件 slots 回写（children → props）
+     *
+     * 保存前将 children tree 的结构信息反向同步到 props，
+     * 以便：
+     * - 兼容旧版渲染/预览逻辑（仍读取 props）；
+     * - 让“Slots”属性面板值与 children tree 保持一致。
+     *
+     * @author xiye
+     * @date 2026-06-22
+     * @since 3.0.0
+     */
+    const denormalized = syncAggregateSlotsChildrenToProps(c.node);
+    return {
+      ...denormalized,
+      id: c.id,
+      grid: {
+        col: c.position.x,
+        row: c.position.y,
+        colSpan: c.position.width,
+        rowSpan: c.position.height,
+      },
+    };
+  });
+}
+
+async function getApiErrorMessage(res: Response, fallback: string): Promise<string> {
+  try {
+    const data: unknown = await res.json();
+    if (typeof data === "object" && data !== null && "error" in data) {
+      const err = (data as { error?: unknown }).error;
+      if (typeof err === "string") return err;
+      if (typeof err === "object" && err !== null && "message" in err) {
+        const message = (err as { message?: unknown }).message;
+        if (typeof message === "string") return message;
+      }
+    }
+  } catch {
+  }
+  return fallback;
+}
+
+let autosaveTimer: ReturnType<typeof setTimeout> | null = null;
+let maxDelayTimer: ReturnType<typeof setTimeout> | null = null;
+const MAX_DELAY_MS = 30_000;
+
+export const useProjectPagesStore = create<ProjectPagesState & ProjectPagesActions>((set, get) => ({
+  projectId: null,
+  pages: [],
+  currentPath: null,
+  initializedProjectId: null,
+  isLoading: false,
+  isSaving: false,
+  dirty: false,
+  changeSeq: 0,
+  lastSavedAt: null,
+  error: null,
+
+  setInitializedProjectId: (projectId) => set({ initializedProjectId: projectId }),
+
+  setCurrentPath: (path) => set({ currentPath: path }),
+
+  markClean: () => set({ dirty: false }),
+
+  markDirty: () => set({ dirty: true }),
+
+  /**
+   * 调度自动保存（防抖 + 最大间隔守卫）
+   *
+   * U4: 同时维护两个计时器：
+   * 1. 防抖计时器：最后一次修改后等 delayMs（默认 5s）保存
+   * 2. 最大间隔计时器：首次脏状态起 MAX_DELAY_MS（30s）强制保存
+   * 两者任一触发都执行保存并清除两个计时器
+   */
+  scheduleAutosave: (delayMs = 5_000) => {
+    if (autosaveTimer) clearTimeout(autosaveTimer);
+    autosaveTimer = setTimeout(() => {
+      if (maxDelayTimer) clearTimeout(maxDelayTimer);
+      maxDelayTimer = null;
+      autosaveTimer = null;
+      useProjectPagesStore.getState().save();
+    }, delayMs);
+    if (!maxDelayTimer) {
+      maxDelayTimer = setTimeout(() => {
+        if (autosaveTimer) clearTimeout(autosaveTimer);
+        autosaveTimer = null;
+        maxDelayTimer = null;
+        useProjectPagesStore.getState().save();
+      }, MAX_DELAY_MS);
+    }
+  },
+
+  cancelAutosave: () => {
+    if (autosaveTimer) clearTimeout(autosaveTimer);
+    autosaveTimer = null;
+    if (maxDelayTimer) clearTimeout(maxDelayTimer);
+    maxDelayTimer = null;
+  },
+
+  flushAutosave: async () => {
+    if (autosaveTimer) clearTimeout(autosaveTimer);
+    autosaveTimer = null;
+    if (maxDelayTimer) clearTimeout(maxDelayTimer);
+    maxDelayTimer = null;
+    await useProjectPagesStore.getState().save();
+  },
+
+  getCurrentPage: () => {
+    const { pages, currentPath } = get();
+    if (!currentPath) return null;
+    return pages.find((p) => p.path === currentPath) ?? null;
+  },
+
+  /** G10: 新建页面 */
+  addPage: () => {
+    set((state) => {
+      const basePath = `/page-${state.pages.length}`;
+      const newPage = createDefaultPage(basePath);
+      return {
+        pages: [...state.pages, newPage],
+        currentPath: newPage.path,
+        dirty: true,
+        changeSeq: state.changeSeq + 1,
+      };
+    });
+  },
+
+  /** G10: 删除指定路径的页面 */
+  removePage: (path) => {
+    set((state) => {
+      const nextPages = state.pages.filter((p) => p.path !== path);
+      if (nextPages.length === 0) return {};
+      const nextPath = state.currentPath === path
+        ? (nextPages[0]?.path ?? null)
+        : state.currentPath;
+      return {
+        pages: nextPages,
+        currentPath: nextPath,
+        dirty: true,
+        changeSeq: state.changeSeq + 1,
+      };
+    });
+  },
+
+  /** G10: 重命名页面的 title */
+  renamePage: (path, newTitle) => {
+    set((state) => ({
+      pages: state.pages.map((p) =>
+        p.path === path ? { ...p, title: newTitle } : p,
+      ),
+      dirty: true,
+      changeSeq: state.changeSeq + 1,
+    }));
+  },
+
+  /** G10: 重新排序页面（fromIndex → toIndex，splice 兼容前移/后移） */
+  reorderPages: (fromIndex, toIndex) => {
+    set((state) => {
+      const nextPages = state.pages.slice();
+      const [moved] = nextPages.splice(fromIndex, 1);
+      if (moved) {
+        // 如果目标索引在原位置之后，移除前元素会导致数组收缩 1，需补偿
+        const adjustedTo = fromIndex < toIndex ? toIndex - 1 : toIndex;
+        nextPages.splice(adjustedTo, 0, moved);
+      }
+      return {
+        pages: nextPages,
+        dirty: true,
+        changeSeq: state.changeSeq + 1,
+      };
+    });
+  },
+
+  /** G10: 复制页面（含 schema 和元数据） */
+  duplicatePage: (path) => {
+    set((state) => {
+      const source = state.pages.find((p) => p.path === path);
+      if (!source) return {};
+      const newPath = `${path}-copy`;
+      const newPage: EditorProjectPage = {
+        ...structuredClone(source),
+        path: newPath,
+        title: `${source.title} (副本)`,
+        schema: {
+          ...structuredClone(source.schema),
+          path: newPath,
+        },
+      };
+      return {
+        pages: [...state.pages, newPage],
+        currentPath: newPath,
+        dirty: true,
+        changeSeq: state.changeSeq + 1,
+      };
+    });
+  },
+
+  loadByProjectId: async (projectId: string) => {
+    set({ isLoading: true, error: null, projectId });
+    try {
+      const res = await fetch(`/api/projects/${projectId}/pages`, { method: "GET" });
+      if (!res.ok) throw new Error(await getApiErrorMessage(res, "Failed to fetch project pages"));
+      const rows: ProjectPage[] = await res.json();
+      const pages = rows.map(toEditorPage);
+      if (pages.length === 0) {
+        const defaultPage = createDefaultPage("/");
+        set({
+          pages: [defaultPage],
+          currentPath: "/",
+          dirty: true,
+        });
+        return;
+      }
+      set({
+        pages,
+        currentPath: pages[0]?.path ?? "/",
+        dirty: false,
+      });
+    } catch (e) {
+      const message = e instanceof Error ? e.message : "Failed to fetch project pages";
+      set({ error: message });
+    } finally {
+      set({ isLoading: false });
+    }
+  },
+
+  syncCurrentPageFromCanvas: (canvas) => {
+    const state = get();
+    if (!state.currentPath) return;
+    const components = canvasComponentsToComponentNodes(canvas.components);
+    set({
+      pages: state.pages.map((p) =>
+        p.path === state.currentPath
+          ? {
+              ...p,
+              schema: {
+                ...p.schema,
+                components,
+                padding: canvas.pagePadding,
+                pageMaxWidth: canvas.pageMaxWidth ?? undefined,
+                background: {
+                  ...(p.schema.background ?? {}),
+                  color: canvas.pageBackground,
+                },
+              },
+            }
+          : p,
+      ),
+      dirty: true,
+      changeSeq: state.changeSeq + 1,
+    });
+  },
+
+  save: async () => {
+    const { projectId, pages, isSaving, changeSeq } = get();
+    if (!projectId || isSaving) return;
+
+    // S6: 保存前执行 schema 校验，拦截非法数据
+    for (const p of pages) {
+      const result = pageSchema.safeParse(p.schema);
+      if (!result.success) {
+        const issues = result.error.issues
+          .map((i) => `  ${i.path.join(".")}: ${i.message}`)
+          .join("\n");
+        set({
+          error: `页面 "${p.path}" 校验失败:\n${issues}`,
+          isSaving: false,
+        });
+        return;
+      }
+    }
+
+    set({ isSaving: true, error: null });
+    const startSeq = changeSeq;
+    try {
+      const res = await fetch(`/api/projects/${projectId}/pages`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          pages: pages.map((p) => ({
+            path: p.path,
+            title: p.title,
+            description: p.description,
+            schema: p.schema,
+            metadata: p.metadata,
+            sort_order: p.sort_order,
+            is_published: p.is_published,
+          })),
+        }),
+      });
+      if (!res.ok) throw new Error(await getApiErrorMessage(res, "Failed to save project pages"));
+      const rows: ProjectPage[] = await res.json();
+      const savedPages = rows.map(toEditorPage);
+      const latest = get();
+      const stillDirty = latest.changeSeq !== startSeq;
+      set({
+        pages: stillDirty ? latest.pages : savedPages.length > 0 ? savedPages : latest.pages,
+        dirty: stillDirty,
+        lastSavedAt: stillDirty ? null : Date.now(),
+      });
+    } catch (e) {
+      const message = e instanceof Error ? e.message : "Failed to save project pages";
+      set({ error: message });
+    } finally {
+      set({ isSaving: false });
+    }
+  },
+}));

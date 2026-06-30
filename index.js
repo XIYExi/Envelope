@@ -1,3 +1,3 @@
-/*暴露 electron 入口文件*/
-
-require('./main/main.js');
+throw new Error(
+  "Legacy Electron entry is disabled. Use apps/electron (pnpm --filter=@envelope/electron dev)."
+);

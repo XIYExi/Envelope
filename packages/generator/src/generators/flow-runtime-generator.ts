@@ -1,0 +1,767 @@
+import type { VirtualFile } from "../core/file-system.types";
+import type {
+  GenerateFlowRuntimeOptions,
+  ProjectEndpoint,
+  ProjectFlow,
+} from "./flow-runtime-types";
+import { yamlToJson, type FlowDefinition } from "@envelope/flow";
+import { tsStringLiteral } from "../core/tsx-escape";
+
+export function generateFlowRuntimeFiles(options: GenerateFlowRuntimeOptions): VirtualFile[] {
+  const files: VirtualFile[] = [];
+
+  const flows = (options.flows ?? []).map((f) => ({
+    id: f.id,
+    name: f.name,
+    definition: parseSingleFlowYaml(f.yaml_content),
+  }));
+
+  const registryJson = JSON.stringify(
+    Object.fromEntries(flows.map((f) => [f.id, f.definition])),
+    null,
+    2,
+  );
+
+  files.push({
+    path: "lib/flows/registry.ts",
+    content: [
+      `export type FlowNodeType = string;`,
+      ``,
+      `export type FlowPortDataType = "string" | "number" | "boolean" | "object" | "array" | "any";`,
+      ``,
+      `export interface FlowPosition {`,
+      `  x: number;`,
+      `  y: number;`,
+      `}`,
+      ``,
+      `export interface FlowNode {`,
+      `  id: string;`,
+      `  type: FlowNodeType;`,
+      `  position: FlowPosition;`,
+      `  label?: string;`,
+      `  config: Record<string, unknown>;`,
+      `}`,
+      ``,
+      `export interface FlowEdge {`,
+      `  id: string;`,
+      `  source: string;`,
+      `  sourceHandle: string;`,
+      `  target: string;`,
+      `  targetHandle: string;`,
+      `  label?: string;`,
+      `}`,
+      ``,
+      `export interface FlowDefinition {`,
+      `  thing: string;`,
+      `  version: string;`,
+      `  description?: string;`,
+      `  nodes: FlowNode[];`,
+      `  edges: FlowEdge[];`,
+      `}`,
+      ``,
+      `export const flowRegistry: Record<string, FlowDefinition> = ${registryJson} as Record<string, FlowDefinition>;`,
+      ``,
+      `export function getFlow(flowId: string): FlowDefinition | undefined {`,
+      `  return flowRegistry[flowId];`,
+      `}`,
+      ``,
+    ].join("\n"),
+  });
+
+  files.push({
+    path: "lib/flows/runtime.ts",
+    content: [
+      `import { getFlow, type FlowDefinition } from "./registry";`,
+      ``,
+      `/**`,
+      ` * FlowExecutionLog: 记录每个节点的执行日志`,
+      ` */`,
+      `export interface FlowExecutionLog {`,
+      `  nodeId: string;`,
+      `  nodeType: string;`,
+      `  input: unknown;`,
+      `  output: unknown;`,
+      `  durationMs: number;`,
+      `  error?: string;`,
+      `}`,
+      ``,
+      `export interface RunFlowResult {`,
+      `  flowId: string;`,
+      `  version: string;`,
+      `  output: unknown;`,
+      `  logs: FlowExecutionLog[];`,
+      `}`,
+      ``,
+      `import { createClient } from "@supabase/supabase-js";`,
+      ``,
+      `type SupabaseClient = ReturnType<typeof createClient>;`,
+      ``,
+      `/** _supabaseClient: Supabase 客户端单例 */`,
+      `let _supabaseClient: SupabaseClient | null = null;`,
+      ``,
+      `function getSupabaseClient(): SupabaseClient {`,
+      `  if (!_supabaseClient) {`,
+      `    _supabaseClient = createClient(`,
+      `      process.env.NEXT_PUBLIC_SUPABASE_URL!,`,
+      `      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,`,
+      `    );`,
+      `  }`,
+      `  return _supabaseClient;`,
+      `}`,
+      ``,
+      `/**`,
+      ` * getByPath: 通过路径从对象中取值，例如 getByPath({ a: { b: 1 } }, "a.b") => 1`,
+      ` */`,
+      `function getByPath(obj: unknown, path: string): unknown {`,
+      `  const p = path.replace(/^\\$/, "").replace(/^\\./, "");`,
+      `  if (!p) return obj;`,
+      `  const parts = p.split(".").filter(Boolean);`,
+      `  let cur: any = obj;`,
+      `  for (const part of parts) {`,
+      `    if (cur == null) return undefined;`,
+      `    cur = cur[part];`,
+      `  }`,
+      `  return cur;`,
+      `}`,
+      ``,
+      `/**`,
+      ` * 1) topoSort: 拓扑排序 — 使用 Kahn 算法，支持循环检测`,
+      ` */`,
+      `export function topoSort(nodes: { id: string }[], edges: { source: string; target: string }[]): string[] {`,
+      `  // 初始化入度表和邻接表`,
+      `  const inDegree: Record<string, number> = {};`,
+      `  const adj: Record<string, string[]> = {};`,
+      `  for (const n of nodes) {`,
+      `    inDegree[n.id] = 0;`,
+      `    adj[n.id] = [];`,
+      `  }`,
+      `  for (const e of edges) {`,
+      `    if (!adj[e.source]) adj[e.source] = [];`,
+      `    adj[e.source].push(e.target);`,
+      `    if (inDegree[e.target] === undefined) inDegree[e.target] = 0;`,
+      `    inDegree[e.target] = (inDegree[e.target] || 0) + 1;`,
+      `  }`,
+      `  // BFS 拓扑排序`,
+      `  const queue: string[] = [];`,
+      `  for (const [id, deg] of Object.entries(inDegree)) {`,
+      `    if (deg === 0) queue.push(id);`,
+      `  }`,
+      `  const order: string[] = [];`,
+      `  while (queue.length > 0) {`,
+      `    const id = queue.shift()!;`,
+      `    order.push(id);`,
+      `    for (const next of adj[id] || []) {`,
+      `      inDegree[next]--;`,
+      `      if (inDegree[next] === 0) queue.push(next);`,
+      `    }`,
+      `  }`,
+      `  // 循环检测：如果 order 长度不等于节点数，说明存在循环依赖`,
+      `  if (order.length !== nodes.length) {`,
+      `    const cycled = nodes.filter((n) => !order.includes(n.id)).map((n) => n.id);`,
+      `    throw new Error(\`流程包含循环依赖: \${cycled.join(", ")}\`);`,
+      `  }`,
+      `  return order;`,
+      `}`,
+      ``,
+      `/**`,
+      ` * 2) resolveTemplates: 递归解析模板字符串中的 {{...}} 占位符，在 context 中查找对应值`,
+      ` */`,
+      `export function resolveTemplates(value: unknown, ctx: Record<string, unknown>): unknown {`,
+      `  if (typeof value === "string") {`,
+      `    // 替换所有 {{...}} 模式`,
+      `    return value.replace(/\{\{(.+?)\}\}/g, (_, key: string) => {`,
+      `      const trimmed = key.trim();`,
+      `      const resolved = getByPath(ctx, trimmed);`,
+      `      return resolved !== undefined ? String(resolved) : \`{{\${trimmed}}}\`;`,
+      `    });`,
+      `  }`,
+      `  if (Array.isArray(value)) {`,
+      `    return value.map((v) => resolveTemplates(v, ctx));`,
+      `  }`,
+      `  if (value && typeof value === "object") {`,
+      `    const result: Record<string, unknown> = {};`,
+      `    for (const [k, v] of Object.entries(value as Record<string, unknown>)) {`,
+      `      result[k] = resolveTemplates(v, ctx);`,
+      `    }`,
+      `    return result;`,
+      `  }`,
+      `  return value;`,
+      `}`,
+      ``,
+      `/**`,
+      ` * 3) executeNode: 执行单个节点，根据 node.type 分发到不同处理器`,
+      ` */`,
+      `export async function executeNode(`,
+      `  node: { id: string; type: string; config: Record<string, unknown> },`,
+      `  input: unknown,`,
+      `  ctx: Record<string, unknown>,`,
+      `  supabase: SupabaseClient,`,
+      `): Promise<unknown> {`,
+      `  const cfg = resolveTemplates(node.config, ctx) as Record<string, unknown>;`,
+      ``,
+      `  // —— 事件类节点：透传输入 ——`,
+      `  if (node.type.startsWith("event.")) {`,
+      `    return input;`,
+      `  }`,
+      ``,
+      `  // —— 数据库操作节点 ——`,
+      `  if (node.type === "db.query") {`,
+      `    const table = String(cfg.table || "");`,
+      `    if (!table) throw new Error(\`db.query: 缺少 table 配置\`);`,
+      `    const columns = Array.isArray(cfg.columns) ? (cfg.columns as string[]).join(",") : "*";`,
+      `    const where = cfg.where && typeof cfg.where === "object" ? (cfg.where as Record<string, unknown>) : {};`,
+      `    const limit = typeof cfg.limit === "number" ? cfg.limit : undefined;`,
+      `    const orderBy = cfg.orderBy && typeof cfg.orderBy === "object" ? cfg.orderBy as { column: string; ascending?: boolean } : undefined;`,
+      ``,
+      `    let q: any = supabase.from(table).select(columns);`,
+      `    // 应用 where 条件`,
+      `    for (const [k, v] of Object.entries(where)) {`,
+      `      if (v !== undefined) q = q.eq(k, v);`,
+      `    }`,
+      `    // 应用排序`,
+      `    if (orderBy) {`,
+      `      q = q.order(orderBy.column, { ascending: orderBy.ascending ?? true });`,
+      `    }`,
+      `    // 应用 limit`,
+      `    if (limit !== undefined) q = q.limit(limit);`,
+      `    const { data, error } = await q;`,
+      `    if (error) throw new Error(error.message);`,
+      `    return data;`,
+      `  }`,
+      ``,
+      `  if (node.type === "db.insert") {`,
+      `    const table = String(cfg.table || "");`,
+      `    if (!table) throw new Error(\`db.insert: 缺少 table 配置\`);`,
+      `    const values = cfg.values !== undefined ? cfg.values : input;`,
+      `    const { data, error } = await supabase.from(table).insert(values as any).select();`,
+      `    if (error) throw new Error(error.message);`,
+      `    return data;`,
+      `  }`,
+      ``,
+      `  if (node.type === "db.update") {`,
+      `    const table = String(cfg.table || "");`,
+      `    if (!table) throw new Error(\`db.update: 缺少 table 配置\`);`,
+      `    const values = cfg.values !== undefined ? cfg.values : input;`,
+      `    const where = cfg.where && typeof cfg.where === "object" ? (cfg.where as Record<string, unknown>) : {};`,
+      `    let q: any = supabase.from(table).update(values as any);`,
+      `    for (const [k, v] of Object.entries(where)) {`,
+      `      if (v !== undefined) q = q.eq(k, v);`,
+      `    }`,
+      `    const { data, error } = await q.select();`,
+      `    if (error) throw new Error(error.message);`,
+      `    return data;`,
+      `  }`,
+      ``,
+      `  if (node.type === "db.delete") {`,
+      `    const table = String(cfg.table || "");`,
+      `    if (!table) throw new Error(\`db.delete: 缺少 table 配置\`);`,
+      `    const where = cfg.where && typeof cfg.where === "object" ? (cfg.where as Record<string, unknown>) : {};`,
+      `    let q: any = supabase.from(table).delete();`,
+      `    for (const [k, v] of Object.entries(where)) {`,
+      `      if (v !== undefined) q = q.eq(k, v);`,
+      `    }`,
+      `    const { data, error } = await q;`,
+      `    if (error) throw new Error(error.message);`,
+      `    return data;`,
+      `  }`,
+      ``,
+      `  // —— API 请求节点 ——`,
+      `  if (node.type === "api.request") {`,
+      `    const url = String(cfg.url || "");`,
+      `    if (!url) throw new Error(\`api.request: 缺少 url 配置\`);`,
+      `    const method = String(cfg.method || "GET");`,
+      `    const headers = cfg.headers && typeof cfg.headers === "object" ? (cfg.headers as Record<string, string>) : undefined;`,
+      `    const body = cfg.body !== undefined ? cfg.body : undefined;`,
+      `    const fetchOptions: RequestInit = { method };`,
+      `    if (headers) fetchOptions.headers = headers;`,
+      `    if (body !== undefined && method !== "GET" && method !== "HEAD") {`,
+      `      fetchOptions.body = typeof body === "string" ? body : JSON.stringify(body);`,
+      `    }`,
+      `    const res = await fetch(url, fetchOptions);`,
+      `    const text = await res.text();`,
+      `    let json: unknown = text;`,
+      `    try { json = JSON.parse(text); } catch { /* not JSON */ }`,
+      `    return { status: res.status, data: json };`,
+      `  }`,
+      ``,
+      `  // —— 条件分支节点 ——`,
+      `  if (node.type === "condition.if") {`,
+      `    const expression = String(cfg.expression || "true");`,
+      `    // 安全求值：在 context 中查找表达式对应的布尔值，或通过 Function 构造函数求值`,
+      `    let result: boolean;`,
+      `    const ctxVal = getByPath(ctx, expression) ?? getByPath({ input }, expression);`,
+      `    if (typeof ctxVal === "boolean") {`,
+      `      result = ctxVal;`,
+      `    } else {`,
+      `      try {`,
+      `        const keys = Object.keys(ctx);`,
+      `        const vals = Object.values(ctx);`,
+      `        const fn = new Function(...keys, \`return Boolean(\${expression});\`);`,
+      `        result = fn(...vals);`,
+      `      } catch {`,
+      `        result = Boolean(ctxVal);`,
+      `      }`,
+      `    }`,
+      `    return { condition: result };`,
+      `  }`,
+      ``,
+      `  if (node.type === "condition.switch") {`,
+      `    const value = cfg.value !== undefined ? cfg.value : getByPath(ctx, String(cfg.valuePath || ""));`,
+      `    const cases = Array.isArray(cfg.cases) ? (cfg.cases as { value: unknown; label: string }[]) : [];`,
+      `    // 查找匹配的 case，未匹配则返回 null`,
+      `    const matched = cases.find((c) => String(c.value) === String(value));`,
+      `    return { switchValue: value, matchedCase: matched?.label ?? null };`,
+      `  }`,
+      ``,
+      `  // —— 循环节点 ——`,
+      `  if (node.type === "loop.forEach") {`,
+      `    const collection = cfg.collection !== undefined ? cfg.collection : getByPath(ctx, String(cfg.collectionPath || ""));`,
+      `    if (!Array.isArray(collection)) throw new Error(\`loop.forEach: collection 不是数组\`);`,
+      `    const results: unknown[] = [];`,
+      `    for (let i = 0; i < collection.length; i++) {`,
+      `      results.push(collection[i]);`,
+      `    }`,
+      `    return results;`,
+      `  }`,
+      ``,
+      `  if (node.type === "loop.while") {`,
+      `    const maxIterations = typeof cfg.maxIterations === "number" ? cfg.maxIterations : 100;`,
+      `    const conditionExpr = String(cfg.condition || "true");`,
+      `    const results: unknown[] = [];`,
+      `    let iterations = 0;`,
+      `    while (iterations < maxIterations) {`,
+      `      const keys = Object.keys(ctx);`,
+      `      const vals = Object.values(ctx);`,
+      `      let shouldContinue: boolean;`,
+      `      try {`,
+      `        const fn = new Function(...keys, \`return Boolean(\${conditionExpr});\`);`,
+      `        shouldContinue = fn(...vals);`,
+      `      } catch {`,
+      `        shouldContinue = false;`,
+      `      }`,
+      `      if (!shouldContinue) break;`,
+      `      // 输出当前迭代上下文快照`,
+      `      results.push({ ...ctx });`,
+      `      iterations++;`,
+      `    }`,
+      `    return results;`,
+      `  }`,
+      ``,
+      `  // —— 数据转换节点 ——`,
+      `  if (node.type === "transform.data") {`,
+      `    const expr = typeof cfg.expression === "string" ? cfg.expression : "";`,
+      `    const source = cfg.source !== undefined ? cfg.source : input;`,
+      `    if (!expr) return source;`,
+      `    return getByPath(source, expr);`,
+      `  }`,
+      ``,
+      `  // —— 延时节点 ——`,
+      `  if (node.type === "flow.delay") {`,
+      `    const ms = typeof cfg.duration === "number" ? cfg.duration : 1000;`,
+      `    await new Promise((resolve) => setTimeout(resolve, ms));`,
+      `    return input;`,
+      `  }`,
+      ``,
+      `  // —— 操作类节点（存根） ——`,
+      `  if (node.type === "action.email") {`,
+      `    console.log(\`[flow] 发送邮件: \${JSON.stringify(cfg)}\`);`,
+      `    return { sent: true };`,
+      `  }`,
+      ``,
+      `  if (node.type === "notification") {`,
+      `    console.log(\`[flow] 发送通知: \${JSON.stringify(cfg)}\`);`,
+      `    return { shown: true };`,
+      `  }`,
+      ``,
+      `  // —— 自定义代码节点（存根） ——`,
+      `  if (node.type === "custom.code") {`,
+      `    const code = String(cfg.code || "");`,
+      `    console.log(\`[flow] 执行自定义代码: \${code.substring(0, 100)}\`);`,
+      `    return input;`,
+      `  }`,
+      ``,
+      `  // —— 默认：透传输入 ——`,
+      `  return input;`,
+      `}`,
+      ``,
+      `/**`,
+      ` * 4) runFlow: 完整的流程执行引擎 — 拓扑排序 → 按序执行 → 条件分支 → 错误处理 → 执行日志`,
+      ` */`,
+      `export async function runFlow(flowId: string, input: unknown): Promise<RunFlowResult> {`,
+      `  const def = getFlow(flowId);`,
+      `  if (!def) {`,
+      `    throw new Error(\`Flow not found: \${flowId}\`);`,
+      `  }`,
+      ``,
+      `  const supabase = getSupabaseClient();`,
+      `  const logs: FlowExecutionLog[] = [];`,
+      `  const ctx: Record<string, unknown> = { input };`,
+      `  const nodeOutputs: Record<string, unknown> = {};`,
+      `  const skippedNodes: Set<string> = new Set();`,
+      ``,
+      `  // 拓扑排序得到节点执行顺序`,
+      `  const sortedIds = topoSort(def.nodes, def.edges);`,
+      ``,
+      `  // 构建出边映射：source -> edges[]`,
+      `  const outEdges: Record<string, typeof def.edges> = {};`,
+      `  for (const e of def.edges) {`,
+      `    if (!outEdges[e.source]) outEdges[e.source] = [];`,
+      `    outEdges[e.source].push(e);`,
+      `  }`,
+      ``,
+      `  // 构建入边映射：target -> edges[]`,
+      `  const inEdges: Record<string, typeof def.edges> = {};`,
+      `  for (const e of def.edges) {`,
+      `    if (!inEdges[e.target]) inEdges[e.target] = [];`,
+      `    inEdges[e.target].push(e);`,
+      `  }`,
+      ``,
+      `  // 遍历已排序的节点序列，依次执行`,
+      `  for (const nodeId of sortedIds) {`,
+      `    const node = def.nodes.find((n) => n.id === nodeId);`,
+      `    if (!node) continue;`,
+      ``,
+      `    // 如果当前节点在跳过的路径中，跳过执行`,
+      `    if (skippedNodes.has(nodeId)) {`,
+      `      continue;`,
+      `    }`,
+      ``,
+      `    // 收集入边端口: inputPorts = 当前节点的所有入边（按 targetHandle 分组）`,
+      `    const inputPorts = inEdges[nodeId] || [];`,
+      `    // srcPorts: 按 sourceHandle → targetHandle 收集上游输出`,
+      `    const srcPorts: Record<string, unknown> = {};`,
+      `    for (const e of inputPorts) {`,
+      `      srcPorts[e.sourceHandle || "default"] = nodeOutputs[e.source];`,
+      `    }`,
+      ``,
+      `    let nodeInput: unknown = input;`,
+      `    if (inputPorts.length === 1) {`,
+      `      nodeInput = nodeOutputs[inputPorts[0].source];`,
+      `    } else if (inputPorts.length > 1) {`,
+      `      nodeInput = srcPorts;`,
+      `    }`,
+      ``,
+      `    // 执行节点`,
+      `    const startTime = performance.now();`,
+      `    let nodeOutput: unknown;`,
+      `    let execError: string | undefined;`,
+      ``,
+      `    try {`,
+      `      nodeOutput = await executeNode(node, nodeInput, ctx, supabase);`,
+      `    } catch (err) {`,
+      `      execError = err instanceof Error ? err.message : String(err);`,
+      `      nodeOutput = null;`,
+      `    }`,
+      ``,
+      `    const durationMs = performance.now() - startTime;`,
+      `    nodeOutputs[nodeId] = nodeOutput;`,
+      ``,
+      `    // 记录执行日志`,
+      `    logs.push({`,
+      `      nodeId: node.id,`,
+      `      nodeType: node.type,`,
+      `      input: nodeInput,`,
+      `      output: nodeOutput,`,
+      `      durationMs: Math.round(durationMs * 100) / 100,`,
+      `      ...(execError ? { error: execError } : {}),`,
+      `    });`,
+      ``,
+      `    // 错误处理：若有 error 端口边则传递错误，否则抛出`,
+      `    if (execError) {`,
+      `      const hasErrorEdge = outEdges[nodeId]?.some((e) => e.sourceHandle === "error") || false;`,
+      `      if (hasErrorEdge) {`,
+      `        for (const e of outEdges[nodeId] || []) {`,
+      `          if (e.sourceHandle === "error") {`,
+      `            nodeOutputs[e.target] = { error: execError };`,
+      `          } else {`,
+      `            skippedNodes.add(e.target);`,
+      `          }`,
+      `        }`,
+      `      } else {`,
+      `        throw new Error(execError);`,
+      `      }`,
+      `      continue;`,
+      `    }`,
+      ``,
+      `    // 条件分支处理：condition.if 判断后跳过非活跃分支`,
+      `    if (node.type === "condition.if") {`,
+      `      const condResult = nodeOutput && typeof nodeOutput === "object" && "condition" in (nodeOutput as Record<string, unknown>)`,
+      `        ? (nodeOutput as Record<string, unknown>).condition`,
+      `        : true;`,
+      `      const isTruthy = Boolean(condResult);`,
+      `      if (isTruthy) {`,
+      `        // 非活跃分支：跳过 false 分支的后续节点`,
+      `        for (const e of outEdges[nodeId] || []) {`,
+      `          if (e.sourceHandle === "false") {`,
+      `            skippedNodes.add(e.target);`,
+      `          }`,
+      `        }`,
+      `      } else {`,
+      `        // 非活跃分支：跳过 true 分支的后续节点`,
+      `        for (const e of outEdges[nodeId] || []) {`,
+      `          if (e.sourceHandle === "true") {`,
+      `            skippedNodes.add(e.target);`,
+      `          }`,
+      `        }`,
+      `      }`,
+      `    }`,
+      ``,
+      `    // condition.switch：仅保留匹配 case 的分支`,
+      `    if (node.type === "condition.switch") {`,
+      `      const matchedLabel = nodeOutput && typeof nodeOutput === "object"`,
+      `        ? (nodeOutput as Record<string, unknown>).matchedCase`,
+      `        : null;`,
+      `      for (const e of outEdges[nodeId] || []) {`,
+      `        if (e.sourceHandle && e.sourceHandle !== (matchedLabel as string ?? "__default__")) {`,
+      `          skippedNodes.add(e.target);`,
+      `        }`,
+      `      }`,
+      `    }`,
+      ``,
+      `    // 更新上下文`,
+      `    ctx[node.id] = nodeOutput;`,
+      `  }`,
+      ``,
+      `  // 收集最终输出：取最后一个非事件节点的输出`,
+      `  const lastNonEvent = sortedIds.filter((id) => {`,
+      `    const n = def.nodes.find((nd) => nd.id === id);`,
+      `    return n && !n.type.startsWith("event.");`,
+      `  });`,
+      `  const lastOutput = lastNonEvent.length > 0 ? nodeOutputs[lastNonEvent[lastNonEvent.length - 1]] : null;`,
+      ``,
+      `  return {`,
+      `    flowId,`,
+      `    version: def.version,`,
+      `    output: lastOutput,`,
+      `    logs,`,
+      `  };`,
+      `}`,
+      ``,
+      `export function getFlowDefinition(flowId: string): FlowDefinition {`,
+      `  const def = getFlow(flowId);`,
+      `  if (!def) {`,
+      `    throw new Error(\`Flow not found: \${flowId}\`);`,
+      `  }`,
+      `  return def;`,
+      `}`,
+      ``,
+    ].join("\n"),
+  });
+
+  // ======================================================================
+  // K5: 生成 Zustand store 文件: lib/store/app-store.ts
+  // 用于存储 flow 执行结果并驱动组件响应式更新
+  // ======================================================================
+  files.push({
+    path: "lib/store/app-store.ts",
+    content: [
+      `/**`,
+      ` * K5: 全局应用级 Zustand Store — 存储 flow 执行结果`,
+      ` *`,
+      ` * flow 的输出写入此 store，组件通过订阅对应 flowId 的字段实现响应式更新（K6）。`,
+      ` */`,
+      `import { create } from "zustand";`,
+      ``,
+      `interface AppStore {`,
+      `  /** K5: flow 执行结果映射表，key 为 flowId */`,
+      `  flowResults: Record<string, unknown>;`,
+      `  /** K5: 设置指定 flow 的执行结果 */`,
+      `  setFlowResult: (flowId: string, result: unknown) => void;`,
+      `}`,
+      ``,
+      `export const useAppStore = create<AppStore>((set) => ({`,
+      `  flowResults: {},`,
+      `  setFlowResult: (flowId, result) => set((state) => ({`,
+      `    flowResults: { ...state.flowResults, [flowId]: result },`,
+      `  })),`,
+      `}));`,
+      ``,
+    ].join("\n"),
+  });
+
+  // ======================================================================
+  // K5: 更新 callFlow — 执行后回写结果到 Zustand store
+  // ======================================================================
+  files.push({
+    path: "lib/flows/client.ts",
+    content: [
+      `import { useAppStore } from "@/lib/store/app-store";`,
+      ``,
+      `export async function callFlow(flowId: string, input?: unknown): Promise<unknown> {`,
+      `  const res = await fetch(\`/api/flows/\${encodeURIComponent(flowId)}\`, {`,
+      `    method: "POST",`,
+      `    headers: { "content-type": "application/json" },`,
+      `    body: JSON.stringify({ input }),`,
+      `  });`,
+      `  if (!res.ok) {`,
+      `    const text = await res.text().catch(() => "");`,
+      `    throw new Error(text || \`Flow request failed: \${res.status}\`);`,
+      `  }`,
+      `  const result = await res.json();`,
+      `  // K5: flow 输出回写客户端 Zustand store，驱动组件更新`,
+      `  useAppStore.getState().setFlowResult(flowId, result);`,
+      `  return result;`,
+      `}`,
+      ``,
+    ].join("\n"),
+  });
+
+  files.push({
+    path: "app/api/flows/[flowId]/route.ts",
+    content: [
+      `import { NextResponse } from "next/server";`,
+      `import { runFlow } from "@/lib/flows/runtime";`,
+      ``,
+      `export async function POST(`,
+      `  request: Request,`,
+      `  { params }: { params: { flowId: string } },`,
+      `) {`,
+      `  const body = await request.json().catch(() => ({}));`,
+      `  const result = await runFlow(params.flowId, (body as { input?: unknown }).input ?? body);`,
+      `  return NextResponse.json(result);`,
+      `}`,
+      ``,
+      `export async function GET(`,
+      `  request: Request,`,
+      `  { params }: { params: { flowId: string } },`,
+      `) {`,
+      `  const url = new URL(request.url);`,
+      `  const query = Object.fromEntries(url.searchParams.entries());`,
+      `  const result = await runFlow(params.flowId, { query });`,
+      `  return NextResponse.json(result);`,
+      `}`,
+      ``,
+    ].join("\n"),
+  });
+
+  if (options.endpoints && options.endpoints.length > 0) {
+    const groups = new Map<string, ProjectEndpoint[]>();
+    for (const endpoint of options.endpoints) {
+      const key = normalizeEndpointPath(endpoint.path);
+      const list = groups.get(key) ?? [];
+      list.push(endpoint);
+      groups.set(key, list);
+    }
+    for (const [key, endpoints] of groups) {
+      files.push({
+        path: endpointToRouteFilePath(key),
+        content: generateEndpointRouteContent(endpoints),
+      });
+    }
+  }
+
+  return files;
+}
+
+function parseSingleFlowYaml(yaml: string): FlowDefinition {
+  const normalized = yaml.replace(/\r\n/g, "\n").trim();
+  if (!normalized) {
+    return {
+      thing: "empty-flow",
+      version: "1.0.0",
+      nodes: [
+        { id: "start", type: "event.start", position: { x: 0, y: 0 }, config: {} },
+        { id: "end", type: "event.end", position: { x: 200, y: 0 }, config: {} },
+      ],
+      edges: [
+        { id: "e1", source: "start", sourceHandle: "out", target: "end", targetHandle: "in" },
+      ],
+    };
+  }
+  const parsed = yamlToJson(normalized);
+  if (!parsed.success || !parsed.data || typeof parsed.data === "string") {
+    throw new Error(parsed.error || `Failed to parse flow yaml`);
+  }
+  return parsed.data;
+}
+
+function endpointToRouteFilePath(normalized: string): string {
+  if (!normalized) return "app/api/route.ts";
+  return `app/api/${normalized}/route.ts`;
+}
+
+function normalizeEndpointPath(endpointPath: string): string {
+  let p = endpointPath.trim();
+  if (!p) return "";
+  if (!p.startsWith("/")) p = `/${p}`;
+  p = p.replace(/\/+/g, "/");
+  if (p === "/api") return "";
+  if (p.startsWith("/api/")) p = p.slice("/api/".length);
+  p = p.replace(/:([a-zA-Z0-9_]+)/g, "[$1]");
+  p = p.replace(/\{([a-zA-Z0-9_]+)\}/g, "[$1]");
+  return p.replace(/^\/+|\/+$/g, "");
+}
+
+function generateEndpointRouteContent(endpoints: ProjectEndpoint[]): string {
+  const lines: string[] = [];
+  lines.push(`import { NextResponse } from "next/server";`);
+  lines.push(`import { runFlow } from "@/lib/flows/runtime";`);
+
+  // U11: 检查是否有端点需要 body schema 校验
+  const needsBodyValidation = endpoints.some((ep) => {
+    const schema = ep.request_schema as Record<string, unknown> | null | undefined;
+    const bodyStr = schema?.requestBodySchema;
+    return typeof bodyStr === "string" && bodyStr.trim().length > 0;
+  });
+  if (needsBodyValidation) {
+    lines.push(`import { z } from "zod";`);
+  }
+  lines.push(``);
+
+  for (const endpoint of endpoints) {
+    const method = endpoint.method.toUpperCase() as ProjectEndpoint["method"];
+    const flowId = endpoint.flow_id;
+    const flowIdLiteral = flowId ? tsStringLiteral(flowId) : null;
+
+    // U10: 自定义处理器 — 直接输出用户编写的 handler 代码
+    if (endpoint.custom_handler) {
+      lines.push(endpoint.custom_handler);
+      lines.push(``);
+      continue;
+    }
+
+    if (!flowIdLiteral) {
+      lines.push(`export async function ${method}(request: Request) {`);
+      lines.push(`  const url = new URL(request.url);`);
+      lines.push(`  return NextResponse.json({ method: ${tsStringLiteral(method)}, path: url.pathname });`);
+      lines.push(`}`);
+      lines.push(``);
+      continue;
+    }
+
+    if (method === "GET" || method === "DELETE") {
+      lines.push(`export async function ${method}(request: Request, ctx?: { params?: Record<string, string> }) {`);
+      lines.push(`  const url = new URL(request.url);`);
+      lines.push(`  const query = Object.fromEntries(url.searchParams.entries());`);
+      lines.push(`  const result = await runFlow(${flowIdLiteral}, { query, params: ctx?.params ?? {} });`);
+      lines.push(`  return NextResponse.json(result);`);
+      lines.push(`}`);
+      lines.push(``);
+      continue;
+    }
+
+    lines.push(`export async function ${method}(request: Request, ctx?: { params?: Record<string, string> }) {`);
+    lines.push(`  const body = await request.json().catch(() => ({}));`);
+
+    // U11: body schema 校验 — 当用户填写了 requestBodySchema 时启用
+    const reqSchema = endpoint.request_schema as Record<string, unknown> | null | undefined;
+    const bodySchemaStr = reqSchema?.requestBodySchema;
+    const hasBodySchema = typeof bodySchemaStr === "string" && bodySchemaStr.trim().length > 0;
+    if (hasBodySchema) {
+      lines.push(`  const parsed = z.object({}).passthrough().safeParse(body);`);
+      lines.push(`  if (!parsed.success) {`);
+      lines.push(`    return NextResponse.json(`);
+      lines.push(`      { error: "请求体校验失败", details: parsed.error.issues },`);
+      lines.push(`      { status: 400 },`);
+      lines.push(`    );`);
+      lines.push(`  }`);
+    }
+
+    lines.push(`  const result = await runFlow(${flowIdLiteral}, { body, params: ctx?.params ?? {} });`);
+    lines.push(`  return NextResponse.json(result);`);
+    lines.push(`}`);
+    lines.push(``);
+  }
+
+  return lines.join("\n");
+}

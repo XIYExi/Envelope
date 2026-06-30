@@ -1,0 +1,30 @@
+{
+  "name": "@envelope/electron",
+  "version": "3.0.0",
+  "private": true,
+  "main": "./main/main.js",
+  "scripts": {
+    "dev": "electron .",
+    "dev:full": "concurrently \"pnpm --filter=@envelope/platform dev\" \"wait-on http://localhost:3000 && electron .\"",
+    "rebuild:native": "node ./scripts/rebuild-electron-native-deps.js",
+    "build:renderer": "pnpm --filter=@envelope/platform build && pnpm run rebuild:native && node ./scripts/prepare-platform-renderer.js",
+    "build": "pnpm run build:renderer && electron-builder --config electron-builder.config.js",
+    "smoke:update": "node ./scripts/run-update-smoke.js",
+    "lint": "eslint main/ preload/ scripts/ test/",
+    "test": "node --test test/*.test.js",
+    "typecheck": "tsc --noEmit",
+    "clean": "node -e \"require('fs').rmSync('release',{recursive:true,force:true});require('fs').rmSync('dist',{recursive:true,force:true})\""
+  },
+  "dependencies": {
+    "better-sqlite3": "^12.11.1",
+    "electron-updater": "^6.3.0"
+  },
+  "devDependencies": {
+    "@envelope/platform": "workspace:*",
+    "@types/node": "^20.19.43",
+    "concurrently": "^9.0.0",
+    "electron": "^31.0.0",
+    "electron-builder": "^24.13.0",
+    "wait-on": "^8.0.0"
+  }
+}

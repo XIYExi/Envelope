@@ -1,0 +1,1325 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`@envelope/generator - reference project snapshots > blog snapshot 1`] = `
+{
+  "files": [
+    ".env.example",
+    ".eslintrc.json",
+    ".gitignore",
+    "Dockerfile",
+    "README.md",
+    "app/error.tsx",
+    "app/globals.css",
+    "app/layout.tsx",
+    "app/loading.tsx",
+    "app/page.tsx",
+    "app/posts/[slug]/error.tsx",
+    "app/posts/[slug]/loading.tsx",
+    "app/posts/[slug]/page.tsx",
+    "app/posts/error.tsx",
+    "app/posts/loading.tsx",
+    "app/posts/page.tsx",
+    "components.json",
+    "lib/utils.ts",
+    "next.config.js",
+    "package.json",
+    "postcss.config.js",
+    "tailwind.config.ts",
+    "tsconfig.json",
+  ],
+  "keyFiles": {
+    "README.md": "# Envelope App
+
+Built with **Envelope V3** — low-code Next.js application scaffold.
+
+## Tech Stack
+
+- **Framework**: Next.js 14 (App Router)
+- **Database**: Supabase (PostgreSQL)
+- **Styling**: Tailwind CSS + shadcn/ui
+- **State**: Zustand
+- **Data Fetching**: TanStack React Query
+
+## Getting Started
+
+1. Clone the repository
+2. Copy \`.env.example\` to \`.env.local\` and fill in your Supabase credentials
+3. Run \`npm install\`
+4. Run \`npm run dev\`
+5. Open [http://localhost:3000](http://localhost:3000)
+
+## Project Structure
+
+\`\`\`
+app/          — Next.js App Router pages and layouts
+components/   — Reusable UI components (shadcn/ui)
+lib/          — Utility functions, Supabase clients
+types/        — TypeScript type definitions
+supabase/     — Database migrations
+public/       — Static assets
+\`\`\`
+
+## Environment Variables
+
+| Variable | Description |
+|----------|-------------|
+| \`NEXT_PUBLIC_SUPABASE_URL\` | Supabase project URL |
+| \`NEXT_PUBLIC_SUPABASE_ANON_KEY\` | Supabase anonymous key |
+",
+    "app/layout.tsx": "import type { Metadata } from "next";
+import type { ReactNode } from "react";
+import "./globals.css";
+
+export const metadata: Metadata = {
+  title: {
+    template: "%s | Envelope Blog",
+    default: "Envelope App",
+  },
+  description: "一个用于验证生成器输出稳定性的 Blog 参考项目",
+};
+
+export default function RootLayout({
+  children,
+}: {
+  children: ReactNode;
+}) {
+  return (
+    <html lang="en" suppressHydrationWarning>
+      <body
+        className="min-h-screen bg-background font-sans antialiased"
+        style={{ fontFamily: "Inter, sans-serif" }}
+      >
+        {children}
+      </body>
+    </html>
+  );
+}
+",
+    "app/page.tsx": "import Link from "next/link";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+
+export const metadata = {
+  title: "Envelope Blog",
+  description: "欢迎来到示例 Blog，用于验证生成器快照输出。",
+};
+
+export default function Page() {
+  return (
+    <div className={"min-h-screen mx-auto"}>
+      {/* 页面根容器 */}
+      <div className={"container mx-auto p-6 space-y-6"}>
+        {/* 站点介绍卡片 */}
+        <Card>
+          <CardHeader>
+            <CardTitle>{"Envelope Blog"}</CardTitle>
+            <CardDescription>{"用于测试 generateProject 的参考项目（blog）"}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Link href={"/posts"} className={"inline-block text-primary underline"}>{"进入文章列表 →"}</Link>          </CardContent>        </Card>      </div>
+    </div>
+  );
+}",
+    "app/posts/[slug]/page.tsx": "import Link from "next/link";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+
+export const metadata = {
+  title: "文章详情",
+  description: "单篇文章详情页（动态路由示例）",
+};
+
+export default function Page() {
+  return (
+    <div className={"min-h-screen mx-auto"}>
+      <div className={"container mx-auto p-6 space-y-6"}>
+        <Card>
+          <CardHeader>
+            <CardTitle>{"文章详情页"}</CardTitle>
+            <CardDescription>{"此页面由动态路由 /posts/[slug] 映射"}</CardDescription>
+          </CardHeader>
+          <CardFooter>
+            <Link href={"/posts"} className={"text-muted-foreground hover:underline"}>{"← 返回列表"}</Link>          </CardFooter>        </Card>      </div>
+    </div>
+  );
+}",
+    "app/posts/page.tsx": "import Link from "next/link";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+
+export const metadata = {
+  title: "文章列表",
+  description: "包含文章条目的列表页（静态示例）",
+};
+
+export default function Page() {
+  return (
+    <div className={"min-h-screen mx-auto"}>
+      <div className={"container mx-auto p-6 space-y-4"}>
+        <Card>
+          <CardHeader>
+            <CardTitle>{"文章列表"}</CardTitle>
+            <CardDescription>{"这里展示文章条目（示例内容）"}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Link href={"/posts/hello-world"} className={"text-primary underline"}>{"Hello World（示例文章）"}</Link>          </CardContent>        </Card>      </div>
+    </div>
+  );
+}",
+    "package.json": "{
+  "name": "envelope-app",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "next": "^14.2.0",
+    "react": "^18.3.0",
+    "react-dom": "^18.3.0",
+    "@supabase/supabase-js": "^2.45.0",
+    "@supabase/ssr": "^0.5.0",
+    "@tanstack/react-query": "^5.59.0",
+    "zustand": "^5.0.0",
+    "lucide-react": "^0.447.0",
+    "@radix-ui/react-slot": "^1.1.0",
+    "class-variance-authority": "^0.7.0",
+    "clsx": "^2.1.0",
+    "tailwind-merge": "^2.5.0",
+    "@radix-ui/react-dialog": "^1.1.0",
+    "@radix-ui/react-dropdown-menu": "^2.1.0",
+    "@radix-ui/react-label": "^2.1.0",
+    "@radix-ui/react-select": "^2.1.0",
+    "@radix-ui/react-separator": "^1.1.0",
+    "@radix-ui/react-tabs": "^1.1.0",
+    "@radix-ui/react-toast": "^1.2.0",
+    "@radix-ui/react-tooltip": "^1.1.0",
+    "@radix-ui/react-avatar": "^1.1.0",
+    "@radix-ui/react-checkbox": "^1.1.0",
+    "@radix-ui/react-switch": "^1.1.0",
+    "@radix-ui/react-popover": "^1.1.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.0",
+    "@types/node": "^22.0.0",
+    "@types/react": "^18.3.0",
+    "@types/react-dom": "^18.3.0",
+    "tailwindcss": "^3.4.0",
+    "postcss": "^8.4.0",
+    "autoprefixer": "^10.4.0",
+    "eslint": "^8.57.0",
+    "eslint-config-next": "^14.2.0"
+  }
+}
+",
+  },
+}
+`;
+
+exports[`@envelope/generator - reference project snapshots > dashboard snapshot 1`] = `
+{
+  "files": [
+    ".env.example",
+    ".eslintrc.json",
+    ".gitignore",
+    "Dockerfile",
+    "README.md",
+    "app/api/flows/[flowId]/route.ts",
+    "app/auth/callback/route.ts",
+    "app/dashboard/error.tsx",
+    "app/dashboard/loading.tsx",
+    "app/dashboard/page.tsx",
+    "app/dashboard/users/error.tsx",
+    "app/dashboard/users/loading.tsx",
+    "app/dashboard/users/page.tsx",
+    "app/error.tsx",
+    "app/globals.css",
+    "app/layout.tsx",
+    "app/loading.tsx",
+    "app/login/page.tsx",
+    "app/page.tsx",
+    "app/settings/error.tsx",
+    "app/settings/loading.tsx",
+    "app/settings/page.tsx",
+    "components.json",
+    "lib/flows/client.ts",
+    "lib/flows/registry.ts",
+    "lib/flows/runtime.ts",
+    "lib/store/app-store.ts",
+    "lib/supabase/client.ts",
+    "lib/supabase/middleware.ts",
+    "lib/supabase/server.ts",
+    "lib/utils.ts",
+    "middleware.ts",
+    "next.config.js",
+    "package.json",
+    "postcss.config.js",
+    "tailwind.config.ts",
+    "tsconfig.json",
+    "types/auth.ts",
+  ],
+  "keyFiles": {
+    "app/api/flows/[flowId]/route.ts": "import { NextResponse } from "next/server";
+import { runFlow } from "@/lib/flows/runtime";
+
+export async function POST(
+  request: Request,
+  { params }: { params: { flowId: string } },
+) {
+  const body = await request.json().catch(() => ({}));
+  const result = await runFlow(params.flowId, (body as { input?: unknown }).input ?? body);
+  return NextResponse.json(result);
+}
+
+export async function GET(
+  request: Request,
+  { params }: { params: { flowId: string } },
+) {
+  const url = new URL(request.url);
+  const query = Object.fromEntries(url.searchParams.entries());
+  const result = await runFlow(params.flowId, { query });
+  return NextResponse.json(result);
+}
+",
+    "app/dashboard/page.tsx": ""use client";
+
+import { useEffect, useCallback } from "react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { callFlow } from "@/lib/flows/client";
+import { useAppStore } from "@/lib/store/app-store";
+
+export default function Page() {
+  // SEO — dynamic title for client component
+  useEffect(() => {
+    document.title = "仪表盘";
+    const meta = document.querySelector('meta[name="description"]');
+    if (meta) meta.setAttribute("content", "包含事件绑定的页面，用于触发 use client 代码路径");
+  }, []);
+
+  const handle_dash_refresh_button_onClick = useCallback(async (...args: unknown[]) => {
+    const eventArgs = args;
+    const flowResults: unknown[] = [];
+    const flowResult = await callFlow("flow-refresh-users", {
+      componentId: "dash-refresh-button",
+      event: "onClick",
+      args: eventArgs,
+    });
+    flowResults.push(flowResult);
+    return flowResults;
+  }, []);
+
+  return (
+    <div className={"min-h-screen mx-auto"}>
+      <div className={"container mx-auto p-6 space-y-4"}>
+        <Card>
+          <CardHeader>
+            <CardTitle>{"仪表盘"}</CardTitle>
+            <CardDescription>{"包含按钮事件绑定（onClick → flow）"}</CardDescription>
+          </CardHeader>
+          <CardFooter>
+            <Button variant={"default"} size={"default"} onClick={handle_dash_refresh_button_onClick} data-flow-output-0={useAppStore((s) => s.flowResults["flow-refresh-users"])}>{"刷新用户数据"}</Button>          </CardFooter>        </Card>      </div>
+    </div>
+  );
+}",
+    "app/login/page.tsx": ""use client";
+
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
+import { Provider } from "@supabase/supabase-js";
+
+export default function LoginPage() {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
+
+  const handleEmailLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
+
+    const supabase = createClient();
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (error) {
+      setError(error.message);
+      setLoading(false);
+      return;
+    }
+
+    router.push("/dashboard");
+    router.refresh();
+  };
+
+  const handleOAuthLogin = async (provider: Provider) => {
+    const supabase = createClient();
+    await supabase.auth.signInWithOAuth({
+      provider,
+      options: {
+        redirectTo: \`\${location.origin}/auth/callback\`,
+      },
+    });
+  };
+
+  return (
+    <div className="flex min-h-screen items-center justify-center">
+      <div className="w-full max-w-md space-y-6 rounded-lg border p-8 shadow-sm">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold">Sign In</h1>
+          <p className="text-muted-foreground mt-2">
+            Welcome back
+          </p>
+        </div>
+
+        <form onSubmit={handleEmailLogin} className="space-y-4">
+          <div className="space-y-2">
+            <label htmlFor="email" className="text-sm font-medium">
+              Email
+            </label>
+            <input
+              id="email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              className="w-full rounded-md border px-3 py-2 text-sm"
+              placeholder="you@example.com"
+            />
+          </div>
+          <div className="space-y-2">
+            <label htmlFor="password" className="text-sm font-medium">
+              Password
+            </label>
+            <input
+              id="password"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              className="w-full rounded-md border px-3 py-2 text-sm"
+              placeholder="••••••••"
+            />
+          </div>
+
+          {error && (
+            <p className="text-sm text-destructive">{error}</p>
+          )}
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+          >
+            {loading ? "Signing in..." : "Sign In"}
+          </button>
+        </form>
+
+        <div className="relative">
+          <div className="absolute inset-0 flex items-center">
+            <span className="w-full border-t" />
+          </div>
+          <div className="relative flex justify-center text-xs uppercase">
+            <span className="bg-background px-2 text-muted-foreground">
+              Or continue with
+            </span>
+          </div>
+        </div>
+
+        <div className="grid gap-2">
+          <button
+            onClick={() => handleOAuthLogin("github")}
+            className="w-full rounded-md border px-4 py-2 text-sm font-medium hover:bg-accent"
+          >
+            {"Github"}
+          </button>
+        </div>
+
+      </div>
+    </div>
+  );
+}
+",
+    "lib/flows/registry.ts": "export type FlowNodeType = string;
+
+export type FlowPortDataType = "string" | "number" | "boolean" | "object" | "array" | "any";
+
+export interface FlowPosition {
+  x: number;
+  y: number;
+}
+
+export interface FlowNode {
+  id: string;
+  type: FlowNodeType;
+  position: FlowPosition;
+  label?: string;
+  config: Record<string, unknown>;
+}
+
+export interface FlowEdge {
+  id: string;
+  source: string;
+  sourceHandle: string;
+  target: string;
+  targetHandle: string;
+  label?: string;
+}
+
+export interface FlowDefinition {
+  thing: string;
+  version: string;
+  description?: string;
+  nodes: FlowNode[];
+  edges: FlowEdge[];
+}
+
+export const flowRegistry: Record<string, FlowDefinition> = {
+  "flow-refresh-users": {
+    "thing": "empty-flow",
+    "version": "1.0.0",
+    "nodes": [
+      {
+        "id": "start",
+        "type": "event.start",
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "config": {}
+      },
+      {
+        "id": "end",
+        "type": "event.end",
+        "position": {
+          "x": 200,
+          "y": 0
+        },
+        "config": {}
+      }
+    ],
+    "edges": [
+      {
+        "id": "e1",
+        "source": "start",
+        "sourceHandle": "out",
+        "target": "end",
+        "targetHandle": "in"
+      }
+    ]
+  }
+} as Record<string, FlowDefinition>;
+
+export function getFlow(flowId: string): FlowDefinition | undefined {
+  return flowRegistry[flowId];
+}
+",
+    "middleware.ts": "import { updateSession } from "@/lib/supabase/middleware";
+import { NextResponse, type NextRequest } from "next/server";
+
+export async function middleware(request: NextRequest) {
+  const { supabaseResponse, user } = await updateSession(request);
+
+  const { pathname } = request.nextUrl;
+
+  // 公开路由 — 无需认证即可访问
+  const publicPaths = ["/login", "/auth", "/api/auth"];
+  const isPublicPath = publicPaths.some(path => pathname.startsWith(path));
+
+  // 静态资源不拦截
+  if (
+    pathname.startsWith("/_next") ||
+    pathname.startsWith("/favicon") ||
+    pathname.match(/\\.(svg|png|jpg|jpeg|gif|ico|css|js)$/)
+  ) {
+    return supabaseResponse;
+  }
+
+  // 未登录用户访问受保护页面 → 重定向到登录页
+  if (!user && !isPublicPath) {
+    const loginUrl = new URL("/login", request.url);
+    loginUrl.searchParams.set("redirect", pathname);
+    return NextResponse.redirect(loginUrl);
+  }
+
+  // 已登录用户访问登录页 → 重定向到首页
+  if (user && pathname === "/login") {
+    return NextResponse.redirect(new URL("/dashboard", request.url));
+  }
+
+  return supabaseResponse;
+}
+
+export const config = {
+  matcher: [
+    "/((?!_next/static|_next/image|favicon.ico).*)",
+  ],
+};
+",
+    "package.json": "{
+  "name": "envelope-app",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "next": "^14.2.0",
+    "react": "^18.3.0",
+    "react-dom": "^18.3.0",
+    "@supabase/supabase-js": "^2.45.0",
+    "@supabase/ssr": "^0.5.0",
+    "@tanstack/react-query": "^5.59.0",
+    "zustand": "^5.0.0",
+    "lucide-react": "^0.447.0",
+    "@radix-ui/react-slot": "^1.1.0",
+    "class-variance-authority": "^0.7.0",
+    "clsx": "^2.1.0",
+    "tailwind-merge": "^2.5.0",
+    "@radix-ui/react-dialog": "^1.1.0",
+    "@radix-ui/react-dropdown-menu": "^2.1.0",
+    "@radix-ui/react-label": "^2.1.0",
+    "@radix-ui/react-select": "^2.1.0",
+    "@radix-ui/react-separator": "^1.1.0",
+    "@radix-ui/react-tabs": "^1.1.0",
+    "@radix-ui/react-toast": "^1.2.0",
+    "@radix-ui/react-tooltip": "^1.1.0",
+    "@radix-ui/react-avatar": "^1.1.0",
+    "@radix-ui/react-checkbox": "^1.1.0",
+    "@radix-ui/react-switch": "^1.1.0",
+    "@radix-ui/react-popover": "^1.1.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.0",
+    "@types/node": "^22.0.0",
+    "@types/react": "^18.3.0",
+    "@types/react-dom": "^18.3.0",
+    "tailwindcss": "^3.4.0",
+    "postcss": "^8.4.0",
+    "autoprefixer": "^10.4.0",
+    "eslint": "^8.57.0",
+    "eslint-config-next": "^14.2.0"
+  }
+}
+",
+  },
+}
+`;
+
+exports[`@envelope/generator - reference project snapshots > e-commerce snapshot 1`] = `
+{
+  "files": [
+    ".env.example",
+    ".eslintrc.json",
+    ".gitignore",
+    "Dockerfile",
+    "README.md",
+    "app/api/checkout/route.ts",
+    "app/api/flows/[flowId]/route.ts",
+    "app/cart/error.tsx",
+    "app/cart/loading.tsx",
+    "app/cart/page.tsx",
+    "app/checkout/error.tsx",
+    "app/checkout/loading.tsx",
+    "app/checkout/page.tsx",
+    "app/error.tsx",
+    "app/globals.css",
+    "app/layout.tsx",
+    "app/loading.tsx",
+    "app/page.tsx",
+    "app/products/error.tsx",
+    "app/products/loading.tsx",
+    "app/products/page.tsx",
+    "components.json",
+    "lib/flows/client.ts",
+    "lib/flows/registry.ts",
+    "lib/flows/runtime.ts",
+    "lib/store/app-store.ts",
+    "lib/utils.ts",
+    "next.config.js",
+    "package.json",
+    "postcss.config.js",
+    "supabase/migrations/001_initial_schema.sql",
+    "tailwind.config.ts",
+    "tsconfig.json",
+    "types/database.ts",
+  ],
+  "keyFiles": {
+    "app/api/checkout/route.ts": "import { NextResponse } from "next/server";
+import { runFlow } from "@/lib/flows/runtime";
+
+export async function POST(request: Request, ctx?: { params?: Record<string, string> }) {
+  const body = await request.json().catch(() => ({}));
+  const result = await runFlow("flow-checkout", { body, params: ctx?.params ?? {} });
+  return NextResponse.json(result);
+}
+",
+    "app/checkout/page.tsx": ""use client";
+
+import { useEffect, useCallback } from "react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { callFlow } from "@/lib/flows/client";
+import { useAppStore } from "@/lib/store/app-store";
+
+export default function Page() {
+  // SEO — dynamic title for client component
+  useEffect(() => {
+    document.title = "结算";
+    const meta = document.querySelector('meta[name="description"]');
+    if (meta) meta.setAttribute("content", "结算页（示例）");
+  }, []);
+
+  const handle_checkout_btn_onClick = useCallback(async (...args: unknown[]) => {
+    const eventArgs = args;
+    const flowResults: unknown[] = [];
+    const flowResult = await callFlow("flow-checkout", {
+      componentId: "checkout-btn",
+      event: "onClick",
+      args: eventArgs,
+    });
+    flowResults.push(flowResult);
+    return flowResults;
+  }, []);
+
+  return (
+    <div className={"min-h-screen mx-auto"}>
+      <div className={"container mx-auto p-6 space-y-4"}>
+        <Card>
+          <CardHeader>
+            <CardTitle>{"结算"}</CardTitle>
+            <CardDescription>{"示例结算页（配合 /api/checkout endpoint）"}</CardDescription>
+          </CardHeader>
+          <CardFooter>
+            <Button variant={"default"} size={"default"} onClick={handle_checkout_btn_onClick} data-flow-output-0={useAppStore((s) => s.flowResults["flow-checkout"])}>{"提交订单"}</Button>          </CardFooter>        </Card>      </div>
+    </div>
+  );
+}",
+    "app/products/page.tsx": "import Link from "next/link";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+
+export const metadata = {
+  title: "商品列表",
+  description: "商品列表页（示例）",
+};
+
+export default function Page() {
+  return (
+    <div className={"min-h-screen mx-auto"}>
+      <div className={"container mx-auto p-6 space-y-4"}>
+        <Card>
+          <CardHeader>
+            <CardTitle>{"商品"}</CardTitle>
+            <CardDescription>{"此处展示商品列表（示例数据）"}</CardDescription>
+          </CardHeader>
+          <CardFooter>
+            <Link href={"/cart"} className={"text-primary underline"}>{"查看购物车 →"}</Link>          </CardFooter>        </Card>      </div>
+    </div>
+  );
+}",
+    "lib/flows/runtime.ts": "import { getFlow, type FlowDefinition } from "./registry";
+
+/**
+ * FlowExecutionLog: 记录每个节点的执行日志
+ */
+export interface FlowExecutionLog {
+  nodeId: string;
+  nodeType: string;
+  input: unknown;
+  output: unknown;
+  durationMs: number;
+  error?: string;
+}
+
+export interface RunFlowResult {
+  flowId: string;
+  version: string;
+  output: unknown;
+  logs: FlowExecutionLog[];
+}
+
+import { createClient } from "@supabase/supabase-js";
+
+type SupabaseClient = ReturnType<typeof createClient>;
+
+/** _supabaseClient: Supabase 客户端单例 */
+let _supabaseClient: SupabaseClient | null = null;
+
+function getSupabaseClient(): SupabaseClient {
+  if (!_supabaseClient) {
+    _supabaseClient = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    );
+  }
+  return _supabaseClient;
+}
+
+/**
+ * getByPath: 通过路径从对象中取值，例如 getByPath({ a: { b: 1 } }, "a.b") => 1
+ */
+function getByPath(obj: unknown, path: string): unknown {
+  const p = path.replace(/^\\$/, "").replace(/^\\./, "");
+  if (!p) return obj;
+  const parts = p.split(".").filter(Boolean);
+  let cur: any = obj;
+  for (const part of parts) {
+    if (cur == null) return undefined;
+    cur = cur[part];
+  }
+  return cur;
+}
+
+/**
+ * 1) topoSort: 拓扑排序 — 使用 Kahn 算法，支持循环检测
+ */
+export function topoSort(nodes: { id: string }[], edges: { source: string; target: string }[]): string[] {
+  // 初始化入度表和邻接表
+  const inDegree: Record<string, number> = {};
+  const adj: Record<string, string[]> = {};
+  for (const n of nodes) {
+    inDegree[n.id] = 0;
+    adj[n.id] = [];
+  }
+  for (const e of edges) {
+    if (!adj[e.source]) adj[e.source] = [];
+    adj[e.source].push(e.target);
+    if (inDegree[e.target] === undefined) inDegree[e.target] = 0;
+    inDegree[e.target] = (inDegree[e.target] || 0) + 1;
+  }
+  // BFS 拓扑排序
+  const queue: string[] = [];
+  for (const [id, deg] of Object.entries(inDegree)) {
+    if (deg === 0) queue.push(id);
+  }
+  const order: string[] = [];
+  while (queue.length > 0) {
+    const id = queue.shift()!;
+    order.push(id);
+    for (const next of adj[id] || []) {
+      inDegree[next]--;
+      if (inDegree[next] === 0) queue.push(next);
+    }
+  }
+  // 循环检测：如果 order 长度不等于节点数，说明存在循环依赖
+  if (order.length !== nodes.length) {
+    const cycled = nodes.filter((n) => !order.includes(n.id)).map((n) => n.id);
+    throw new Error(\`流程包含循环依赖: \${cycled.join(", ")}\`);
+  }
+  return order;
+}
+
+/**
+ * 2) resolveTemplates: 递归解析模板字符串中的 {{...}} 占位符，在 context 中查找对应值
+ */
+export function resolveTemplates(value: unknown, ctx: Record<string, unknown>): unknown {
+  if (typeof value === "string") {
+    // 替换所有 {{...}} 模式
+    return value.replace(/{{(.+?)}}/g, (_, key: string) => {
+      const trimmed = key.trim();
+      const resolved = getByPath(ctx, trimmed);
+      return resolved !== undefined ? String(resolved) : \`{{\${trimmed}}}\`;
+    });
+  }
+  if (Array.isArray(value)) {
+    return value.map((v) => resolveTemplates(v, ctx));
+  }
+  if (value && typeof value === "object") {
+    const result: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
+      result[k] = resolveTemplates(v, ctx);
+    }
+    return result;
+  }
+  return value;
+}
+
+/**
+ * 3) executeNode: 执行单个节点，根据 node.type 分发到不同处理器
+ */
+export async function executeNode(
+  node: { id: string; type: string; config: Record<string, unknown> },
+  input: unknown,
+  ctx: Record<string, unknown>,
+  supabase: SupabaseClient,
+): Promise<unknown> {
+  const cfg = resolveTemplates(node.config, ctx) as Record<string, unknown>;
+
+  // —— 事件类节点：透传输入 ——
+  if (node.type.startsWith("event.")) {
+    return input;
+  }
+
+  // —— 数据库操作节点 ——
+  if (node.type === "db.query") {
+    const table = String(cfg.table || "");
+    if (!table) throw new Error(\`db.query: 缺少 table 配置\`);
+    const columns = Array.isArray(cfg.columns) ? (cfg.columns as string[]).join(",") : "*";
+    const where = cfg.where && typeof cfg.where === "object" ? (cfg.where as Record<string, unknown>) : {};
+    const limit = typeof cfg.limit === "number" ? cfg.limit : undefined;
+    const orderBy = cfg.orderBy && typeof cfg.orderBy === "object" ? cfg.orderBy as { column: string; ascending?: boolean } : undefined;
+
+    let q: any = supabase.from(table).select(columns);
+    // 应用 where 条件
+    for (const [k, v] of Object.entries(where)) {
+      if (v !== undefined) q = q.eq(k, v);
+    }
+    // 应用排序
+    if (orderBy) {
+      q = q.order(orderBy.column, { ascending: orderBy.ascending ?? true });
+    }
+    // 应用 limit
+    if (limit !== undefined) q = q.limit(limit);
+    const { data, error } = await q;
+    if (error) throw new Error(error.message);
+    return data;
+  }
+
+  if (node.type === "db.insert") {
+    const table = String(cfg.table || "");
+    if (!table) throw new Error(\`db.insert: 缺少 table 配置\`);
+    const values = cfg.values !== undefined ? cfg.values : input;
+    const { data, error } = await supabase.from(table).insert(values as any).select();
+    if (error) throw new Error(error.message);
+    return data;
+  }
+
+  if (node.type === "db.update") {
+    const table = String(cfg.table || "");
+    if (!table) throw new Error(\`db.update: 缺少 table 配置\`);
+    const values = cfg.values !== undefined ? cfg.values : input;
+    const where = cfg.where && typeof cfg.where === "object" ? (cfg.where as Record<string, unknown>) : {};
+    let q: any = supabase.from(table).update(values as any);
+    for (const [k, v] of Object.entries(where)) {
+      if (v !== undefined) q = q.eq(k, v);
+    }
+    const { data, error } = await q.select();
+    if (error) throw new Error(error.message);
+    return data;
+  }
+
+  if (node.type === "db.delete") {
+    const table = String(cfg.table || "");
+    if (!table) throw new Error(\`db.delete: 缺少 table 配置\`);
+    const where = cfg.where && typeof cfg.where === "object" ? (cfg.where as Record<string, unknown>) : {};
+    let q: any = supabase.from(table).delete();
+    for (const [k, v] of Object.entries(where)) {
+      if (v !== undefined) q = q.eq(k, v);
+    }
+    const { data, error } = await q;
+    if (error) throw new Error(error.message);
+    return data;
+  }
+
+  // —— API 请求节点 ——
+  if (node.type === "api.request") {
+    const url = String(cfg.url || "");
+    if (!url) throw new Error(\`api.request: 缺少 url 配置\`);
+    const method = String(cfg.method || "GET");
+    const headers = cfg.headers && typeof cfg.headers === "object" ? (cfg.headers as Record<string, string>) : undefined;
+    const body = cfg.body !== undefined ? cfg.body : undefined;
+    const fetchOptions: RequestInit = { method };
+    if (headers) fetchOptions.headers = headers;
+    if (body !== undefined && method !== "GET" && method !== "HEAD") {
+      fetchOptions.body = typeof body === "string" ? body : JSON.stringify(body);
+    }
+    const res = await fetch(url, fetchOptions);
+    const text = await res.text();
+    let json: unknown = text;
+    try { json = JSON.parse(text); } catch { /* not JSON */ }
+    return { status: res.status, data: json };
+  }
+
+  // —— 条件分支节点 ——
+  if (node.type === "condition.if") {
+    const expression = String(cfg.expression || "true");
+    // 安全求值：在 context 中查找表达式对应的布尔值，或通过 Function 构造函数求值
+    let result: boolean;
+    const ctxVal = getByPath(ctx, expression) ?? getByPath({ input }, expression);
+    if (typeof ctxVal === "boolean") {
+      result = ctxVal;
+    } else {
+      try {
+        const keys = Object.keys(ctx);
+        const vals = Object.values(ctx);
+        const fn = new Function(...keys, \`return Boolean(\${expression});\`);
+        result = fn(...vals);
+      } catch {
+        result = Boolean(ctxVal);
+      }
+    }
+    return { condition: result };
+  }
+
+  if (node.type === "condition.switch") {
+    const value = cfg.value !== undefined ? cfg.value : getByPath(ctx, String(cfg.valuePath || ""));
+    const cases = Array.isArray(cfg.cases) ? (cfg.cases as { value: unknown; label: string }[]) : [];
+    // 查找匹配的 case，未匹配则返回 null
+    const matched = cases.find((c) => String(c.value) === String(value));
+    return { switchValue: value, matchedCase: matched?.label ?? null };
+  }
+
+  // —— 循环节点 ——
+  if (node.type === "loop.forEach") {
+    const collection = cfg.collection !== undefined ? cfg.collection : getByPath(ctx, String(cfg.collectionPath || ""));
+    if (!Array.isArray(collection)) throw new Error(\`loop.forEach: collection 不是数组\`);
+    const results: unknown[] = [];
+    for (let i = 0; i < collection.length; i++) {
+      results.push(collection[i]);
+    }
+    return results;
+  }
+
+  if (node.type === "loop.while") {
+    const maxIterations = typeof cfg.maxIterations === "number" ? cfg.maxIterations : 100;
+    const conditionExpr = String(cfg.condition || "true");
+    const results: unknown[] = [];
+    let iterations = 0;
+    while (iterations < maxIterations) {
+      const keys = Object.keys(ctx);
+      const vals = Object.values(ctx);
+      let shouldContinue: boolean;
+      try {
+        const fn = new Function(...keys, \`return Boolean(\${conditionExpr});\`);
+        shouldContinue = fn(...vals);
+      } catch {
+        shouldContinue = false;
+      }
+      if (!shouldContinue) break;
+      // 输出当前迭代上下文快照
+      results.push({ ...ctx });
+      iterations++;
+    }
+    return results;
+  }
+
+  // —— 数据转换节点 ——
+  if (node.type === "transform.data") {
+    const expr = typeof cfg.expression === "string" ? cfg.expression : "";
+    const source = cfg.source !== undefined ? cfg.source : input;
+    if (!expr) return source;
+    return getByPath(source, expr);
+  }
+
+  // —— 延时节点 ——
+  if (node.type === "flow.delay") {
+    const ms = typeof cfg.duration === "number" ? cfg.duration : 1000;
+    await new Promise((resolve) => setTimeout(resolve, ms));
+    return input;
+  }
+
+  // —— 操作类节点（存根） ——
+  if (node.type === "action.email") {
+    console.log(\`[flow] 发送邮件: \${JSON.stringify(cfg)}\`);
+    return { sent: true };
+  }
+
+  if (node.type === "notification") {
+    console.log(\`[flow] 发送通知: \${JSON.stringify(cfg)}\`);
+    return { shown: true };
+  }
+
+  // —— 自定义代码节点（存根） ——
+  if (node.type === "custom.code") {
+    const code = String(cfg.code || "");
+    console.log(\`[flow] 执行自定义代码: \${code.substring(0, 100)}\`);
+    return input;
+  }
+
+  // —— 默认：透传输入 ——
+  return input;
+}
+
+/**
+ * 4) runFlow: 完整的流程执行引擎 — 拓扑排序 → 按序执行 → 条件分支 → 错误处理 → 执行日志
+ */
+export async function runFlow(flowId: string, input: unknown): Promise<RunFlowResult> {
+  const def = getFlow(flowId);
+  if (!def) {
+    throw new Error(\`Flow not found: \${flowId}\`);
+  }
+
+  const supabase = getSupabaseClient();
+  const logs: FlowExecutionLog[] = [];
+  const ctx: Record<string, unknown> = { input };
+  const nodeOutputs: Record<string, unknown> = {};
+  const skippedNodes: Set<string> = new Set();
+
+  // 拓扑排序得到节点执行顺序
+  const sortedIds = topoSort(def.nodes, def.edges);
+
+  // 构建出边映射：source -> edges[]
+  const outEdges: Record<string, typeof def.edges> = {};
+  for (const e of def.edges) {
+    if (!outEdges[e.source]) outEdges[e.source] = [];
+    outEdges[e.source].push(e);
+  }
+
+  // 构建入边映射：target -> edges[]
+  const inEdges: Record<string, typeof def.edges> = {};
+  for (const e of def.edges) {
+    if (!inEdges[e.target]) inEdges[e.target] = [];
+    inEdges[e.target].push(e);
+  }
+
+  // 遍历已排序的节点序列，依次执行
+  for (const nodeId of sortedIds) {
+    const node = def.nodes.find((n) => n.id === nodeId);
+    if (!node) continue;
+
+    // 如果当前节点在跳过的路径中，跳过执行
+    if (skippedNodes.has(nodeId)) {
+      continue;
+    }
+
+    // 收集入边端口: inputPorts = 当前节点的所有入边（按 targetHandle 分组）
+    const inputPorts = inEdges[nodeId] || [];
+    // srcPorts: 按 sourceHandle → targetHandle 收集上游输出
+    const srcPorts: Record<string, unknown> = {};
+    for (const e of inputPorts) {
+      srcPorts[e.sourceHandle || "default"] = nodeOutputs[e.source];
+    }
+
+    let nodeInput: unknown = input;
+    if (inputPorts.length === 1) {
+      nodeInput = nodeOutputs[inputPorts[0].source];
+    } else if (inputPorts.length > 1) {
+      nodeInput = srcPorts;
+    }
+
+    // 执行节点
+    const startTime = performance.now();
+    let nodeOutput: unknown;
+    let execError: string | undefined;
+
+    try {
+      nodeOutput = await executeNode(node, nodeInput, ctx, supabase);
+    } catch (err) {
+      execError = err instanceof Error ? err.message : String(err);
+      nodeOutput = null;
+    }
+
+    const durationMs = performance.now() - startTime;
+    nodeOutputs[nodeId] = nodeOutput;
+
+    // 记录执行日志
+    logs.push({
+      nodeId: node.id,
+      nodeType: node.type,
+      input: nodeInput,
+      output: nodeOutput,
+      durationMs: Math.round(durationMs * 100) / 100,
+      ...(execError ? { error: execError } : {}),
+    });
+
+    // 错误处理：若有 error 端口边则传递错误，否则抛出
+    if (execError) {
+      const hasErrorEdge = outEdges[nodeId]?.some((e) => e.sourceHandle === "error") || false;
+      if (hasErrorEdge) {
+        for (const e of outEdges[nodeId] || []) {
+          if (e.sourceHandle === "error") {
+            nodeOutputs[e.target] = { error: execError };
+          } else {
+            skippedNodes.add(e.target);
+          }
+        }
+      } else {
+        throw new Error(execError);
+      }
+      continue;
+    }
+
+    // 条件分支处理：condition.if 判断后跳过非活跃分支
+    if (node.type === "condition.if") {
+      const condResult = nodeOutput && typeof nodeOutput === "object" && "condition" in (nodeOutput as Record<string, unknown>)
+        ? (nodeOutput as Record<string, unknown>).condition
+        : true;
+      const isTruthy = Boolean(condResult);
+      if (isTruthy) {
+        // 非活跃分支：跳过 false 分支的后续节点
+        for (const e of outEdges[nodeId] || []) {
+          if (e.sourceHandle === "false") {
+            skippedNodes.add(e.target);
+          }
+        }
+      } else {
+        // 非活跃分支：跳过 true 分支的后续节点
+        for (const e of outEdges[nodeId] || []) {
+          if (e.sourceHandle === "true") {
+            skippedNodes.add(e.target);
+          }
+        }
+      }
+    }
+
+    // condition.switch：仅保留匹配 case 的分支
+    if (node.type === "condition.switch") {
+      const matchedLabel = nodeOutput && typeof nodeOutput === "object"
+        ? (nodeOutput as Record<string, unknown>).matchedCase
+        : null;
+      for (const e of outEdges[nodeId] || []) {
+        if (e.sourceHandle && e.sourceHandle !== (matchedLabel as string ?? "__default__")) {
+          skippedNodes.add(e.target);
+        }
+      }
+    }
+
+    // 更新上下文
+    ctx[node.id] = nodeOutput;
+  }
+
+  // 收集最终输出：取最后一个非事件节点的输出
+  const lastNonEvent = sortedIds.filter((id) => {
+    const n = def.nodes.find((nd) => nd.id === id);
+    return n && !n.type.startsWith("event.");
+  });
+  const lastOutput = lastNonEvent.length > 0 ? nodeOutputs[lastNonEvent[lastNonEvent.length - 1]] : null;
+
+  return {
+    flowId,
+    version: def.version,
+    output: lastOutput,
+    logs,
+  };
+}
+
+export function getFlowDefinition(flowId: string): FlowDefinition {
+  const def = getFlow(flowId);
+  if (!def) {
+    throw new Error(\`Flow not found: \${flowId}\`);
+  }
+  return def;
+}
+",
+    "package.json": "{
+  "name": "envelope-app",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "next": "^14.2.0",
+    "react": "^18.3.0",
+    "react-dom": "^18.3.0",
+    "@supabase/supabase-js": "^2.45.0",
+    "@supabase/ssr": "^0.5.0",
+    "@tanstack/react-query": "^5.59.0",
+    "zustand": "^5.0.0",
+    "lucide-react": "^0.447.0",
+    "@radix-ui/react-slot": "^1.1.0",
+    "class-variance-authority": "^0.7.0",
+    "clsx": "^2.1.0",
+    "tailwind-merge": "^2.5.0",
+    "@radix-ui/react-dialog": "^1.1.0",
+    "@radix-ui/react-dropdown-menu": "^2.1.0",
+    "@radix-ui/react-label": "^2.1.0",
+    "@radix-ui/react-select": "^2.1.0",
+    "@radix-ui/react-separator": "^1.1.0",
+    "@radix-ui/react-tabs": "^1.1.0",
+    "@radix-ui/react-toast": "^1.2.0",
+    "@radix-ui/react-tooltip": "^1.1.0",
+    "@radix-ui/react-avatar": "^1.1.0",
+    "@radix-ui/react-checkbox": "^1.1.0",
+    "@radix-ui/react-switch": "^1.1.0",
+    "@radix-ui/react-popover": "^1.1.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.0",
+    "@types/node": "^22.0.0",
+    "@types/react": "^18.3.0",
+    "@types/react-dom": "^18.3.0",
+    "tailwindcss": "^3.4.0",
+    "postcss": "^8.4.0",
+    "autoprefixer": "^10.4.0",
+    "eslint": "^8.57.0",
+    "eslint-config-next": "^14.2.0"
+  }
+}
+",
+    "supabase/migrations/001_initial_schema.sql": "-- ============================================================
+-- Envelope V3 — Database Migration
+-- Schema Version: 3.0.0
+-- Generated by @envelope/generator
+-- ============================================================
+
+CREATE TYPE "order_status" AS ENUM ('pending', 'paid', 'cancelled');
+
+-- 商品表（示例）
+CREATE TABLE "products" (
+  "id" UUID DEFAULT gen_random_uuid() NOT NULL PRIMARY KEY, -- 主键
+  "title" TEXT NOT NULL, -- 商品标题
+  "price" NUMERIC NOT NULL DEFAULT 0, -- 价格（示例）
+  "created_at" TIMESTAMPTZ NOT NULL DEFAULT now() -- 创建时间
+);
+
+CREATE INDEX "idx_products_title" ON "products" USING btree ("title");
+
+ALTER TABLE "products" ENABLE ROW LEVEL SECURITY;
+
+-- 订单表（示例）
+CREATE TABLE "orders" (
+  "id" UUID DEFAULT gen_random_uuid() NOT NULL PRIMARY KEY,
+  "status" TEXT NOT NULL DEFAULT 'pending'::text,
+  "created_at" TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+ALTER TABLE "orders" ENABLE ROW LEVEL SECURITY;
+",
+    "types/database.ts": "// Auto-generated by @envelope/generator
+// Schema Version: 3.0.0
+// DO NOT EDIT MANUALLY — changes will be overwritten
+
+export interface Database {
+  public: {
+    Tables: {
+      products: {
+        Row: ProductsRow;
+        Insert: Partial<ProductsRow>;
+        Update: Partial<ProductsRow>;
+      };
+      orders: {
+        Row: OrdersRow;
+        Insert: Partial<OrdersRow>;
+        Update: Partial<OrdersRow>;
+      };
+    };
+    Views: {};
+    Functions: {};
+    Enums: {};
+  };
+}
+
+/** 商品表（示例） */
+export interface ProductsRow {
+  /** 主键 */
+  id: string;
+  /** 商品标题 */
+  title: string;
+  /** 价格（示例） */
+  price: number;
+  /** 创建时间 */
+  created_at: string;
+}
+
+/** 订单表（示例） */
+export interface OrdersRow {
+  id: string;
+  status: string;
+  created_at: string;
+}
+",
+  },
+}
+`;
