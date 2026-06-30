@@ -2,54 +2,59 @@
  * 画布选中操作切片
  *
  * 包含单选、多选、清除选中、全选等操作。
+ * 选中管理委托给 SelectionManager。
  *
  * @author xiye
- * @date 2026-06-25
+ * @date 2026-06-29
  */
 
 import type { CanvasState, CanvasActions } from "../types";
-import { findNodeLocation } from "./tree-ops";
+import { SelectionManager } from "../document/selection-manager";
+import type { NodeManager } from "../document/node-manager";
 
 export function createSelectionSlice(
   set: (partial: Partial<CanvasState & CanvasActions>) => void,
   get: () => CanvasState & CanvasActions,
+  getSelectionManager: () => SelectionManager,
+  getNodeManager: () => NodeManager,
 ) {
+  const sel = () => getSelectionManager();
+  const nm = () => getNodeManager();
+
   return {
-    // 选中操作不入历史栈，符合 Figma 等业界惯例
     selectComponent: (id: string, multi = false) => {
       const state = get();
       if (multi) {
-        const already = state.selectedIds.includes(id);
-        const nextSelectedIds = already ? state.selectedIds.filter((s) => s !== id) : [...state.selectedIds, id];
+        const nextIds = sel().toggle(state.selectedIds, id);
         set({
-          selectedIds: nextSelectedIds,
-          activeNodeId: nextSelectedIds.length === 1 ? nextSelectedIds[0]! : null,
+          selectedIds: nextIds,
+          activeNodeId: nextIds.length === 1 ? nextIds[0]! : null,
         });
         return;
       }
       set({ selectedIds: [id], activeNodeId: id });
     },
 
-    // 选中操作不入历史栈，符合 Figma 等业界惯例
     selectNode: (nodeId: string) => {
-      const loc = findNodeLocation(get().components, nodeId);
-      if (!loc) return;
+      const state = get();
+      const loc = nm().locate(state.components, nodeId);
+      if (!loc) {
+        set({ selectedIds: [nodeId], activeNodeId: nodeId });
+        return;
+      }
       set({
         selectedIds: [loc.rootId],
         activeNodeId: nodeId,
       });
     },
 
-    // 选中操作不入历史栈，符合 Figma 等业界惯例
     clearSelection: () => {
-      set({ selectedIds: [] as string[], activeNodeId: null });
+      set({ selectedIds: [], activeNodeId: null });
     },
 
-    // 选中操作不入历史栈，符合 Figma 等业界惯例
     selectAll: () => {
-      const visibleIds = get().components
-        .filter((c) => !c.hidden)
-        .map((c) => c.id);
+      const state = get();
+      const visibleIds = sel().selectAll(state.components);
       const firstId = visibleIds[0] ?? null;
       set({ selectedIds: visibleIds, activeNodeId: firstId });
     },

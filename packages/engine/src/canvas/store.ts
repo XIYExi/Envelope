@@ -24,6 +24,7 @@ import type { ComponentNode } from "../schemas/page.schema";
 import { syncAggregateSlots } from "../slots";
 import { isContainerType } from "../shared/canvas-utils";
 
+import { NodeManager, SelectionManager } from "./document";
 import { resetHistoryState, undoOp, redoOp, clearHistoryOp, hydrateOp, batchOp, withHistory } from "./store/history";
 import { viewportInitialState, createViewportSlice } from "./store/viewport";
 import { createComponentCrudSlice } from "./store/component-crud";
@@ -31,6 +32,10 @@ import { createSelectionSlice } from "./store/selection";
 import { createClipboardSlice } from "./store/clipboard";
 import { createComponentOpsSlice } from "./store/component-ops";
 import { generateId as genId } from "./store/tree-ops";
+
+// 全局 NodeManager 和 SelectionManager 实例
+const _nodeManager = new NodeManager();
+const _selectionManager = new SelectionManager();
 
 // 聚合所有切片创建 store
 export const useCanvasStore = create<CanvasState & CanvasActions>((set, get) => ({
@@ -122,10 +127,18 @@ export const useCanvasStore = create<CanvasState & CanvasActions>((set, get) => 
   ...createComponentCrudSlice(set, get),
 
   // ========== 选中操作 ==========
-  ...createSelectionSlice(set, get),
+  ...createSelectionSlice(set, get, () => _selectionManager, () => _nodeManager),
 
   // ========== 剪贴板 + 节点操作 ==========
-  ...createClipboardSlice(set, get),
+  ...createClipboardSlice(set, get, () => ({
+    insertNode: _nodeManager.insertNode.bind(_nodeManager),
+    removeNode: _nodeManager.removeNode.bind(_nodeManager),
+    moveNode: _nodeManager.moveNode.bind(_nodeManager),
+    updateNode: _nodeManager.updateNode.bind(_nodeManager),
+    locate: _nodeManager.locate.bind(_nodeManager),
+    reflowY: _nodeManager.reflowY.bind(_nodeManager),
+    findNode: _nodeManager.findNode.bind(_nodeManager),
+  })),
 
   // ========== Lock/Hide/Z-Order/Align/Distribute ==========
   ...createComponentOpsSlice(set, get),
@@ -147,6 +160,11 @@ export const useCanvasStore = create<CanvasState & CanvasActions>((set, get) => 
 
   hydrate: (partial) => {
     set(hydrateOp(partial));
+    // 重建 NodeIndex
+    const newComponents = partial.components;
+    if (newComponents) {
+      _nodeManager.index.rebuild(newComponents);
+    }
   },
 
   batch: (fn: () => void) => {
@@ -154,21 +172,26 @@ export const useCanvasStore = create<CanvasState & CanvasActions>((set, get) => 
   },
 }));
 
-// ========== 重新导出树操作工具函数（供外部使用） ==========
+// ========== 重新导出工具函数（供外部使用，保持兼容） ==========
 export {
-  generateId, isAutoName, cloneNodeWithNewIds, nodeContainsId,
-  findNodeLocation, canNodeHaveChildren, findNodeInComponents,
-  reflowRootComponentsByOrder, removeNodeFromTree, insertNodeIntoTree,
-  updateNodeInTree, createComponentNode,
+  generateId, isAutoName, cloneNodeWithNewIds,
+  createComponentNode,
 } from "./store/tree-ops";
 
-export type { NodeLocation } from "./store/tree-ops";
+// 向后兼容：代理 findNodeLocation 到 NodeManager
+export { _nodeManager as _getNodeManager };
 
 /**
- * 重新导出容器类型判断函数
- *
- * 替代已废弃的 COMPONENT_TYPES_THAT_SUPPORT_CHILDREN。
+ * 使用 NodeManager 的 findNodeLocation
+ * 与旧版 tree-ops.findNodeLocation 签名兼容
  */
+export function findNodeLocation(
+  components: import("./types").CanvasComponent[],
+  nodeId: string,
+): import("./store/tree-ops").NodeLocation | null {
+  return _nodeManager.locate(components, nodeId) as any;
+}
+
 export { isContainerType };
 
 /**

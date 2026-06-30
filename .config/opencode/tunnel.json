@@ -1,0 +1,9 @@
+{
+  "url": "https://api.trycloudflare.com",
+  "tunnelId": "api",
+  "provider": "cloudflare",
+  "port": 4096,
+  "targetPort": 4096,
+  "startedAt": "2026-06-30T04:43:06.664Z",
+  "lastUpdated": "2026-06-30T04:43:06.665Z"
+}

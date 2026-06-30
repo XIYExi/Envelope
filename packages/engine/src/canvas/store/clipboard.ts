@@ -2,26 +2,37 @@
  * 画布剪贴板操作切片
  *
  * 包含复制、剪切、粘贴、插入节点、移动节点、更新节点等操作。
+ * 树操作委托给 NodeManager。
  *
  * @author xiye
- * @date 2026-06-25
+ * @date 2026-06-29
  */
 
 import type { CanvasComponent, CanvasState, CanvasActions, CanvasClipboard, CanvasClipboardItem } from "../types";
 import type { ComponentNode } from "../../schemas/page.schema";
 import { withHistory } from "./history";
-import {
-  cloneNodeWithNewIds, findNodeLocation, findNodeInComponents, canNodeHaveChildren,
-  removeNodeFromTree, insertNodeIntoTree, reflowRootComponentsByOrder, nodeContainsId,
-  updateNodeInTree,
-} from "./tree-ops";
+import { cloneNodeWithNewIds, generateId } from "./tree-ops";
 import { createDefaultRegistry, validateProps } from "@envelope/materials";
 import { syncAggregateSlots } from "../../slots";
 
 export function createClipboardSlice(
   set: (partial: Partial<CanvasState & CanvasActions>) => void,
   get: () => CanvasState & CanvasActions,
+  getManager: () => { insertNode: Function; removeNode: Function; moveNode: Function; updateNode: Function; locate: Function; reflowY: Function; findNode: Function },
 ) {
+  const getNodeManager = () => {
+    const m = getManager();
+    return {
+      insertNode: m.insertNode,
+      removeNode: m.removeNode,
+      moveNode: m.moveNode,
+      updateNode: m.updateNode,
+      locate: m.locate,
+      reflowY: m.reflowY,
+      findNode: m.findNode,
+    };
+  };
+
   return {
     copySelected: () => {
       const state = get();
@@ -30,7 +41,8 @@ export function createClipboardSlice(
       const primaryId = state.activeNodeId ?? state.selectedIds[0] ?? null;
       if (!primaryId) return;
 
-      const loc = findNodeLocation(state.components, primaryId);
+      const nm = getNodeManager();
+      const loc = nm.locate(state.components, primaryId);
       if (!loc) return;
 
       const items: CanvasClipboardItem[] = (() => {
@@ -65,10 +77,12 @@ export function createClipboardSlice(
         const clipboard = state.clipboard;
         if (!clipboard || clipboard.items.length === 0) return {};
 
+        const nm = getNodeManager();
+
         const inferredTarget = (() => {
           if (target) return target;
           if (state.activeNodeId) {
-            const loc = findNodeLocation(state.components, state.activeNodeId);
+            const loc = nm.locate(state.components, state.activeNodeId);
             if (!loc) return { parentId: null as string | null, index: state.components.length };
             if (loc.kind === "root") return { parentId: null as string | null, index: loc.rootIndex + 1 };
             return { parentId: loc.parentId, index: loc.index + 1 };
@@ -90,6 +104,7 @@ export function createClipboardSlice(
         });
 
         let nextComponents = state.components.slice();
+        const pastedIds: string[] = [];
 
         if (parentId === null) {
           const safeIndex = Math.max(0, Math.min(nextComponents.length, index));
@@ -99,9 +114,9 @@ export function createClipboardSlice(
             position: { x: 1, y: 1, width: 3, height: 2 },
           }));
           nextComponents.splice(safeIndex, 0, ...newComps);
-          const pastedIds = new Set(newComps.map((nc) => nc.id));
-          nextComponents = reflowRootComponentsByOrder(nextComponents, pastedIds);
-          const firstId = newComps[0]?.id ?? null;
+          pastedIds.push(...newComps.map((nc) => nc.id));
+          nextComponents = nm.reflowY(nextComponents, new Set(pastedIds));
+          const firstId = pastedIds[0] ?? null;
           return {
             components: nextComponents,
             selectedIds: firstId ? [firstId] : [],
@@ -111,35 +126,28 @@ export function createClipboardSlice(
         }
 
         let insertedRootId: string | null = null;
-        nextComponents = nextComponents.map((c) => {
-          if (insertedRootId) return c;
-          const res = insertNodeIntoTree(c.node, parentId, index, clonedNodes[0]!);
-          if (!res.inserted) return c;
-          insertedRootId = c.id;
-
-          let nextNode = res.nextNode;
-          for (let i = 1; i < clonedNodes.length; i += 1) {
-            const more = insertNodeIntoTree(nextNode, parentId, index + i, clonedNodes[i]!);
-            nextNode = more.nextNode;
+        for (const cloned of clonedNodes) {
+          const res = nm.insertNode(nextComponents, parentId, index, cloned);
+          if (res !== nextComponents) {
+            nextComponents = res;
+            if (!insertedRootId) insertedRootId = cloned.id;
           }
+        }
 
-          return { ...c, node: nextNode };
-        });
-
-        const firstInserted = clonedNodes[0]?.id ?? null;
         return {
           components: nextComponents,
           selectedIds: insertedRootId ? [insertedRootId] : state.selectedIds,
-          activeNodeId: firstInserted,
+          activeNodeId: clonedNodes[0]?.id ?? null,
           ...(clipboard.mode === "cut" ? { clipboard: null } : {}),
         };
-      })(get(), target));
+      })(get()));
     },
 
     insertNode: (node: ComponentNode, target: { parentId: string | null; index?: number; position?: { x: number; y: number; width?: number; height?: number } }) => {
       set(withHistory((state) => {
         const parentId = target.parentId;
         const index = target.index ?? (parentId === null ? state.components.length : 0);
+        const nm = getNodeManager();
 
         if (parentId === null) {
           const nextComponents = state.components.slice();
@@ -156,109 +164,35 @@ export function createClipboardSlice(
           return { components: nextComponents, selectedIds: [node.id], activeNodeId: node.id };
         }
 
-        let insertedRootId: string | null = null;
-        const nextComponents = state.components.map((c) => {
-          if (insertedRootId) return c;
-          const res = insertNodeIntoTree(c.node, parentId, index, node);
-          if (!res.inserted) return c;
-          insertedRootId = c.id;
-          return { ...c, node: res.nextNode };
-        });
-
-        if (!insertedRootId) return {};
-        return { components: nextComponents, selectedIds: [insertedRootId], activeNodeId: node.id };
-      })(get(), node, target));
+        const nextComponents = nm.insertNode(state.components, parentId, index, node);
+        if (nextComponents === state.components) return {};
+        return { components: nextComponents, selectedIds: [nextComponents.find((c: CanvasComponent) => c.id === (state.activeNodeId ?? state.selectedIds[0]))?.id ?? nextComponents[0]?.id ?? ""].filter(Boolean), activeNodeId: node.id };
+      })(get()));
     },
 
     moveNode: (nodeId: string, target: { parentId: string | null; index?: number }) => {
       set(withHistory((state) => {
-        const loc = findNodeLocation(state.components, nodeId);
-        if (!loc) return {};
+        const nm = getNodeManager();
+        const nextComponents = nm.moveNode(state.components, nodeId, target);
+        if (nextComponents === state.components) return {};
 
-        const targetParentId = target.parentId;
-        if (targetParentId && nodeContainsId(loc.node, targetParentId)) return {};
-
-        let removedKind: "canvas-component" | "component-node" | null = null;
-        let removedComponent: CanvasComponent | null = null;
-        let removedNode: ComponentNode | null = null;
-        let originParentId: string | null = null;
-        let originIndex = -1;
-
-        let nextComponents = state.components.slice();
-
-        if (loc.kind === "root") {
-          originParentId = null;
-          originIndex = loc.rootIndex;
-          const removedComp = nextComponents.splice(loc.rootIndex, 1)[0]!;
-          removedKind = "canvas-component";
-          removedComponent = removedComp;
-        } else {
-          originParentId = loc.parentId;
-          originIndex = loc.index;
-          const rootComp = nextComponents[loc.rootIndex];
-          if (!rootComp) return {};
-          const res = removeNodeFromTree(rootComp.node, nodeId);
-          if (!res.removed) return {};
-          removedKind = "component-node";
-          removedNode = res.removed;
-          nextComponents[loc.rootIndex] = { ...rootComp, node: res.nextNode };
-        }
-
-        if (!removedKind) return {};
-
-        const adjustedIndex = (() => {
-          const raw = target.index ?? (targetParentId === null ? nextComponents.length : 0);
-          if (originParentId !== targetParentId) return raw;
-          if (originIndex >= 0 && originIndex < raw) return Math.max(0, raw - 1);
-          return raw;
-        })();
-
-        if (targetParentId === null) {
-          const safeIndex = Math.max(0, Math.min(nextComponents.length, adjustedIndex));
-          const maxY = nextComponents.length > 0
-            ? Math.max(...nextComponents.map((c) => c.position.y + c.position.height))
-            : 0;
-          const newY = Math.max(1, maxY + 1);
-          const compsToInsert: CanvasComponent[] = [];
-          if (removedKind === "canvas-component" && removedComponent) {
-            compsToInsert.push({ ...removedComponent, position: { ...removedComponent.position, y: newY } });
-          } else if (removedKind === "component-node" && removedNode) {
-            compsToInsert.push({ id: removedNode.id, node: removedNode, position: { x: 1, y: newY, width: 3, height: 2 } });
-          } else {
-            return {};
-          }
-          nextComponents.splice(safeIndex, 0, ...compsToInsert);
-        } else {
-          const targetNode = findNodeInComponents(nextComponents, targetParentId);
-          if (targetNode && !canNodeHaveChildren(targetNode.type)) return {};
-          const nodeToInsert = removedKind === "canvas-component" ? removedComponent?.node : removedNode;
-          if (!nodeToInsert) return {};
-          let inserted = false;
-          nextComponents = nextComponents.map((c) => {
-            if (inserted) return c;
-            const res = insertNodeIntoTree(c.node, targetParentId, adjustedIndex, nodeToInsert);
-            if (!res.inserted) return c;
-            inserted = true;
-            return { ...c, node: res.nextNode };
-          });
-          if (!inserted) return {};
-        }
-
-        const nextLoc = findNodeLocation(nextComponents, nodeId);
+        const nextLoc = nm.locate(nextComponents, nodeId);
         return {
           components: nextComponents,
-          selectedIds: nextLoc ? [nextLoc.rootId] : [],
+          selectedIds: nextLoc
+            ? [nextLoc.kind === "root" ? nextLoc.rootId : nextLoc.rootId]
+            : [],
           activeNodeId: nodeId,
         };
-      })(get(), nodeId, target));
+      })(get()));
     },
 
     updateNode: (nodeId: string, updates: Partial<Omit<ComponentNode, "id">>) => {
-      // 校验 props
       const hasPropsUpdate = Object.prototype.hasOwnProperty.call(updates, "props");
       if (hasPropsUpdate) {
         const state = get();
-        const node = findNodeInComponents(state.components, nodeId);
+        const nm = getNodeManager();
+        const node = nm.findNode(state.components, nodeId);
         if (node) {
           const registry = createDefaultRegistry();
           const material = registry.get(node.type);
@@ -275,30 +209,11 @@ export function createClipboardSlice(
       }
 
       set(withHistory((state) => {
-        const loc = findNodeLocation(state.components, nodeId);
-        if (!loc) return {};
-
-        if (loc.kind === "root") {
-          const components = state.components.map((c) => {
-            if (c.id !== nodeId) return c;
-            const nextNode: ComponentNode = { ...c.node, ...updates } as ComponentNode;
-            const hasProps = Object.prototype.hasOwnProperty.call(updates, "props");
-            const hasChildren = Object.prototype.hasOwnProperty.call(updates, "children");
-            const source = hasChildren && !hasProps ? "children" : "props";
-            const synced = (hasProps || hasChildren) ? syncAggregateSlots(nextNode, source) : nextNode;
-            return { ...c, node: synced };
-          });
-          return { components };
-        }
-
-        const components = state.components.map((c) => {
-          if (c.id !== loc.rootId) return c;
-          const res = updateNodeInTree(c.node, nodeId, updates);
-          if (!res.updated) return c;
-          return { ...c, node: res.nextNode };
-        });
-        return { components };
-      }, { coalesceKey: "updateNode" })(get(), nodeId, updates));
+        const nm = getNodeManager();
+        const nextComponents = nm.updateNode(state.components, nodeId, updates);
+        if (nextComponents === state.components) return {};
+        return { components: nextComponents };
+      }, { coalesceKey: "updateNode" })(get()));
     },
   };
 }
