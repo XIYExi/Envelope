@@ -394,6 +394,17 @@ export interface DropLocationDetail {
 }
 
 /**
+ * DropLocation 来源标识（对齐 lowcode-engine DropLocation.source）
+ *
+ * - "canvas"  = 画布内拖拽（CanvasSensor locate 产出，本轮唯一实现）
+ * - "tree"    = 大纲树拖拽（未来 TreeSensor locate 产出，预留）
+ * - "outline" = outline 面板拖拽（未来 OutlineSensor locate 产出，预留）
+ *
+ * @reference lowcode-engine-main/packages/designer/src/designer/location.ts:118-119
+ */
+export type DropLocationSource = "canvas" | "tree" | "outline";
+
+/**
  * DropLocation（语义对象，Dragon 持有）
  *
  * 对齐 lowcode-engine `designer/src/designer/location.ts DropLocation`。
@@ -403,6 +414,8 @@ export interface DropLocationDetail {
  * - DropTargetInfo = 渲染对象（InsertionView/BorderContainer 消费）
  * - DropLocation = 语义对象（dragEnd 提交消费）
  * - DropLocation.detail.rect + insertType → DropTargetInfo
+ *
+ * @reference lowcode-engine-main/packages/designer/src/designer/location.ts:112-164
  */
 export interface DropLocation {
   /** 目标容器 ID（root 时为 null） */
@@ -411,6 +424,6 @@ export interface DropLocation {
   detail: DropLocationDetail;
   /** 触发此 location 的 locate 事件 */
   event: LocateEvent;
-  /** 来源标识（本轮固定 "canvas"，后续可扩展 "tree"/"outline"） */
-  source: "canvas";
+  /** 来源标识：本轮固定 "canvas"，类型系统预留 "tree"/"outline" 扩展 */
+  source: DropLocationSource;
 }

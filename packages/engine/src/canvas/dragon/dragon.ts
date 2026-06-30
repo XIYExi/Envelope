@@ -22,7 +22,7 @@ import { Detecting } from "./detecting";
 import { Location } from "./location";
 import type { DragSensor } from "./sensor";
 import { CANVAS_CELL_WIDTH, CANVAS_CELL_HEIGHT, computeColumnWidth } from "../../shared/canvas-utils";
-import type { CanvasComponent, DropTargetInfo, DomRectEntry, DragObject, LocateEvent, DropLocation } from "../types";
+import type { CanvasComponent, DropTargetInfo, DomRectEntry, DragObject, LocateEvent, DropLocation, DropLocationSource } from "../types";
 
 /**
  * 拖拽上下文：从 DragStartEvent 中解析出的拖拽信息
@@ -410,7 +410,8 @@ export class Dragon {
         rect: dropTarget.rect,
       },
       event: locateEvent,
-      source: "canvas",
+      // 本轮固定 canvas source；未来 tree/outline sensor 时由 sensor 自身设置
+      source: "canvas" satisfies DropLocationSource,
     };
   }
 }

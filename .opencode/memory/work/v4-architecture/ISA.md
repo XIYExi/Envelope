@@ -1,7 +1,8 @@
 # ISA: Envelope V4 — Architecture Refinement (Lowcode-Engine Patterns)
 
-> **Tier:** E4 Deep | **Status:** `phase: OBSERVE` | **Created:** 2026-06-29
+> **Tier:** E4 Deep | **Status:** `phase: EXECUTE` | **Created:** 2026-06-29
 > **Reference:** `lowcode-engine-main/packages/designer/src/` 为直接代码参考源
+> **本轮重点:** V4-B 深度对齐 — B8 拆分 + B11~B14 新增 + B14 代码修复
 
 ---
 
@@ -387,13 +388,20 @@ Consumer Contract (editor-layout):
 | ISC-V4-B1 | ✅ PASS | `dragon.ts` 管理 dragging/type/activeId | — |
 | ISC-V4-B2 | ⚠️ PARTIAL | `location.ts` 基于 domRects 像素 rect 计算 | 目前为排序+线性扫描；ISA 要求二分可后续优化 |
 | ISC-V4-B3 | ⚠️ PARTIAL | `detecting.ts` 存在但未成为 hover 单一来源 | 目前 hover 主要来自 CanvasRenderer onHover；需统一或明确职责 |
-| ISC-V4-B4 | ✅ PASS | `Dragon.onDragMove` 内部调用 `scroller.scrolling(globalX, globalY, viewportRect)` | — |
+| ISC-V4-B4 | ✅ PASS | `Dragon.onDragMove` 内部调用 `scroller.scrolling(globalX, globalY, viewportRect)`；单测 `dragon.test.ts` 验证 scroller 被正确参数调用 | — |
 | ISC-V4-B5 | ⚠️ PARTIAL | `offset-observer.ts` + 单测存在 | 尚未接入；现阶段用 `gridRect/zoom` 归一化替代，需在 ISA 中明确 |
 | ISC-V4-B6 | ✅ PASS | `editor-layout.tsx` 将 dropTarget 传入 `CanvasRenderer → BemTools → InsertionView` | — |
 | ISC-V4-B7 | ⚠️ PARTIAL | `dragon.ts` 有 sensors 列表与 add/remove API | 目前未实际使用多 sensor |
-| ISC-V4-B8 | ⚠️ PARTIAL | canvas-container 路径已用 `dragon.getDropLocation()` 提供精确 index；tree/pages 仍由 editor-layout 解析 overId | 后续可进一步收敛 tree-drop 协议到 Dragon |
+| ISC-V4-B8 | ⚠️ 已拆分 | 见 B8a/B8b/B8c | — |
+| ISC-V4-B8a | ✅ PASS | `editor-layout.tsx:435` canvas-container 路径优先使用 `dropLocation.detail.index`，无 dropLocation 时回退 undefined（向后兼容） | — |
+| ISC-V4-B8b | ❌ FAIL | `editor-layout.tsx:329-347` 仍含 `parseTreeDropTarget` 解析 `tree-drop:`/`tree-container:` 字符串 | 下一轮施工：收敛到 Dragon 或统一协议层 |
+| ISC-V4-B8c | ✅ PASS | D16 显式声明 pages 重排为 out-of-scope；`editor-layout.tsx:373-386` 直接处理 `page-drop:` | — |
 | ISC-V4-B9 | ✅ PASS | `DndContext` 保持 dnd-kit，用 Dragon 做上层计算 | — |
-| ISC-V4-B10 | ✅ PASS | `Dragon.onDragMove` 接入 scroller，`onDragEnd` 调用 `scroller.cancel()` | — |
+| ISC-V4-B10 | ✅ PASS | `Dragon.onDragMove` 接入 scroller，`onDragEnd` 调用 `scroller.cancel()`；单测验证 cancel 恰好调用一次 | — |
+| ISC-V4-B11 | ✅ PASS | `dragon.ts:242` 每次 dragMove 更新 `_currentDropLocation`；`:259` dragEnd 清空；`:270-271` getter 返回当前值或 null | — |
+| ISC-V4-B12 | ✅ PASS | `dragon.ts:224` 仅在 globalX 未传入时 fallback 读 activatorEvent；主路径使用参数坐标 | — |
+| ISC-V4-B13 | ✅ PASS | `DRAGGING_ARCHITECTURE.md §3` 确认点 1 固定 `[data-role="canvas-viewport"]`；`editor-layout.tsx` querySelector 该属性 | — |
+| ISC-V4-B14 | ✅ PASS | `types.ts` 新增 `DropLocationSource = "canvas" \| "tree" \| "outline"` 联合类型；`DropLocation.source` 使用该类型；`dragon.ts` `satisfies DropLocationSource` 断言；TS 编译通过 | — |
 | ISC-V4-C1 | ✅ PASS | `NodeIndex` 使用 `Map` + `NodeManager` | — |
 | ISC-V4-C2 | ⚠️ PARTIAL | `NodeEntry` 目前含 parentId/depth/path/rootIndex | ISA 中 childrenIds/index 字段需调整为“可计算”或补齐 |
 | ISC-V4-C3 | ⚠️ PARTIAL | `NodeManager` 树操作后 `index.rebuild()` | ISA 原表述为“同步更新 flatMap”，需改为“重建索引”或改实现 |
@@ -447,3 +455,4 @@ Consumer Contract (editor-layout):
 | 2026-06-30 | **Audit:** 对照 V3 `editor-layout/plugin-system/canvas/dragon` 与 lowcode-engine `workbench/editor-skeleton`，补充 V4-G（shell 闭环）与 D11/D12，并在 Verification 中标记当前 PASS/FAIL/Partials。 |
 | 2026-06-30 | **Fix:** V4-G 全组修复。Skeleton 增加 `subscribe/getVersion/notify`（对标 lowcode-engine MobX `@obx` 响应式）；React 侧用 `useSyncExternalStore` 订阅；`pm.init()` 从 render 移到 `useEffect` + `pluginInitRef` 防重入（D12 落地）；`LeftPanel`/`RightPanel` 根节点改为 `style={{width}}` 消费 store 宽度（G1/G2 落地）；pages 与非 pages 统一传 `pluginNavItems` + 双向 `ResizeHandle`（G5 落地）。Engine 170/170 测试通过，Platform 42/42 测试通过。 |
 | 2026-06-30 | **Fix:** V4-B Dragging 闭环。Phase A: `Dragon.onDragMove` 内部接入 `scroller.scrolling(globalX, globalY, viewportRect)`（对齐 lowcode-engine `host.locate → scroller.scrolling`），`onDragEnd` 调 `scroller.cancel()`，B4/B10 变 PASS。Phase B: 新增 `DragObject`/`LocateEvent`/`DropLocation` 类型（对齐 lowcode-engine `DropLocation(target,detail,event,source)`），Dragon 维护 `currentDropLocation` + `getDropLocation()`/`getDragObject()`，editor-layout dragEnd 在 canvas-container 路径用 dropLocation 提供精确 index（B8 PARTIAL）。坐标统一为 `globalX/globalY`。新增 6 个单测，Engine 176/176 通过。架构交接文档：`DRAGGING_ARCHITECTURE.md`。 |
+| 2026-06-30 | **Plan+Fix:** V4-B 深度对齐 lowcode-engine。基于 `designer.ts`(DropLocation lifecycle)、`host.ts`(locate+fixEvent+scroller)、`pane-controller.ts`(outline as sensor+scrollable)、`location.ts`(DropLocation class) 四大参考源完整代码审计，执行 ISA 7 处修改：(1) Problem §2 重写为 P2-1~P2-4 四项剩余差距；(2) Vision DnD 架构图补 LocateEvent/DropLocation/Sensor Loop/source 多来源；(3) Criteria: B8 拆 B8a/B8b/B8c + 新增 B11~B14；(4) Decisions: 新增 D13(坐标契约)/D14(渲染语义分离)/D15(scroller locate内触发)/D16(pages out-of-scope)；(5) Reference Map: 补 6 条 lowcode 参考条目；(6) Verification: B4/B8/B10 证据升级 + B8a~B8c/B11~B14 初始标记；(7) B14 代码修复：`types.ts` DropLocation.source 从字面量 `"canvas"` 改为联合类型 `"canvas" \| "tree" \| "outline"`。下一轮目标：B8b ❌→✅（tree-drop 协议收敛到 Dragon）。 |

@@ -25,8 +25,8 @@
    - 这是对齐 lowcode-engine `scrollable.bounds` 的视口边界。
    - `canvas-grid` 的 rect 仅用于 Location 坐标归一化（canvasX/canvasY），不用于 scroller。
 2. **DropLocation.source 命名**：本轮固定 `"canvas"`。
-   - 后续扩展 outline/tree 时新增 `"tree"` / `"outline"`。
-   - Dragon 在 locate 时根据当前 sensor 设置 source（本轮只有 canvas sensor）。
+    - 类型已扩展为联合 `"canvas" | "tree" | "outline"`（`DropLocationSource`），为未来 sensor 扩展预留。
+    - Dragon 在 locate 时根据当前 sensor 设置 source（本轮只有 canvas sensor）。
 3. **pages 重排不纳入 Dragon**：保持 `editor-layout.tsx` 直接处理 `page-drop:` 协议（对齐 lowcode-engine 把页面管理留在 project UI 层）。
 
 ## 4. 类型契约（新增/扩展）
@@ -64,10 +64,10 @@ export interface DropLocationDetail {
 
 /** DropLocation（语义对象，Dragon 持有） */
 export interface DropLocation {
-  targetContainerId: string;
+  targetContainerId: string | null;
   detail: DropLocationDetail;
   event: LocateEvent;
-  source: "canvas";
+  source: DropLocationSource;  // "canvas" | "tree" | "outline"
 }
 ```
 
