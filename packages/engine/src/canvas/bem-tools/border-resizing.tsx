@@ -18,6 +18,7 @@
 import React, { useCallback, useEffect, useRef } from "react";
 import type { CSSProperties } from "react";
 import type { CanvasComponent } from "../types";
+import type { CanvasHost } from "../canvas-host";
 import { computePixelRect } from "./shared";
 import { CELL_HEIGHT, CELL_WIDTH, allResizeDirections } from "../renderer-utils";
 import type { ResizeDirection } from "../resize-utils";
@@ -25,6 +26,8 @@ import { DragResizeEngine } from "./drag-resize-engine";
 
 interface BorderResizingProps {
   activeComponent: CanvasComponent | null;
+  /** 画布统一协调层（V6: 通过 host.getComponentRect 获取 rect） */
+  host?: CanvasHost;
   gridCols: number;
   columnWidth: number;
   gridGap: number;
@@ -38,14 +41,21 @@ interface BorderResizingProps {
 }
 
 export function BorderResizing({
-  activeComponent, gridCols, columnWidth, gridGap, pagePadding, cellHeight, zoom, positionMode, onResize, onResizeStart, onResizeEnd,
+  activeComponent, host, gridCols, columnWidth, gridGap, pagePadding, cellHeight, zoom, positionMode, onResize, onResizeStart, onResizeEnd,
 }: BorderResizingProps) {
   if (!activeComponent || activeComponent.locked)
     return null;
 
-  const rect = computePixelRect(
-    activeComponent.position, columnWidth, gridGap, pagePadding, CELL_WIDTH, cellHeight, positionMode,
-  );
+  // V6: 优先通过 host.getComponentRect 获取 rect（domRects 优先），fallback computePixelRect
+  let rect: { x: number; y: number; width: number; height: number } | null = null;
+  if (host) {
+    rect = host.getComponentRect(activeComponent.id);
+  }
+  if (!rect) {
+    rect = computePixelRect(
+      activeComponent.position, columnWidth, gridGap, pagePadding, CELL_WIDTH, cellHeight, positionMode,
+    );
+  }
   if (!rect) return null;
 
   return (

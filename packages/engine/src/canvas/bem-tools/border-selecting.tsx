@@ -12,7 +12,7 @@
 
 import React, { useCallback, useMemo } from "react";
 import type { CanvasComponent } from "../types";
-import { computePixelRect } from "./shared";
+import type { CanvasHost } from "../canvas-host";
 import { createDefaultRegistry, buildAvailableActions } from "@envelope/materials";
 import { Copy, Trash2, Lock, Unlock, Move, EyeOff } from "lucide-react";
 
@@ -25,24 +25,14 @@ const ACTION_ICONS: Record<string, React.ComponentType<{ className?: string }>> 
  * 组件选中框容器属性
  */
 interface BorderSelectingProps {
+  /** 画布统一协调层 */
+  host: CanvasHost;
   /** 画布上所有组件实例 */
   components: CanvasComponent[];
   /** 已选中组件 ID 列表 */
   selectedIds: string[];
   /** 当前选中的组件 ID */
   activeNodeId: string | null;
-  /** 每列宽度（px） */
-  columnWidth: number;
-  /** 网格间距（px） */
-  gridGap: number;
-  /** 页面内边距（px） */
-  pagePadding: number;
-  /** 单元格基准宽度（px） */
-  cellWidth: number;
-  /** 单元格基准高度（px） */
-  cellHeight: number;
-  /** 布局模式 */
-  positionMode: "grid" | "free";
   /** 删除组件点击事件处理函数 */
   onDeleteComponent: (id: string) => void;
   /** 复制组件点击事件处理函数 */
@@ -61,7 +51,7 @@ interface BorderSelectingProps {
  */
 export function BorderSelecting({
   components, selectedIds, activeNodeId,
-  columnWidth, gridGap, pagePadding, cellWidth, cellHeight, positionMode,
+  host,
   onDeleteComponent, onCopyComponent, onLockToggle, isDragging,
 }: BorderSelectingProps) {
   // 没有选中项时直接返回
@@ -95,12 +85,7 @@ export function BorderSelecting({
             key={comp.id}
             comp={comp}
             isPrimary={isPrimary}
-            columnWidth={columnWidth}
-            gridGap={gridGap}
-            pagePadding={pagePadding}
-            cellWidth={cellWidth}
-            cellHeight={cellHeight}
-            positionMode={positionMode}
+            host={host}
             onAction={handleAction}
             isDragging={isDragging}
           />
@@ -118,18 +103,8 @@ interface BorderBoxProps {
   comp: CanvasComponent;
   /** 是否为"主选中"组件（显示工具栏和尺寸提示的那个） */
   isPrimary: boolean;
-  /** 每列宽度（px） */
-  columnWidth: number;
-  /** 网格间距（px） */
-  gridGap: number;
-  /** 页面内边距（px） */
-  pagePadding: number;
-  /** 单元格基准宽度（px） */
-  cellWidth: number;
-  /** 单元格基准高度（px） */
-  cellHeight: number;
-  /** 布局模式 */
-  positionMode: "grid" | "free";
+  /** 画布统一协调层 */
+  host: CanvasHost;
   /** 操作按钮点击回调，actionName 对应 ComponentAction.name */
   onAction: (actionName: string, id: string) => void;
   /** 是否正在拖拽（拖拽中隐藏工具栏，参考 dragging 标志） */
@@ -141,14 +116,15 @@ interface BorderBoxProps {
  *
  * 根据组件位置计算出像素矩形，在其上覆盖边框，
  * 主选中组件额外显示顶部操作栏和底部尺寸提示。
+ *
+ * V6: 使用 host.getComponentRect() 统一获取 rect（优先 domRects，fallback computePixelRect）。
  */
 const BorderBox = React.memo(function BorderBox({
-  comp, isPrimary,
-  columnWidth, gridGap, pagePadding, cellWidth, cellHeight, positionMode,
+  comp, isPrimary, host,
   onAction, isDragging,
 }: BorderBoxProps) {
-  // 将组件网格坐标转换为像素坐标
-  const rect = computePixelRect(comp.position, columnWidth, gridGap, pagePadding, cellWidth, cellHeight, positionMode);
+  // 通过 host 统一获取组件 rect（优先实时 DOM 测量）
+  const rect = host.getComponentRect(comp.id);
   if (!rect) return null;
 
   // 根据物料定义动态计算可用操作列表

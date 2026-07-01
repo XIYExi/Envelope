@@ -17,18 +17,14 @@
 
 import React from "react";
 import type { CanvasComponent } from "../types";
-import { computePixelRect } from "./shared";
+import type { CanvasHost } from "../canvas-host";
 
 interface BorderDetectingProps {
   hoveredId: string | null;
   components: CanvasComponent[];
   selectedIds: string[];
-  columnWidth: number;
-  gridGap: number;
-  pagePadding: number;
-  cellWidth: number;
-  cellHeight: number;
-  positionMode: "grid" | "free";
+  /** 画布统一协调层（V6: 通过 host.getComponentRect 获取 rect） */
+  host: CanvasHost;
   /** 画布是否正在滚动/平移中（拖拽平移时抑制悬停框，参考 vp.scrolling） */
   isScrolling?: boolean;
   /** 是否正在拖拽组件（拖拽过程中抑制悬停框，参考 dragon.dragging） */
@@ -73,8 +69,7 @@ function findLockedAncestor(
 }
 
 export function BorderDetecting({
-  hoveredId, components, selectedIds,
-  columnWidth, gridGap, pagePadding, cellWidth, cellHeight, positionMode,
+  hoveredId, components, selectedIds, host,
   isScrolling, isDragging, isResizing,
 }: BorderDetectingProps) {
   // 无悬停目标 → 不渲染
@@ -95,7 +90,8 @@ export function BorderDetecting({
   const comp = components.find(c => c.id === hoveredId);
   if (!comp || comp.hidden) return null;
 
-  const rect = computePixelRect(comp.position, columnWidth, gridGap, pagePadding, cellWidth, cellHeight, positionMode);
+  // V6: 通过 host.getComponentRect() 统一获取 rect（优先 domRects，fallback computePixelRect）
+  const rect = host.getComponentRect(hoveredId);
   if (!rect) return null;
 
   // 查找最近锁定祖先（参考 getClosestNode → n.isLocked）

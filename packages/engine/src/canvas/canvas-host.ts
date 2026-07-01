@@ -18,10 +18,10 @@
  * @reference lowcode-engine-main/packages/designer/src/builtin-simulator/host.ts
  */
 
-import type { CanvasComponent, DomRectEntry, DropTargetInfo, DragObject, LocateEvent, DropLocation, DropLocationSource } from "../types";
-import { computePixelRect } from "../bem-tools/shared";
-import { OffsetObserver } from "../dragon/offset-observer";
-import type { CanvasViewportState, OffsetResult } from "../dragon/offset-observer";
+import type { CanvasComponent, DomRectEntry } from "./types";
+import { computePixelRect } from "./bem-tools/shared";
+import { OffsetObserver } from "./dragon/offset-observer";
+import type { CanvasViewportState, OffsetResult } from "./dragon/offset-observer";
 
 /**
  * 画布宿主配置

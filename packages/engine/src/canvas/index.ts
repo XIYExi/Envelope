@@ -18,6 +18,8 @@ export * from "./renderer";
 export * from "./ctrl-context";
 export * from "./minimap";
 export * from "./ruler";
+export { CanvasHost } from "./canvas-host";
+export type { CanvasHostConfig } from "./canvas-host";
 export { BemTools, bemToolsManager } from "./bem-tools/index";
 export type { BemToolsProps, BemToolComponent } from "./bem-tools/index";
 export { CanvasScroller, Detecting, Dragon, Location } from "./dragon/index";

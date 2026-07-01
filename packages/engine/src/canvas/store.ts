@@ -19,6 +19,7 @@
 "use client";
 
 import { create } from "zustand";
+import { subscribeWithSelector } from "zustand/middleware";
 import type { CanvasState, CanvasActions, CanvasComponent } from "./types";
 import type { ComponentNode } from "../schemas/page.schema";
 import { syncAggregateSlots } from "../slots";
@@ -39,7 +40,7 @@ const _nodeManager = new NodeManager();
 const _selectionManager = new SelectionManager();
 
 // 聚合所有切片创建 store
-export const useCanvasStore = create<CanvasState & CanvasActions>((set, get) => ({
+export const useCanvasStore = create<CanvasState & CanvasActions>()(subscribeWithSelector((set, get) => ({
   // ========== 初始状态 ==========
   components: [],
   selectedIds: [],
@@ -176,7 +177,7 @@ export const useCanvasStore = create<CanvasState & CanvasActions>((set, get) => 
   batch: (fn: () => void) => {
     batchOp(get, set, fn);
   },
-}));
+})));
 
 // ========== 重新导出工具函数（供外部使用，保持兼容） ==========
 export {

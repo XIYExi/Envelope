@@ -23,6 +23,7 @@ import { Location } from "./location";
 import type { DragSensor } from "./sensor";
 import { CANVAS_CELL_WIDTH, CANVAS_CELL_HEIGHT, computeColumnWidth } from "../../shared/canvas-utils";
 import type { CanvasComponent, DropTargetInfo, DomRectEntry, DragObject, LocateEvent, DropLocation, DropLocationSource } from "../types";
+import type { CanvasHost } from "../canvas-host";
 
 /**
  * 拖拽上下文：从 DragStartEvent 中解析出的拖拽信息
@@ -202,6 +203,7 @@ export class Dragon {
    * @param gridRect - canvas-grid 的 getBoundingClientRect（location 坐标归一化）
    * @param globalX - 鼠标视口 X 坐标（activatorEvent.clientX + delta.x）
    * @param globalY - 鼠标视口 Y 坐标（activatorEvent.clientY + delta.y）
+   * @param host - 画布统一协调层（V6: 提供 toCanvasCoords / getComponentRect）
    */
   onDragMove(
     event: DragMoveEvent,
@@ -226,6 +228,7 @@ export class Dragon {
     gridRect?: DOMRect,
     globalX?: number,
     globalY?: number,
+    host?: CanvasHost,
   ): DragMoveResult {
     if (!this._dragging || !this._dragData) {
       return { alignInfo: null, dropTarget: null };
@@ -249,7 +252,7 @@ export class Dragon {
     // 3. 计算插入位置（通过 Location 引擎）
     const dropTarget = this.computeDropTarget(
       gx, gy, components, selectedIds,
-      viewport, positionMode, gridRect, domRects, zoom,
+      viewport, positionMode, gridRect, domRects, zoom, host,
     );
 
     // 4. 维护 DropLocation（语义对象）
@@ -356,8 +359,9 @@ export class Dragon {
   /**
    * 计算插入位置
    *
-   * 将全局鼠标坐标转换为画布内部像素坐标后，
-   * 通过 Location 引擎计算鼠标所在容器和插入类型。
+   * V6: 通过 host.toCanvasCoords 统一坐标归一化（替代内联计算），
+   * 通过 host.getComponentRect 统一获取容器 rect（优先 domRects）。
+   * 若 host 未注入则 fallback 到内联计算（向后兼容测试路径）。
    */
   private computeDropTarget(
     globalX: number,
@@ -369,12 +373,18 @@ export class Dragon {
     gridRect?: DOMRect,
     domRects?: Record<string, DomRectEntry>,
     zoom?: number,
+    host?: CanvasHost,
   ): DropTargetInfo | null {
-    // 将全局鼠标坐标归一化到 canvas-grid 局部未缩放空间
-    // 与 collectDomRects 产出的 domRects 坐标系统一致
     let canvasX = globalX;
     let canvasY = globalY;
-    if (gridRect) {
+
+    if (host) {
+      // V6: 通过 host.toCanvasCoords 统一坐标归一化
+      const coords = host.toCanvasCoords(globalX, globalY);
+      canvasX = coords.canvasX;
+      canvasY = coords.canvasY;
+    } else if (gridRect) {
+      // fallback: host 不可用时内联计算（向后兼容）
       const z = (zoom && zoom > 0) ? zoom : 1;
       canvasX = (globalX - gridRect.left) / z;
       canvasY = (globalY - gridRect.top) / z;
@@ -384,6 +394,7 @@ export class Dragon {
       mouseX: canvasX,
       mouseY: canvasY,
       components,
+      host,
       columnWidth: viewport.columnWidth,
       gridGap: viewport.gap,
       pagePadding: viewport.padding,

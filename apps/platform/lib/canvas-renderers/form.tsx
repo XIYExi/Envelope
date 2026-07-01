@@ -13,7 +13,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Switch } from "@/components/ui/switch";
 import { Slider } from "@/components/ui/slider";
 import { Toggle } from "@/components/ui/toggle";
-import { ToggleGroup } from "@/components/ui/toggle-group";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { PreviewRenderFn } from "./types";
 import { filterDesignProps, pstr, pbool, pnum } from "./types";
@@ -133,9 +133,9 @@ export const renderToggleGroup: PreviewRenderFn = (props) => {
   return (
     <ToggleGroup type={type} disabled={pbool(props, "disabled")} data-design-mode="true">
       {items.map((item) => (
-        <ToggleGroup key={item} value={item} className="text-[10px]">
+        <ToggleGroupItem key={item} value={item} className="text-[10px]">
           {item}
-        </ToggleGroup>
+        </ToggleGroupItem>
       ))}
     </ToggleGroup>
   );

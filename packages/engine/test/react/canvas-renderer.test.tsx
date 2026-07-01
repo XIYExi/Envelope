@@ -2,7 +2,8 @@ import { describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import React from "react";
 import { CanvasRenderer } from "../../src/canvas/renderer";
-import type { CanvasComponent } from "../../src/canvas/types";
+import { CanvasHost } from "../../src/canvas/canvas-host";
+import type { CanvasComponent, DomRectEntry } from "../../src/canvas/types";
 
 function createComp(
   id: string,
@@ -22,6 +23,25 @@ function createComp(
     },
     position: position ?? { x: 1, y: 1, width: 2, height: 1 },
   };
+}
+
+/** 创建测试用 CanvasHost（V6: BemTools 需要 host 才能渲染） */
+function makeHost(components: CanvasComponent[], domRects?: Record<string, DomRectEntry>): CanvasHost {
+  const host = new CanvasHost({
+    viewport: { panX: 0, panY: 0, zoom: 1 },
+    grid: {
+      columnWidth: 80,
+      gap: 8,
+      padding: 16,
+      cellWidth: 80,
+      cellHeight: 40,
+      gridCols: 12,
+      positionMode: "grid",
+    },
+  });
+  host.setComponents(components);
+  if (domRects) host.setDomRects(domRects);
+  return host;
 }
 
 describe("CanvasRenderer（React）", () => {
@@ -201,10 +221,13 @@ describe("CanvasRenderer（React）", () => {
 
   it("拖拽缩放手柄触发 resize 回调（关键分支）", async () => {
     const onResize = vi.fn();
+    const comps = [createComp("box-1", "Card", { label: "Box" }, { x: 1, y: 1, width: 2, height: 2 })];
+    const host = makeHost(comps);
 
     const { container } = render(
       <CanvasRenderer
-        components={[createComp("box-1", "Card", { label: "Box" }, { x: 1, y: 1, width: 2, height: 2 })]}
+        host={host}
+        components={comps}
         selectedIds={["box-1"]}
         activeNodeId="box-1"
         onSelect={vi.fn()}
@@ -242,10 +265,13 @@ describe("CanvasRenderer（React）", () => {
 
   it("缩放手柄使用 window 监听退化路径（关键分支）", async () => {
     const onResize = vi.fn();
+    const comps = [createComp("box-1", "Card", { label: "Box" }, { x: 1, y: 1, width: 2, height: 2 })];
+    const host = makeHost(comps);
 
     const { container } = render(
       <CanvasRenderer
-        components={[createComp("box-1", "Card", { label: "Box" }, { x: 1, y: 1, width: 2, height: 2 })]}
+        host={host}
+        components={comps}
         selectedIds={["box-1"]}
         activeNodeId="box-1"
         onSelect={vi.fn()}

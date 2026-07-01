@@ -19,7 +19,7 @@ import { DndContext, useDroppable, pointerWithin, DragOverlay, type DragEndEvent
 import { createDefaultRegistry, NestingValidator } from "@envelope/materials";
 import { setMaterialRegistry } from "@envelope/engine";
 import { registerPreviewRenderers } from "@/lib/canvas-renderers";
-import { useCanvasStore, createComponentNode, resolveInitialProps, CanvasRenderer, VIEWPORT_WIDTHS, CANVAS_CELL_SIZE, CANVAS_CELL_HEIGHT, findNodeLocation, Dragon, CanvasScroller, PluginManager, createModuleEventBus, EventBus, computeColumnWidth, RULER_SIZE, type CanvasSnapshot, type ComponentNode, type DropTargetInfo, type DropLocation, type DragObject } from "@envelope/engine";
+import { useCanvasStore, createComponentNode, resolveInitialProps, CanvasRenderer, VIEWPORT_WIDTHS, CANVAS_CELL_SIZE, CANVAS_CELL_HEIGHT, findNodeLocation, Dragon, CanvasScroller, CanvasHost, PluginManager, createModuleEventBus, EventBus, computeColumnWidth, RULER_SIZE, type CanvasSnapshot, type ComponentNode, type DropTargetInfo, type DropLocation, type DragObject } from "@envelope/engine";
 import type { EditorEventMap } from "@envelope/engine";
 import { useEditorStore } from "@/stores/editor";
 import { useProjectPagesStore, componentNodesToCanvasComponents } from "@/stores/project-pages";
@@ -54,9 +54,10 @@ import { toast } from "sonner";
  * 注册为 DnD Kit 的可放置区域，接收从素材面板拖来的组件。
  * 处理 Ctrl+滚轮缩放，渲染 CanvasRenderer 并传递所有画布状态。
  */
-const CanvasDropZone = memo(function CanvasDropZone({ dragAlignInfo, dragon }: {
+const CanvasDropZone = memo(function CanvasDropZone({ dragAlignInfo, dragon, host }: {
   dragAlignInfo: { gridX: number; gridY: number; gridWidth: number; gridHeight: number } | null;
   dragon: Dragon | null;
+  host: CanvasHost;
 }) {
   const {
     components, selectedIds, activeNodeId, selectComponent, clearSelection,
@@ -149,6 +150,7 @@ const CanvasDropZone = memo(function CanvasDropZone({ dragAlignInfo, dragon }: {
       className={`flex flex-1 min-h-0 overflow-hidden ${isOver ? "bg-blue-50/30" : ""}`}
     >
       <CanvasRenderer
+        host={host}
         components={components}
         selectedIds={selectedIds}
         activeNodeId={activeNodeId}
@@ -318,6 +320,24 @@ export function EditorLayout() {
     });
   }
   const dragon = dragonRef.current;
+
+  // V6: CanvasHost 画布统一协调层（跨渲染周期保持单例）
+  const hostRef = useRef<CanvasHost | null>(null);
+  if (!hostRef.current) {
+    hostRef.current = new CanvasHost({
+      viewport: { panX: 0, panY: 0, zoom: 1 },
+      grid: {
+        columnWidth: CANVAS_CELL_SIZE,
+        gap: 0,
+        padding: 0,
+        cellWidth: CANVAS_CELL_SIZE,
+        cellHeight: CANVAS_CELL_HEIGHT,
+        gridCols: 12,
+        positionMode: "grid",
+      },
+    });
+  }
+  const host = hostRef.current;
 
   // 编辑器级事件总线（跨渲染周期保持单例）
   const editorBusRef = useRef<EventBus<EditorEventMap> | null>(null);
@@ -732,6 +752,7 @@ export function EditorLayout() {
   // 拖拽移动中计算插入位置、自动滚动、对齐辅助线（B10）
   // 自动滚动由 Dragon.onDragMove 内部协调 CanvasScroller
   // 通过 onScroll 回调 → store.setPan 实现
+  // V6: 同步 host 状态（viewport/domRects/components），传入 dragon 统一坐标归一化
   const handleDragMove = useCallback((event: DragMoveEvent) => {
     const dragType = event.active.data.current?.type;
     if (dragType !== "canvas-component" && dragType !== "material") {
@@ -754,7 +775,26 @@ export function EditorLayout() {
     const padding = typeof cs.pagePadding === "number" ? cs.pagePadding : 0;
     const colW = computeColumnWidth({ viewportWidth: viewportW - RULER_SIZE, pageMaxWidth: cs.pageMaxWidth, pagePadding: padding, gridCols: cs.gridCols, gridGap: cs.gridGap });
 
-    // 获取 canvas-grid 的 bounding rect 用于 Location 坐标归一化
+    // V6: 同步 host 状态（每帧更新，确保 toCanvasCoords / getComponentRect 使用最新数据）
+    host.updateConfig({
+      viewport: { panX: cs.panX, panY: cs.panY, zoom: cs.zoom },
+      grid: {
+        columnWidth: colW,
+        gap: cs.gridGap,
+        padding,
+        cellWidth: CANVAS_CELL_SIZE,
+        cellHeight: CANVAS_CELL_HEIGHT,
+        gridCols: cs.gridCols,
+        positionMode: cs.positionMode,
+      },
+    });
+    host.setDomRects(cs.domRects);
+    host.setComponents(componentsRef.current);
+    host.setSelectedIds(cs.selectedIds);
+    // 注入视口元素（供 host.getViewportRect 使用）
+    host.setViewportElement(el);
+
+    // 获取 canvas-grid 的 bounding rect 用于 Location 坐标归一化（host fallback 路径）
     const gridEl = document.querySelector<HTMLElement>('[data-testid="canvas-grid"]');
     const gridRect = gridEl?.getBoundingClientRect();
 
@@ -780,11 +820,12 @@ export function EditorLayout() {
       gridRect,
       globalX,
       globalY,
+      host,
     );
 
     setDragAlignInfo(result.alignInfo);
     useCanvasStore.getState().setDropTarget(result.dropTarget);
-  }, [dragon]);
+  }, [dragon, host]);
 
   const [activeDragId, setActiveDragId] = useState<string | null>(null);
   // B10: 拖拽对齐辅助线 — 存储被拖组件的网格坐标用于计算对齐
@@ -829,7 +870,7 @@ export function EditorLayout() {
             {skeleton.getItems('left-panel').map((item) => (
               <item.component key={item.name} />
             ))}
-            <CanvasDropZone dragAlignInfo={dragAlignInfo} dragon={dragon} />
+            <CanvasDropZone dragAlignInfo={dragAlignInfo} dragon={dragon} host={host} />
             {!rightPanelCollapsed && (
               <ResizeHandle edge="left" panelWidth={rightPanelWidth} collapsed={false} minWidth={200} maxWidth={480} onResize={(w) => setRightPanelWidth?.(w)} />
             )}

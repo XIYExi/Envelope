@@ -189,6 +189,7 @@ export function BemTools(props: BemToolsProps) {
       {/* 组件缩放工具 */}
       <BorderResizing
         activeComponent={activeComponent}
+        host={host}
         gridCols={gridCols}
         columnWidth={columnWidth}
         gridGap={gridGap}

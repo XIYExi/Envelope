@@ -14,26 +14,19 @@
 "use client";
 
 import React from "react";
-import type { CanvasComponent, DropTargetInfo, DomRectEntry } from "../types";
-import { computePixelRect } from "./shared";
+import type { CanvasComponent, DropTargetInfo } from "../types";
+import type { CanvasHost } from "../canvas-host";
 import { isContainerType } from "../../shared/canvas-utils";
 
 interface BorderContainerProps {
   dropTarget: DropTargetInfo | null;
   components: CanvasComponent[];
-  columnWidth: number;
-  gridGap: number;
-  pagePadding: number;
-  cellWidth: number;
-  cellHeight: number;
-  positionMode: "grid" | "free";
-  domRects: Record<string, DomRectEntry>;
+  /** 画布统一协调层（V6: 通过 host.getComponentRect 获取 rect） */
+  host: CanvasHost;
 }
 
 export function BorderContainer({
-  dropTarget, components,
-  columnWidth, gridGap, pagePadding, cellWidth, cellHeight, positionMode,
-  domRects,
+  dropTarget, components, host,
 }: BorderContainerProps) {
   if (!dropTarget || dropTarget.type !== "cover") return null;
 
@@ -44,17 +37,8 @@ export function BorderContainer({
   if (!comp) return null;
   if (!isContainerType(comp.node.type)) return null;
 
-  let pixelRect: { x: number; y: number; width: number; height: number } | null = null;
-
-  if (domRects[containerId]) {
-    const r = domRects[containerId];
-    pixelRect = { x: r.left, y: r.top, width: r.width, height: r.height };
-  } else {
-    pixelRect = computePixelRect(
-      comp.position, columnWidth, gridGap, pagePadding,
-      cellWidth, cellHeight, positionMode,
-    );
-  }
+  // V6: 通过 host.getComponentRect() 统一获取 rect（优先 domRects，fallback computePixelRect）
+  const pixelRect = host.getComponentRect(containerId);
 
   if (!pixelRect || pixelRect.width <= 0 || pixelRect.height <= 0) return null;
 

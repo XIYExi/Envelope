@@ -21,6 +21,7 @@ import React, { forwardRef, useCallback, useMemo, useRef, useState, useEffect, t
 import { cn, CELL_HEIGHT, CELL_WIDTH, RULER_SIZE, getPreviewTailwindClasses } from "./renderer-utils";
 import type { CanvasComponent, DropTargetInfo } from "./types";
 import { isContainerType, computeColumnWidth } from "../shared/canvas-utils";
+import type { CanvasHost } from "./canvas-host";
 import { Minimap } from "./minimap";
 import { HorizontalRuler, VerticalRuler } from "./ruler";
 import { CanvasComponentItem } from "./canvas-component-item";
@@ -67,6 +68,8 @@ function collectDomRects(gridContainer: HTMLElement, zoom: number): Array<{ id: 
  * 不直接依赖 Zustand Store，由父组件桥接。
  */
 export interface CanvasRendererProps {
+  /** 画布统一协调层（V6） */
+  host?: CanvasHost;
   /** 画布上的所有组件 */
   components: CanvasComponent[];
   /** 当前选中的组件 ID 列表 */
@@ -142,6 +145,7 @@ export interface CanvasRendererProps {
  */
 export const CanvasRenderer = forwardRef<HTMLDivElement, CanvasRendererProps>(
   function CanvasRenderer({
+    host,
     components, selectedIds, activeNodeId: activeNodeIdProp, editScope, hoveredId, onSelect, onClearSelection, onSelectChild, onDoubleClickComponent, onExitChildEdit, onResize, onHover,
     zoom, viewportWidth, panX, panY, onPan, gridCols, gridGap,
     pageBackground, pagePadding, pageMaxWidth, minRowHeight, dragAlignInfo,
@@ -175,7 +179,12 @@ export const CanvasRenderer = forwardRef<HTMLDivElement, CanvasRendererProps>(
     }, [viewportWidth, pageMaxWidth, pagePadding, gridCols, gridGap]);
 
     // ═══ DOM Rects ResizeObserver — 实时采集组件实际像素位置 ═══
+    // V6: 稳定的 ResizeObserver（不随 zoom/pan/gridCols 重建），
+    // 通过 ref 获取最新的 zoom 值。
+    const zoomRef = useRef(zoom);
+    zoomRef.current = zoom;
     const observerRef = useRef<ResizeObserver | null>(null);
+
     useEffect(() => {
       const gridEl = ref && 'current' in ref ? (ref as React.RefObject<HTMLDivElement>).current : null;
       if (!gridEl) return;
@@ -184,8 +193,13 @@ export const CanvasRenderer = forwardRef<HTMLDivElement, CanvasRendererProps>(
       const grid = canvasBg.querySelector('[data-testid="canvas-grid"]') as HTMLElement | null;
       if (!grid) return;
 
+      // 注入 gridEl 到 host（供 toCanvasCoords / getComponentRect 使用）
+      if (host) {
+        host.setGridElement(grid);
+      }
+
       const observer = new ResizeObserver(() => {
-        const entries = collectDomRects(grid, zoom);
+        const entries = collectDomRects(grid, zoomRef.current);
         if (entries.length > 0) {
           useCanvasStore.getState().batchRegisterDomRects(entries as any);
         }
@@ -200,7 +214,7 @@ export const CanvasRenderer = forwardRef<HTMLDivElement, CanvasRendererProps>(
       }
 
       // 初始采集一次
-      const initial = collectDomRects(grid, zoom);
+      const initial = collectDomRects(grid, zoomRef.current);
       if (initial.length > 0) {
         useCanvasStore.getState().batchRegisterDomRects(initial as any);
       }
@@ -208,8 +222,10 @@ export const CanvasRenderer = forwardRef<HTMLDivElement, CanvasRendererProps>(
       return () => {
         observer.disconnect();
         observerRef.current = null;
+        if (host) host.setGridElement(null);
       };
-    }, [components.length, zoom, panX, panY, gridCols, gridGap, pagePadding, positionMode]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- 只在挂载时创建一次
+    }, []);
 
     // 组件增减时同步观察新 DOM 节点
     useEffect(() => {
@@ -225,15 +241,15 @@ export const CanvasRenderer = forwardRef<HTMLDivElement, CanvasRendererProps>(
         added = true;
       }
       if (added) {
-        const entries = collectDomRects(grid, zoom);
+        const entries = collectDomRects(grid, zoomRef.current);
         if (entries.length > 0) {
           useCanvasStore.getState().batchRegisterDomRects(entries as any);
         }
       }
     }, [components]);
 
-    // 从 store 订阅 domRects（实时 DOM 矩形）
-    const domRects = useCanvasStore((s) => s.domRects);
+    // V6: domRects 通过 host 管理，不再直接从 store 订阅
+    // host.setDomRects 由 ResizeObserver 回调同步更新
 
     // B10: 拖拽对齐辅助线计算
     const alignGuides = useMemo(() => {
@@ -493,33 +509,35 @@ export const CanvasRenderer = forwardRef<HTMLDivElement, CanvasRendererProps>(
               </div>
 
               {/* BEM Tools 组件 */}
-              <BemTools
-                components={components}
-                selectedIds={selectedIds}
-                activeNodeId={activeNodeId}
-                hoveredId={hoveredId}
-                columnWidth={columnWidth}
-                gridGap={gridGap}
-                pagePadding={typeof pagePadding === "number" ? pagePadding : 0}
-                cellWidth={CELL_WIDTH}
-                cellHeight={CELL_HEIGHT}
-                gridCols={gridCols}
-                zoom={zoom}
-                positionMode={positionMode}
-                onResize={onResize}
-                onDeleteComponent={onDeleteComponent ?? onClearSelection}
-                onCopyComponent={onCopyComponent ?? (() => { })}
-                onLockToggle={onLockToggle ?? (() => { })}
-                dropTarget={dropTarget ?? null}
-                domRects={domRects}
-                panX={panX}
-                panY={panY}
-                onResizeStart={onResizeStart}
-                onResizeEnd={onResizeEnd}
-                isScrolling={isPanning}
-                isDragging={isDragging}
-                isResizing={isResizing}
-              />
+              {host && (
+                <BemTools
+                  host={host}
+                  components={components}
+                  selectedIds={selectedIds}
+                  activeNodeId={activeNodeId}
+                  hoveredId={hoveredId}
+                  columnWidth={columnWidth}
+                  gridGap={gridGap}
+                  pagePadding={typeof pagePadding === "number" ? pagePadding : 0}
+                  cellWidth={CELL_WIDTH}
+                  cellHeight={CELL_HEIGHT}
+                  gridCols={gridCols}
+                  zoom={zoom}
+                  positionMode={positionMode}
+                  onResize={onResize}
+                  onDeleteComponent={onDeleteComponent ?? onClearSelection}
+                  onCopyComponent={onCopyComponent ?? (() => { })}
+                  onLockToggle={onLockToggle ?? (() => { })}
+                  dropTarget={dropTarget ?? null}
+                  panX={panX}
+                  panY={panY}
+                  onResizeStart={onResizeStart}
+                  onResizeEnd={onResizeEnd}
+                  isScrolling={isPanning}
+                  isDragging={isDragging}
+                  isResizing={isResizing}
+                />
+              )}
               </div>
             </div>
           </div>

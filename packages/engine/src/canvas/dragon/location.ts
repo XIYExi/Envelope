@@ -10,14 +10,18 @@
  * V2 (2026-06-30): computeAmongChildren 重写为基于 DOM rect
  * 的精确像素计算，替代均分容器高度的近似算法。
  *
+ * V3 (2026-07-01): 容器命中改用 host.getComponentRect()
+ * （优先 domRects，fallback computePixelRect），统一坐标来源。
+ *
  * @author xiye
- * @version 2.0.0
- * @date 2026-06-30
+ * @version 3.0.0
+ * @date 2026-07-01
  * @reference lowcode-engine-main/packages/designer/src/designer/location.ts
  * @reference lowcode-engine-main/packages/designer/src/builtin-simulator/bem-tools/insertion.tsx
  */
 
 import type { CanvasComponent, DropTargetInfo, DomRectEntry } from "../types";
+import type { CanvasHost } from "../canvas-host";
 import { computePixelRect } from "../bem-tools/shared";
 import { isContainerType } from "../../shared/canvas-utils";
 
@@ -25,13 +29,16 @@ export interface LocationConfig {
   mouseX: number;
   mouseY: number;
   components: CanvasComponent[];
-  columnWidth: number;
-  gridGap: number;
-  pagePadding: number;
-  gridCols: number;
-  cellHeight: number;
-  cellWidth: number;
-  positionMode: "grid" | "free";
+  /** 画布统一协调层（V3: 通过 host.getComponentRect 获取容器 rect） */
+  host?: CanvasHost;
+  /** 网格布局参数（host 不可用时作为 fallback） */
+  columnWidth?: number;
+  gridGap?: number;
+  pagePadding?: number;
+  gridCols?: number;
+  cellHeight?: number;
+  cellWidth?: number;
+  positionMode?: "grid" | "free";
   selectedIds: string[];
   /** 画布组件 DOM 矩形注册表（id → 实际像素矩形），用于精确插入位置计算 */
   domRects?: Record<string, DomRectEntry>;
@@ -39,18 +46,25 @@ export interface LocationConfig {
 
 export class Location {
   compute(config: LocationConfig): DropTargetInfo | null {
-    const { mouseX, mouseY, components, columnWidth, gridGap, pagePadding,
-            cellHeight, cellWidth, positionMode, selectedIds } = config;
+    const { mouseX, mouseY, components, selectedIds, host } = config;
 
     for (const comp of components) {
       if (comp.hidden) continue;
       if (!isContainerType(comp.node.type)) continue;
       if (selectedIds.includes(comp.id)) continue;
 
-      const rect = computePixelRect(
-        comp.position, columnWidth, gridGap, pagePadding,
-        cellWidth, cellHeight, positionMode,
-      );
+      // V3: 通过 host.getComponentRect 统一获取容器 rect
+      let rect: { x: number; y: number; width: number; height: number } | null = null;
+      if (host) {
+        rect = host.getComponentRect(comp.id);
+      }
+      // fallback: host 不可用时用 computePixelRect（测试路径）
+      if (!rect && config.columnWidth != null) {
+        rect = computePixelRect(
+          comp.position, config.columnWidth, config.gridGap ?? 0, config.pagePadding ?? 0,
+          config.cellWidth ?? 80, config.cellHeight ?? 40, config.positionMode ?? "grid",
+        );
+      }
       if (!rect) continue;
 
       if (mouseX >= rect.x && mouseX <= rect.x + rect.width &&
