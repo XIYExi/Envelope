@@ -287,3 +287,50 @@ export function createComponentNode(
     props,
   }, "props");
 }
+
+/**
+ * Snippet 最小接口（避免循环依赖 @envelope/materials）
+ */
+interface SnippetLike {
+  title?: string;
+  props?: Record<string, unknown>;
+  children?: Array<Record<string, unknown>>;
+}
+
+/**
+ * 物料最小接口（避免循环依赖 @envelope/materials）
+ */
+interface MaterialLike {
+  defaultProps?: Record<string, unknown>;
+  snippets?: SnippetLike[];
+}
+
+/**
+ * 从物料定义解析初始 props 和 children
+ *
+ * V4-F10：拖拽物料时优先使用 snippets[0].props，fallback 到 defaultProps。
+ * 对齐 lowcode-engine IPublicTypeSnippet："用户从组件面板拖入组件到设计器时
+ * 会向页面 schema 中插入 snippets 中定义的组件低代码 schema"
+ *
+ * @reference lowcode-engine-main/packages/types/src/shell/type/snippet.ts
+ *
+ * @param material - 物料定义（含 defaultProps + snippets）
+ * @returns { props, children? } — 合并后的初始 props 和可选的子组件
+ */
+export function resolveInitialProps(
+  material: MaterialLike | undefined,
+): { props: Record<string, unknown>; children?: ComponentNode[] } {
+  if (material?.snippets && material.snippets.length > 0) {
+    const snippet = material.snippets[0]!;
+    const props = { ...(material.defaultProps ?? {}), ...(snippet.props ?? {}) };
+    const children = snippet.children?.length
+      ? snippet.children.map((c) => createComponentNode(
+          (c.type as string) ?? "Text",
+          (c.category as string) ?? "display",
+          { ...(c as Record<string, unknown>) },
+        ))
+      : undefined;
+    return { props, children };
+  }
+  return { props: material?.defaultProps ?? {} };
+}

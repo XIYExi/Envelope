@@ -5,14 +5,17 @@
  * 参考 lowcode-engine-main/packages/editor-skeleton/src/skeleton.ts
  * 的 Skeleton 类设计，简化适配 Envelope 的 React 技术栈。
  *
- * 当前支持的插槽：
+ * 当前支持的插槽（D18 决策，对齐 lowcode-engine 10 area 子集）：
  * - left-nav：左侧导航栏模式切换项
+ * - left-panel：左侧面板区（物料/组件树面板）
  * - main-area：主内容区编辑器面板
+ * - right-panel：右侧面板区（属性面板）
  * - toolbar：顶部工具栏
+ * - bottom-area：底部面板区（预留）
  *
  * @author xiye
- * @version 1.0.0
- * @date 2026-06-30
+ * @version 1.1.0
+ * @date 2026-07-01
  */
 
 import type { SkeletonSlot, SkeletonItem, SkeletonAPI } from "./types";
@@ -29,8 +32,11 @@ export function createSkeleton(): SkeletonAPI {
   /** 插槽注册表，slot → SkeletonItem[] 的映射 */
   const slots = new Map<SkeletonSlot, SkeletonItem[]>([
     ["left-nav", []],
+    ["left-panel", []],
     ["main-area", []],
+    ["right-panel", []],
     ["toolbar", []],
+    ["bottom-area", []],
   ]);
 
   /** 变更版本号，每次 register/unregister 递增 */

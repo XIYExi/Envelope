@@ -23,7 +23,8 @@ import { memo, useMemo, useState, useCallback, useRef, useEffect, type ReactNode
 import { useDroppable, useDraggable, useDndMonitor } from "@dnd-kit/core";
 import { createDefaultRegistry } from "@envelope/materials";
 import { createComponentDragItem, useCanvasStore, buildNodeIndex } from "@envelope/engine";
-import type { CanvasComponent, ComponentNode } from "@envelope/engine";
+import type { CanvasComponent, ComponentNode, Dragon, EventBus } from "@envelope/engine";
+import type { EditorEventMap } from "@envelope/engine";
 import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
@@ -322,10 +323,26 @@ function renderNodeGroup(args: {
   return out;
 }
 
-export const ComponentTreePanel = memo(function ComponentTreePanel() {
+export const ComponentTreePanel = memo(function ComponentTreePanel({
+  dragon,
+  editorBus,
+}: {
+  dragon: Dragon | null;
+  editorBus?: EventBus<EditorEventMap> | null;
+}) {
   const components = useCanvasStore((s) => s.components);
   const selectNode = useCanvasStore((s) => s.selectNode);
-  const activeNodeId = useCanvasStore((s) => s.activeNodeId);
+
+  // V4-E3: 选中状态通过 EventBus 事件驱动，替代直接 useCanvasStore 订阅 activeNodeId
+  const [activeNodeId, setActiveNodeId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!editorBus) return;
+    const unsub = editorBus.on('canvas:select', ({ id }) => {
+      setActiveNodeId(id);
+    });
+    return unsub;
+  }, [editorBus]);
 
   const registry = useMemo(() => createDefaultRegistry(), []);
   const displayNameMap = useMemo(() => {
@@ -547,8 +564,38 @@ export const ComponentTreePanel = memo(function ComponentTreePanel() {
 
   useDndMonitor({
     onDragStart: () => setTreeDragActive(true),
-    onDragEnd: () => setTreeDragActive(false),
-    onDragCancel: () => setTreeDragActive(false),
+    onDragMove: (event) => {
+      if (!dragon?.isDragging) return;
+      const { over } = event;
+      if (!over) {
+        dragon.registerTreeDrop(null);
+        return;
+      }
+      const overId = String(over.id);
+      if (overId.startsWith("tree-drop:")) {
+        const parts = overId.split(":");
+        if (parts.length >= 3) {
+          const parentId = parts[1] === "root" ? null : parts[1]!;
+          const index = Number(parts[2]);
+          dragon.registerTreeDrop({ parentId, index: Number.isFinite(index) ? index : 0 });
+        }
+      } else if (overId.startsWith("tree-container:")) {
+        const parentId = overId.replace(/^tree-container:/, "");
+        if (parentId) {
+          dragon.registerTreeDrop({ parentId, index: 999999 });
+        }
+      } else {
+        dragon.registerTreeDrop(null);
+      }
+    },
+    onDragEnd: () => {
+      setTreeDragActive(false);
+      dragon?.registerTreeDrop(null);
+    },
+    onDragCancel: () => {
+      setTreeDragActive(false);
+      dragon?.registerTreeDrop(null);
+    },
   });
 
   const rows = useMemo(() => renderNodeGroup({

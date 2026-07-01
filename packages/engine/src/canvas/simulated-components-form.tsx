@@ -39,6 +39,7 @@ export function renderButton({ comp, variant: _variant }: SimulatedComponentProp
     <button
       className={cn("inline-flex items-center justify-center rounded-md font-medium", sizeClass, variantClass)}
       tabIndex={-1}
+      data-live-edit-prop="label"
     >
       {label}
     </button>
@@ -68,7 +69,7 @@ export function renderTextarea({ comp, variant: _variant }: SimulatedComponentPr
 /** 模拟 Label 组件渲染 */
 export function renderLabel({ comp, variant: _variant }: SimulatedComponentProps) {
   const { props } = comp.node;
-  return <span className="text-xs font-medium">{pstr(props, "label", "Label")}</span>;
+  return <span className="text-xs font-medium" data-live-edit-prop="label">{pstr(props, "label", "Label")}</span>;
 }
 
 /** 模拟 Checkbox 组件渲染 */
@@ -200,8 +201,8 @@ export function renderBadge({ comp, variant: _variant }: SimulatedComponentProps
     outline: "border",
   } as Record<string, string>)[variantVal] ?? "bg-primary/15 text-primary";
   return (
-    <span className={cn("inline-flex items-center rounded-full font-medium px-2 py-0.5 text-[10px]", variantClass)}>
-      {pstr(props, "label", "Badge")}
+    <span className={cn("inline-flex items-center rounded-full font-medium px-2 py-0.5 text-[10px]", variantClass)} data-live-edit-prop="text">
+      {pstr(props, "text", pstr(props, "label", "Badge"))}
     </span>
   );
 }
@@ -226,8 +227,8 @@ export function renderAlert({ comp, variant: _variant, onSelectChild }: Simulate
         <ChildrenSlot components={children} onSelectChild={onSelectChild} />
       ) : (
         <>
-          {showTitle && <span className="text-[10px] font-semibold">⚠ {titleText}</span>}
-          {showDescription && <span className="text-[10px] text-muted-foreground">{descriptionText}</span>}
+          {showTitle && <span className="text-[10px] font-semibold" data-live-edit-prop="titleText">⚠ {titleText}</span>}
+          {showDescription && <span className="text-[10px] text-muted-foreground" data-live-edit-prop="descriptionText">{descriptionText}</span>}
         </>
       )}
     </div>
@@ -290,3 +291,15 @@ export function renderPagination({ comp, variant: _variant }: SimulatedComponent
 
 /** ChildrenSlot 组件的导入（由 simulated-content.tsx 提供，此处仅声明引用） */
 import { ChildrenSlot } from "./simulated-content";
+
+/** 模拟 Text 组件渲染 */
+export function renderText({ comp, variant: _variant }: SimulatedComponentProps) {
+  const { props } = comp.node;
+  const text = pstr(props, "text", "Text");
+  const className = pstr(props, "className", "");
+  return (
+    <span className={cn("text-sm", className)} data-live-edit-prop="text">
+      {text}
+    </span>
+  );
+}

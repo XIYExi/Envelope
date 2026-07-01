@@ -9,8 +9,9 @@
  */
 "use client";
 
-import { useMemo, useCallback, useRef } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useCanvasStore, PropertyEditor, buildNodeIndex } from "@envelope/engine";
+import type { EventBus, EditorEventMap } from "@envelope/engine";
 import { createDefaultRegistry } from "@envelope/materials";
 import type { EditableProp, MaterialDefinition } from "@envelope/materials";
 import { useFlowBindingStore } from "@envelope/flow";
@@ -219,15 +220,31 @@ function BatchPropertyEditor({ components, registry, onBatchChange }: {
 interface RightPanelProps {
   /** 面板宽度（px），由父组件从 store 传入 */
   width?: number;
+  /** 编辑器事件总线（用于订阅 canvas:select 事件） */
+  editorBus?: EventBus<EditorEventMap> | null;
 }
 
-export function RightPanel({ width }: RightPanelProps = {}) {
+export function RightPanel({ width, editorBus }: RightPanelProps = {}) {
   const {
-    zoom, setZoom, components, selectedIds, activeNodeId,
+    zoom, setZoom, components,
     setPageBackground, pageBackground, pagePadding, setPagePadding, pageMaxWidth, setPageMaxWidth,
     setMinRowHeight, minRowHeight,
     updateNode, batchUpdateSelectedProps,
   } = useCanvasStore();
+
+  // V4-E3: 选中状态通过 EventBus 事件驱动，替代直接 useCanvasStore 订阅 selectedIds/activeNodeId
+  // 对齐 lowcode-engine SettingsMain 监听 designer.selection.change 的模式
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [activeNodeId, setActiveNodeId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!editorBus) return;
+    const unsub = editorBus.on('canvas:select', ({ id, ids }) => {
+      setActiveNodeId(id);
+      setSelectedIds(ids);
+    });
+    return unsub;
+  }, [editorBus]);
 
   const flowList = useFlowBindingStore((s) => s.flowList);
   const tableOptions = useProjectModelsStore((s) => s.tables);

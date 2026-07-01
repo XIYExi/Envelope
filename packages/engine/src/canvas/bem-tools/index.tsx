@@ -4,7 +4,9 @@
 
 "use client";
 
+import { useMemo } from "react";
 import type { CanvasComponent, DropTargetInfo, DomRectEntry } from "../types";
+import type { CanvasHost } from "../canvas-host";
 import { bemToolsManager } from "./manager";
 import { BorderSelecting } from "./border-selecting";
 import { BorderDetecting } from "./border-detecting";
@@ -16,6 +18,8 @@ export { bemToolsManager } from "./manager";
 export type { BemToolComponent } from "./manager";
 
 export interface BemToolsProps {
+  /** 画布统一协调层（坐标系统一入口） */
+  host: CanvasHost;
   /**
    * 组件实例
    */
@@ -95,8 +99,9 @@ export interface BemToolsProps {
   /**
    * 画布组件 DOM 矩形注册表（id → 实际像素矩形），
    * 由 CanvasRenderer 的 ResizeObserver 批量采集。
+   * V6: 已废弃，通过 host.getComponentRect() 统一获取。
    */
-  domRects: Record<string, DomRectEntry>;
+  domRects?: Record<string, DomRectEntry>;
   /**
    * 缩放开始时回调（禁用悬停检测）
    */
@@ -121,11 +126,17 @@ export interface BemToolsProps {
 
 export function BemTools(props: BemToolsProps) {
   const {
-    components, selectedIds, activeNodeId, hoveredId,
+    host, components, selectedIds, activeNodeId, hoveredId,
     columnWidth, gridGap, pagePadding, cellWidth, cellHeight, gridCols,
-    zoom, panX, panY, positionMode, onResize, onDeleteComponent, onCopyComponent, onLockToggle, dropTarget, domRects,
+    zoom, panX, panY, positionMode, onResize, onDeleteComponent, onCopyComponent, onLockToggle, dropTarget,
     onResizeStart, onResizeEnd, isScrolling, isDragging, isResizing,
   } = props;
+
+  // 同步运行时数据到 host（每帧更新）
+  useMemo(() => {
+    host.setComponents(components);
+    host.setSelectedIds(selectedIds);
+  }, [host, components, selectedIds]);
 
   // 当前选中组件实例
   const activeComponent = activeNodeId
@@ -150,12 +161,7 @@ export function BemTools(props: BemToolsProps) {
         hoveredId={hoveredId}
         components={components}
         selectedIds={selectedIds}
-        columnWidth={columnWidth}
-        gridGap={gridGap}
-        pagePadding={pagePadding}
-        cellWidth={cellWidth}
-        cellHeight={cellHeight}
-        positionMode={positionMode}
+        host={host}
         isScrolling={isScrolling}
         isDragging={isDragging}
         isResizing={isResizing}
@@ -165,13 +171,7 @@ export function BemTools(props: BemToolsProps) {
       <BorderContainer
         dropTarget={dropTarget}
         components={components}
-        columnWidth={columnWidth}
-        gridGap={gridGap}
-        pagePadding={pagePadding}
-        cellWidth={cellWidth}
-        cellHeight={cellHeight}
-        positionMode={positionMode}
-        domRects={domRects}
+        host={host}
       />
 
       {/* 组件选中工具 — 工具栏按钮由 buildAvailableActions 动态驱动，拖拽中隐藏工具栏 */}
@@ -179,12 +179,7 @@ export function BemTools(props: BemToolsProps) {
         components={components}
         selectedIds={selectedIds}
         activeNodeId={activeNodeId}
-        columnWidth={columnWidth}
-        gridGap={gridGap}
-        pagePadding={pagePadding}
-        cellWidth={cellWidth}
-        cellHeight={cellHeight}
-        positionMode={positionMode}
+        host={host}
         onDeleteComponent={onDeleteComponent}
         onCopyComponent={onCopyComponent}
         onLockToggle={onLockToggle}

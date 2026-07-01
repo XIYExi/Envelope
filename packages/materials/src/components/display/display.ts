@@ -47,6 +47,12 @@ export const badgeMaterial: MaterialDefinition = {
   category: "display",
   icon: "Tag",
   supportsChildren: true,
+  liveTextEditing: {
+    paths: ["text"],
+  },
+  defaultProps: {
+    text: "Badge",
+  },
   editableProps: [
     {
       key: "variant",
@@ -91,6 +97,9 @@ export const textMaterial: MaterialDefinition = {
   supportsChildren: false,
   defaultProps: {
     text: "Text",
+  },
+  liveTextEditing: {
+    paths: ["text"],
   },
   editableProps: [
     {

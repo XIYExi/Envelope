@@ -18,6 +18,10 @@
 
 import type { PluginCreator, PluginMeta, PluginConfig, PluginContext, InternalPlugin, SkeletonSlot } from "./types";
 import { createSkeleton } from "./skeleton";
+import { HotkeyManager } from "./hotkey";
+import { CommandManager } from "./command";
+import type { EventBus, EditorEventMap } from "../event-bus";
+import { createModuleEventBus } from "../event-bus";
 
 /**
  * 插件管理器类
@@ -31,6 +35,19 @@ export class PluginManager {
   private initOrder: string[] = [];
   /** 骨架 API 实例，所有插件共享 */
   private skeleton = createSkeleton();
+  /** 每插件独立的 HotkeyManager 实例列表（destroy 时统一清理） */
+  private hotkeyManagers: HotkeyManager[] = [];
+  /** 每插件独立的 CommandManager 实例列表（destroy 时统一清理） */
+  private commandManagers: CommandManager[] = [];
+  /** 编辑器事件总线（由外部注入，用于 PluginContext.event） */
+  private eventBus: EventBus<EditorEventMap>;
+
+  /**
+   * @param eventBus - 编辑器级事件总线实例。若未传入则内部创建一个空实例（降级模式）。
+   */
+  constructor(eventBus?: EventBus<EditorEventMap>) {
+    this.eventBus = eventBus ?? createModuleEventBus<EditorEventMap>("PluginFallback");
+  }
 
   /**
    * 注册一个插件
@@ -50,9 +67,18 @@ export class PluginManager {
       console.warn(`[PluginManager] plugin name mismatch: "${name}" !== "${meta.name}", using "${name}"`);
     }
 
+    // D4: 每插件独立 HotkeyManager + CommandManager（对齐 lowcode engine-core.ts:145/158）
+    const hotkey = new HotkeyManager();
+    const command = new CommandManager(name);
+    this.hotkeyManagers.push(hotkey);
+    this.commandManagers.push(command);
+
     const context: PluginContext = {
       pluginName: name,
       skeleton: this.skeleton,
+      event: this.eventBus,
+      hotkey,
+      command,
       logger: {
         info: (msg: string, ...args: unknown[]) => console.log(`[Plugin:${name}] ${msg}`, ...args),
         warn: (msg: string, ...args: unknown[]) => console.warn(`[Plugin:${name}] ${msg}`, ...args),
@@ -140,6 +166,11 @@ export class PluginManager {
         console.error(`[PluginManager] failed to destroy plugin "${name}":`, err);
       }
     }
+    // D4: 清理每插件独立的 HotkeyManager / CommandManager
+    for (const hk of this.hotkeyManagers) hk.destroy();
+    for (const cmd of this.commandManagers) cmd.destroy();
+    this.hotkeyManagers = [];
+    this.commandManagers = [];
     this.plugins.clear();
     this.initOrder = [];
   }

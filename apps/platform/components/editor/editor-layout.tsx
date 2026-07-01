@@ -13,23 +13,26 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, memo } from "react";
+import { shallow } from "zustand/shallow";
 import { useSearchParams } from "next/navigation";
 import { DndContext, useDroppable, pointerWithin, DragOverlay, type DragEndEvent, type DragMoveEvent, type DragStartEvent, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
 import { createDefaultRegistry, NestingValidator } from "@envelope/materials";
-import { useCanvasStore, createComponentNode, CanvasRenderer, VIEWPORT_WIDTHS, CANVAS_CELL_SIZE, CANVAS_CELL_HEIGHT, isContainerType, findNodeLocation, Dragon, CanvasScroller, PluginManager, createModuleEventBus, EventBus, computeColumnWidth, RULER_SIZE, type CanvasSnapshot, type ComponentNode, type DropTargetInfo, type DropLocation, type DragObject } from "@envelope/engine";
+import { setMaterialRegistry } from "@envelope/engine";
+import { registerPreviewRenderers } from "@/lib/canvas-renderers";
+import { useCanvasStore, createComponentNode, resolveInitialProps, CanvasRenderer, VIEWPORT_WIDTHS, CANVAS_CELL_SIZE, CANVAS_CELL_HEIGHT, findNodeLocation, Dragon, CanvasScroller, PluginManager, createModuleEventBus, EventBus, computeColumnWidth, RULER_SIZE, type CanvasSnapshot, type ComponentNode, type DropTargetInfo, type DropLocation, type DragObject } from "@envelope/engine";
 import type { EditorEventMap } from "@envelope/engine";
 import { useEditorStore } from "@/stores/editor";
 import { useProjectPagesStore, componentNodesToCanvasComponents } from "@/stores/project-pages";
 import { useProjectFlowsStore } from "@/stores/project-flows";
 import { EditorToolbar } from "./editor-toolbar";
-import { MaterialPanel } from "./material-panel";
-import { RightPanel } from "./right-panel";
 import { LeftPanel } from "./left-panel";
 import { ResizeHandle } from "./ResizeHandle";
 import { DataModelPlugin } from "./data-model-plugin";
 import { RoutingPlugin } from "./routing-plugin";
 import { FlowPlugin } from "./flow-plugin";
 import { ApiPlugin } from "./api-plugin";
+import { MaterialPlugin } from "./material-plugin";
+import { PropertyPlugin } from "./property-plugin";
 import { useFlowBindingStore } from "@envelope/flow";
 import { Input } from "@/components/ui/input";
 import {
@@ -61,6 +64,7 @@ const CanvasDropZone = memo(function CanvasDropZone({ dragAlignInfo, dragon }: {
     pageBackground, pagePadding, pageMaxWidth,
     resizeComponent, setZoom, setPan,
     selectNode, editScope, enterChildEdit, minRowHeight, positionMode,
+    updateNode,
   } = useCanvasStore();
 
   const [hoveredId, setHoveredId] = useState<string | null>(null);
@@ -174,6 +178,9 @@ const CanvasDropZone = memo(function CanvasDropZone({ dragAlignInfo, dragon }: {
         onResizeEnd={() => { setIsResizing(false); if (dragon) dragon.detecting.enable = true; }}
         isDragging={dragon?.isDragging ?? false}
         isResizing={isResizing}
+        onInlineEdit={(compId, propPath, newText) => {
+          updateNode(compId, { props: { ...((useCanvasStore.getState().components.find(c => c.id === compId)?.node.props ?? {}) as Record<string, unknown>), [propPath]: newText } });
+        }}
       />
     </div>
   );
@@ -257,18 +264,46 @@ export function EditorLayout() {
     renamingIdRef.current = renamingId;
   }, [renamingId]);
 
-  const registry = useMemo(() => createDefaultRegistry(), []);
+  // V5: 创建物料注册表后注入真实 shadcn 组件 previewRender，并注入 engine 全局注册表
+  const registry = useMemo(() => {
+    const reg = createDefaultRegistry();
+    registerPreviewRenderers(reg);
+    setMaterialRegistry(reg);
+    return reg;
+  }, []);
 
   // 编辑器模式切换时通过 EventBus 通知各模块
   useEffect(() => {
     editorBusRef.current?.emit('editor:modeChange', { mode: editorMode });
   }, [editorMode]);
 
+  // 选中状态变化时通过 EventBus 通知 RightPanel / ComponentTreePanel
+  // 对齐 lowcode-engine Designer.postEvent('selection.change', ...) 模式
+  // @reference lowcode-engine-main/packages/designer/src/designer/designer.ts:295-298
+  useEffect(() => {
+    const unsub = useCanvasStore.subscribe(
+      (s) => ({ selectedIds: s.selectedIds, activeNodeId: s.activeNodeId }),
+      (cur, prev) => {
+        if (cur.selectedIds !== prev?.selectedIds || cur.activeNodeId !== prev?.activeNodeId) {
+          editorBusRef.current?.emit('canvas:select', {
+            id: cur.activeNodeId,
+            ids: cur.selectedIds,
+          });
+        }
+      },
+      { equalityFn: shallow, fireImmediately: true },
+    );
+    return unsub;
+  }, []);
+
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: { distance: 5 },
     }),
   );
+
+  // handleAddMaterial 的 ref（延迟绑定，供插件注册时引用）
+  const handleAddMaterialRef = useRef<((name: string) => void) | null>(null);
 
   // Dragon 拖拽引擎（跨渲染周期保持单例）
   const dragonRef = useRef<Dragon | null>(null);
@@ -293,11 +328,15 @@ export function EditorLayout() {
   // 插件管理器（跨渲染周期保持单例）
   const pluginManagerRef = useRef<PluginManager | null>(null);
   if (!pluginManagerRef.current) {
-    const pm = new PluginManager();
+    const pm = new PluginManager(editorBusRef.current ?? undefined);
     pm.register('DataModelPlugin', DataModelPlugin, { name: 'DataModelPlugin', slots: ['main-area', 'left-nav'] });
     pm.register('RoutingPlugin',   RoutingPlugin,   { name: 'RoutingPlugin',   slots: ['main-area', 'left-nav'] });
-    pm.register('FlowPlugin',      FlowPlugin,      { name: 'FlowPlugin',      slots: ['main-area', 'left-nav'] });
+    pm.register('FlowPlugin',      FlowPlugin,      { name: 'FlowPlugin',      slots: ['main-area', 'left-nav'] }, { editorBus: editorBusRef.current });
     pm.register('ApiPlugin',       ApiPlugin,       { name: 'ApiPlugin',       slots: ['main-area', 'left-nav'] });
+    // D7: 物料面板和属性面板封装为插件（注册到 left-panel / right-panel 插槽）
+    // handleAddMaterial 在下方定义，这里用 ref 延迟绑定避免 TDZ
+    pm.register('MaterialPlugin', MaterialPlugin, { name: 'MaterialPlugin', slots: ['left-panel'] }, { dragon, editorBus: editorBusRef.current, onAddMaterial: (name: string) => handleAddMaterialRef.current?.(name) });
+    pm.register('PropertyPlugin', PropertyPlugin, { name: 'PropertyPlugin', slots: ['right-panel'] }, { editorBus: editorBusRef.current, width: rightPanelWidth });
     pluginManagerRef.current = pm;
   }
   const pluginManager = pluginManagerRef.current!;
@@ -326,42 +365,65 @@ export function EditorLayout() {
     return map;
   }, [registry]);
 
-  const parseTreeDropTarget = useCallback((overId: string): { parentId: string | null; index?: number } | null => {
-    if (overId.startsWith("tree-drop:")) {
-      const parts = overId.split(":");
-      if (parts.length < 3) return null;
-      const parentKey = parts[1]!;
-      const idxStr = parts[2]!;
-      const idx = Number(idxStr);
-      return {
-        parentId: parentKey === "root" ? null : parentKey,
-        index: Number.isFinite(idx) ? idx : undefined,
-      };
-    }
-    if (overId.startsWith("tree-container:")) {
-      const parentId = overId.replace(/^tree-container:/, "");
-      if (!parentId) return null;
-      return { parentId, index: 999999 };
-    }
-    return null;
-  }, []);
+  /**
+   * 统一提交函数：基于 DropLocation 语义对象 + DragObject 执行插入/移动。
+   *
+   * 替代原有的 parseTreeDropTarget 字符串协议解析，
+   * canvas-drop 和 tree-drop 统一走此函数。
+   */
+  const commitDrop = useCallback(
+    (dropLocation: DropLocation, dragObject: DragObject) => {
+      const loc = dropLocation.detail;
+      const target = { parentId: dropLocation.targetContainerId, index: loc.index };
 
-  function canComponentAcceptChildren(type: string): boolean {
-    return isContainerType(type);
-  }
+      if (dragObject.type === "material" && dragObject.materialName) {
+        const material = registry.get(dragObject.materialName);
+        const category = materialMap.get(dragObject.materialName)?.category ?? material?.category ?? "layout";
+        const { props: initialProps, children: initialChildren } = resolveInitialProps(material);
+        const node = createComponentNode(dragObject.materialName, category, initialProps);
+        if (initialChildren) node.children = initialChildren;
+
+        if (target.parentId) {
+          const curComponents = useCanvasStore.getState().components;
+          const containerComp = curComponents.find((c) => c.id === target.parentId);
+          if (containerComp) {
+            const allowed = NestingValidator.checkChildAllowed(
+              containerComp.node.type, dragObject.materialName,
+              (name) => registry.get(name),
+            );
+            if (!allowed) {
+              toast.error(`"${dragObject.materialName}" 不能放在 "${containerComp.node.type}" 内部`, {
+                description: `无法放置`,
+              });
+              return;
+            }
+          }
+        }
+
+        insertNode(node, target);
+        editorBusRef.current?.emit('canvas:drop', { component: node, target: dropLocation.targetContainerId });
+        return;
+      }
+
+      if (dragObject.type === "canvas-component" && dragObject.componentId) {
+        moveNode(dragObject.componentId, target);
+        editorBusRef.current?.emit('canvas:drop', { component: { id: dragObject.componentId }, target: dropLocation.targetContainerId });
+        return;
+      }
+    },
+    [insertNode, materialMap, moveNode, registry, editorBusRef],
+  );
 
   /**
    * 拖拽结束处理
    *
-   * 处理三种拖拽场景：
-   * 1. 从画布拖拽组件到画布另一位置（canvas-component → canvas-drop-zone）
-   * 2. 从画布拖拽组件到容器组件（canvas-component → canvas-container:*）
-   * 3. 从素材面板拖拽新组件到画布（material → canvas-drop-zone）
+   * 统一通过 Dragon 的 DropLocation 语义对象提交，不再解析字符串协议。
    *
-   * 均使用 event.delta 计算精确的网格坐标，缩放校正基于当前 zoom。
-   *
-   * Phase B: canvas-container 路径优先使用 Dragon 的 dropLocation 提供精确 index，
-   * 若 dropLocation 不可用则回退到无 index 的 moveNode（保持向后兼容）。
+   * 场景：
+   * 1. canvas-drop: Dragon.onDragMove 产生 dropLocation (source="canvas")
+   * 2. tree-drop:   component-tree-panel 通过 registerTreeDrop 同步落点 (source="tree")
+   * 3. 兜底：material 拖到画布空白区（canvas-drop-zone，无容器）
+   * 4. pages 重排：保持 editor-layout 直接处理（D16 out-of-scope）
    */
   const handleDragEnd = useCallback(
     (event: DragEndEvent, dropLocation?: DropLocation | null, dragObject?: DragObject | null) => {
@@ -385,123 +447,69 @@ export function EditorLayout() {
         return;
       }
 
-      const treeTarget = parseTreeDropTarget(overId);
-
       const dragType = active.data.current?.type as string | undefined;
       const materialName = active.data.current?.materialName as string | undefined;
       const draggedNodeId = active.data.current?.componentId as string | undefined;
 
-      if (treeTarget) {
-        if (dragType === "material" && materialName) {
-          const material = registry.get(materialName);
-          const category = materialMap.get(materialName)?.category ?? material?.category ?? "layout";
-          const defaultProps = material?.defaultProps ?? {};
-          const node = createComponentNode(materialName, category, { ...defaultProps });
-          insertNode(node, treeTarget);
-          return;
-        }
-        if (dragType === "canvas-component" && draggedNodeId) {
-          moveNode(draggedNodeId, treeTarget);
-          return;
+      // 统一提交：canvas-drop 和 tree-drop 都通过 DropLocation 语义对象
+      if (dropLocation && dragObject && dropLocation.detail.valid) {
+        commitDrop(dropLocation, dragObject);
+        return;
+      }
+
+      // 兜底：canvas-component 在画布空白区移动（无容器，无 dropLocation）
+      if (dragType === "canvas-component" && draggedNodeId && overId === "canvas-drop-zone") {
+        const { delta } = event;
+        const curComponents = useCanvasStore.getState().components;
+        const comp = curComponents.find((c) => c.id === draggedNodeId);
+        if (comp) {
+          const cs = useCanvasStore.getState();
+          const viewportW = VIEWPORT_WIDTHS[cs.viewport];
+          const dynColW = computeColumnWidth({ viewportWidth: viewportW - RULER_SIZE, pageMaxWidth: cs.pageMaxWidth, pagePadding: cs.pagePadding ?? 0, gridCols: cs.gridCols, gridGap: cs.gridGap });
+          const newX = Math.round(comp.position.x + delta.x / (dynColW * zoomRef2.current));
+          const newY = Math.round(comp.position.y + delta.y / (CANVAS_CELL_HEIGHT * zoomRef2.current));
+          moveComponent(draggedNodeId, newX, newY);
         }
         return;
       }
 
-      if (overId !== "canvas-drop-zone" && !overId.startsWith("canvas")) return;
-      const { delta } = event;
-
-      const curComponents = componentsRef.current;
-      const curZoom = zoomRef2.current;
-
-      if (dragType === "canvas-component" && draggedNodeId) {
-        if (overId === "canvas-drop-zone") {
-          const comp = curComponents.find((c) => c.id === draggedNodeId);
-          if (comp) {
-            const cs = useCanvasStore.getState();
-            const viewportW = VIEWPORT_WIDTHS[cs.viewport];
-            const dynColW = computeColumnWidth({ viewportWidth: viewportW - RULER_SIZE, pageMaxWidth: cs.pageMaxWidth, pagePadding: cs.pagePadding ?? 0, gridCols: cs.gridCols, gridGap: cs.gridGap });
-            const newX = Math.round(comp.position.x + delta.x / (dynColW * curZoom));
-            const newY = Math.round(comp.position.y + delta.y / (CANVAS_CELL_HEIGHT * curZoom));
-            moveComponent(draggedNodeId, newX, newY);
-          }
-          return;
-        }
-        if (overId.startsWith("canvas-container:")) {
-          const containerId = overId.replace(/^canvas-container:/, "");
-          if (containerId) {
-            const container = curComponents.find((c) => c.id === containerId);
-            if (container && canComponentAcceptChildren(container.node.type)) {
-              // Phase B: 优先使用 Dragon dropLocation 的精确 index
-              const locIndex = (dropLocation && dropLocation.targetContainerId === containerId && dropLocation.detail.insertType !== "cover")
-                ? dropLocation.detail.index
-                : undefined;
-              moveNode(draggedNodeId, { parentId: containerId, index: locIndex });
-            }
-          }
-          return;
-        }
-        return;
-      }
-
+      // 兜底：material 拖到画布空白区（无容器，无 dropLocation）
       if (dragType === "material" && materialName && overId === "canvas-drop-zone") {
         const material = registry.get(materialName);
         const category = materialMap.get(materialName)?.category ?? material?.category ?? "layout";
-        const defaultProps = material?.defaultProps ?? {};
+        const { props: initialProps, children: initialChildren } = resolveInitialProps(material);
 
-        // 校验嵌套合法性：拖入 canvas-drop-zone 时 parent 为根级（无容器约束），跳过校验
-        // 拖入容器时需要校验，容器 ID 从 overId 解析
-        if (overId.startsWith("canvas-container:")) {
-          const containerId = overId.replace(/^canvas-container:/, "");
-          const containerComp = curComponents.find((c) => c.id === containerId);
-          if (containerComp && materialName) {
-            const allowed = NestingValidator.checkChildAllowed(
-              containerComp.node.type, materialName,
-              (name) => registry.get(name),
-            );
-            if (!allowed) {
-              toast.error(`"${materialName}" 不能放在 "${containerComp.node.type}" 内部`, {
-                description: `无法放置`,
-              });
-              return;
-            }
-          }
-        }
-
-        const node = createComponentNode(materialName, category, { ...defaultProps });
-        // 使用动态列宽计算网格坐标（而非 CANVAS_CELL_SIZE=80 硬编码）
+        const node = createComponentNode(materialName, category, initialProps);
+        if (initialChildren) node.children = initialChildren;
         const cs = useCanvasStore.getState();
         const viewportW = VIEWPORT_WIDTHS[cs.viewport];
         const dynColW = computeColumnWidth({ viewportWidth: viewportW - RULER_SIZE, pageMaxWidth: cs.pageMaxWidth, pagePadding: cs.pagePadding ?? 0, gridCols: cs.gridCols, gridGap: cs.gridGap });
-        const x = Math.max(1, Math.round(delta.x / (dynColW * curZoom)));
-        const y = Math.max(1, Math.round(delta.y / (CANVAS_CELL_HEIGHT * curZoom)));
+        const x = Math.max(1, Math.round(event.delta.x / (dynColW * zoomRef2.current)));
+        const y = Math.max(1, Math.round(event.delta.y / (CANVAS_CELL_HEIGHT * zoomRef2.current)));
         insertNode(node, {
           parentId: null,
-          index: curComponents.length,
+          index: cs.components.length,
           position: { x, y, width: 3, height: 2 },
         });
-        // 通过 EventBus 通知其他模块组件已放置
         editorBusRef.current?.emit('canvas:drop', { component: node, target: null });
         return;
       }
-
-      // 画布内组件移动完成后通知（仅通知移动，不重复 emit drop）
-      if (dragType === "canvas-component" && draggedNodeId) {
-        editorBusRef.current?.emit('canvas:drop', { component: { id: draggedNodeId }, target: null });
-      }
     },
-    [insertNode, materialMap, moveComponent, moveNode, parseTreeDropTarget, registry, editorBusRef],
+    [commitDrop, insertNode, materialMap, moveComponent, registry, editorBusRef],
   );
 
   const handleAddMaterial = useCallback(
     (materialName: string) => {
       const material = registry.get(materialName);
       const category = materialMap.get(materialName)?.category ?? material?.category ?? "layout";
-      const defaultProps = material?.defaultProps ?? {};
-      const node = createComponentNode(materialName, category, { ...defaultProps });
+      const { props: initialProps, children: initialChildren } = resolveInitialProps(material);
+      const node = createComponentNode(materialName, category, initialProps);
+      if (initialChildren) node.children = initialChildren;
       insertNode(node, { parentId: null, index: components.length });
     },
     [components.length, insertNode, materialMap, registry],
   );
+  handleAddMaterialRef.current = handleAddMaterial;
 
   useEffect(() => {
     if (!projectId || !isPageMode) return;
@@ -817,12 +825,18 @@ export function EditorLayout() {
             {!leftPanelCollapsed && (
               <ResizeHandle edge="right" panelWidth={leftPanelWidth} collapsed={false} minWidth={160} maxWidth={400} onResize={(w) => setLeftPanelWidth?.(w)} />
             )}
-            <MaterialPanel collapsed={leftPanelCollapsed} onAddMaterial={handleAddMaterial} />
+            {/* D7: left-panel 插槽由插件驱动（MaterialPlugin 注册） */}
+            {skeleton.getItems('left-panel').map((item) => (
+              <item.component key={item.name} />
+            ))}
             <CanvasDropZone dragAlignInfo={dragAlignInfo} dragon={dragon} />
             {!rightPanelCollapsed && (
               <ResizeHandle edge="left" panelWidth={rightPanelWidth} collapsed={false} minWidth={200} maxWidth={480} onResize={(w) => setRightPanelWidth?.(w)} />
             )}
-            {!rightPanelCollapsed ? <RightPanel width={rightPanelWidth} /> : null}
+            {/* D7: right-panel 插槽由插件驱动（PropertyPlugin 注册） */}
+            {!rightPanelCollapsed && skeleton.getItems('right-panel').map((item) => (
+              <item.component key={item.name} />
+            ))}
           </div>
           <DragOverlay dropAnimation={null}>
             {activeDragId && (
@@ -855,7 +869,10 @@ export function EditorLayout() {
           {!rightPanelCollapsed && (
             <ResizeHandle edge="left" panelWidth={rightPanelWidth} collapsed={false} minWidth={200} maxWidth={480} onResize={(w) => setRightPanelWidth?.(w)} />
           )}
-          {!rightPanelCollapsed ? <RightPanel width={rightPanelWidth} /> : null}
+          {/* D7: right-panel 插槽由插件驱动（PropertyPlugin 注册） */}
+          {!rightPanelCollapsed && skeleton.getItems('right-panel').map((item) => (
+            <item.component key={item.name} />
+          ))}
         </div>
       )}
       {/* F2 内联重命名输入框 */}

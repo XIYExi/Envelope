@@ -272,9 +272,13 @@ export interface FlowEditorProps {
   onChange?: (flow: FlowDefinition) => void;
   /** 数据模型 Schema — 适配器模式：将外部数据模型传入编辑器供 db.* 节点的 table select 使用 */
   dataModels?: DataModelSchema;
+  /** V4-E4: flow 执行前回调（用于 EventBus emit flow:execute） */
+  onFlowExecute?: (flowId: string, inputData: unknown) => void;
+  /** V4-E4: flow 执行完成后回调（用于 EventBus emit flow:complete） */
+  onFlowComplete?: (flowId: string, result: unknown) => void;
 }
 
-export function FlowEditor({ initialFlow, onChange, dataModels }: FlowEditorProps = {}) {
+export function FlowEditor({ initialFlow, onChange, dataModels, onFlowExecute, onFlowComplete }: FlowEditorProps = {}) {
   // 流程元信息
   const [flowMeta, setFlowMeta] = useState<FlowEditorState>({
     thing: "untitled-flow",
@@ -559,8 +563,11 @@ export function FlowEditor({ initialFlow, onChange, dataModels }: FlowEditorProp
     try {
       let input: unknown = {};
       try { input = JSON.parse(testInput || "{}"); } catch { /* 忽略解析错误 */ }
+      const flowId = flowMeta.thing ?? "unknown-flow";
+      onFlowExecute?.(flowId, input);
       const result = await executeFlowLocally(flowDef, { input: input as Record<string, unknown> });
       setExecutionResult(result);
+      onFlowComplete?.(flowId, result);
 
       // 观察者模式：将执行状态回写到节点数据，驱动 UI 高亮
       setNodes((nds) =>

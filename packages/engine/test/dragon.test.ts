@@ -410,4 +410,120 @@ describe('Dragon', () => {
     expect(obj!.componentId).toBe('comp-xyz');
     dragon.onDragEnd();
   });
+
+  // ========== Phase C: B8b tree-drop 协议收敛 ==========
+
+  it('V4-B8b: registerTreeDrop 后 getDropLocation 返回 source="tree"', () => {
+    const dragon = new Dragon();
+    const startEvent = {
+      active: { data: { current: { componentId: 'comp-1' } } },
+    } as unknown as DragStartEvent;
+    dragon.onDragStart(startEvent);
+
+    dragon.registerTreeDrop({ parentId: 'container-1', index: 2 });
+
+    // onDragMove 在无 canvas 容器时 dropTarget 为 null，应回退到 tree-drop
+    dragon.onDragMove(
+      { active: { data: { current: { componentId: 'comp-1' } } }, delta: { x: 0, y: 0 }, activatorEvent: { clientX: 0, clientY: 0 } as MouseEvent } as unknown as DragMoveEvent,
+      { zoom: 1, components: [], selectedIds: [], gridCols: 12, positionMode: 'grid' },
+      { width: 1440, padding: 0, gap: 4, cellWidth: 80, cellHeight: 40, columnWidth: 80 },
+      undefined,
+      undefined,
+      0,
+      0,
+    );
+
+    const loc = dragon.getDropLocation();
+    expect(loc).not.toBeNull();
+    expect(loc!.source).toBe('tree');
+    expect(loc!.targetContainerId).toBe('container-1');
+    expect(loc!.detail.index).toBe(2);
+    expect(loc!.detail.type).toBe('Children');
+    expect(loc!.detail.valid).toBe(true);
+
+    dragon.onDragEnd();
+  });
+
+  it('V4-B8b: registerTreeDrop(null) 后 getDropLocation 返回 null', () => {
+    const dragon = new Dragon();
+    const startEvent = {
+      active: { data: { current: { materialName: 'Button' } } },
+    } as unknown as DragStartEvent;
+    dragon.onDragStart(startEvent);
+
+    dragon.registerTreeDrop(null);
+
+    dragon.onDragMove(
+      { active: { data: { current: { materialName: 'Button' } } }, delta: { x: 0, y: 0 }, activatorEvent: { clientX: 0, clientY: 0 } as MouseEvent } as unknown as DragMoveEvent,
+      { zoom: 1, components: [], selectedIds: [], gridCols: 12, positionMode: 'grid' },
+      { width: 1440, padding: 0, gap: 4, cellWidth: 80, cellHeight: 40, columnWidth: 80 },
+      undefined,
+      undefined,
+      0,
+      0,
+    );
+
+    expect(dragon.getDropLocation()).toBeNull();
+    dragon.onDragEnd();
+  });
+
+  it('V4-B8b: canvas locate 结果优先于 tree-drop 落点', () => {
+    const dragon = new Dragon();
+    const startEvent = {
+      active: { data: { current: { materialName: 'Button' } } },
+    } as unknown as DragStartEvent;
+    dragon.onDragStart(startEvent);
+
+    // 同时设置 tree-drop 和 canvas 容器（canvas 优先）
+    dragon.registerTreeDrop({ parentId: 'tree-container', index: 5 });
+
+    const canvasContainer = makeComp({ id: 'canvas-container', x: 1, y: 1, width: 6, height: 4, children: [] });
+    const viewportRect = { top: 0, left: 0, bottom: 600, right: 800, width: 800, height: 600, x: 0, y: 0, toJSON: () => '' } as DOMRect;
+
+    dragon.onDragMove(
+      { active: { data: { current: { materialName: 'Button' } } }, delta: { x: 200, y: 100 }, activatorEvent: { clientX: 0, clientY: 0 } as MouseEvent } as unknown as DragMoveEvent,
+      { zoom: 1, components: [canvasContainer], selectedIds: [], gridCols: 12, positionMode: 'grid' },
+      { width: 1440, padding: 16, gap: 4, cellWidth: 80, cellHeight: 40, columnWidth: 80 },
+      viewportRect,
+      undefined,
+      200,
+      100,
+    );
+
+    const loc = dragon.getDropLocation();
+    expect(loc).not.toBeNull();
+    // canvas 优先
+    expect(loc!.source).toBe('canvas');
+    expect(loc!.targetContainerId).toBe('canvas-container');
+
+    dragon.onDragEnd();
+  });
+
+  it('V4-B8b: onDragEnd 清空 _treeDropTarget', () => {
+    const dragon = new Dragon();
+    const startEvent = {
+      active: { data: { current: { componentId: 'comp-1' } } },
+    } as unknown as DragStartEvent;
+    dragon.onDragStart(startEvent);
+
+    dragon.registerTreeDrop({ parentId: 'c', index: 0 });
+    dragon.onDragEnd();
+
+    // onDragEnd 清空后，下次 onDragMove 不应产出 tree-drop
+    const startEvent2 = {
+      active: { data: { current: { materialName: 'Button' } } },
+    } as unknown as DragStartEvent;
+    dragon.onDragStart(startEvent2);
+    dragon.onDragMove(
+      { active: { data: { current: { materialName: 'Button' } } }, delta: { x: 0, y: 0 }, activatorEvent: { clientX: 0, clientY: 0 } as MouseEvent } as unknown as DragMoveEvent,
+      { zoom: 1, components: [], selectedIds: [], gridCols: 12, positionMode: 'grid' },
+      { width: 1440, padding: 0, gap: 4, cellWidth: 80, cellHeight: 40, columnWidth: 80 },
+      undefined,
+      undefined,
+      0,
+      0,
+    );
+    expect(dragon.getDropLocation()).toBeNull();
+    dragon.onDragEnd();
+  });
 });

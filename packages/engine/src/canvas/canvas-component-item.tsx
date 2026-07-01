@@ -14,7 +14,7 @@
 
 "use client";
 
-import React, { useCallback } from "react";
+import React, { useCallback, useState, useRef } from "react";
 import { useDraggable, useDroppable } from "@dnd-kit/core";
 import type { CSSProperties } from "react";
 import type { MouseEvent as RMouseEvent } from "react";
@@ -86,6 +86,14 @@ interface ICanvasComponentItem {
    * 组件列宽
    */
   columnWidth?: number;
+  /**
+   * V4-F8: 可内联编辑的 prop 路径列表（来自 material.liveTextEditing.paths）
+   */
+  liveTextEditingPaths?: string[];
+  /**
+   * V4-F8: 内联编辑保存回调
+   */
+  onInlineEdit?: (compId: string, propPath: string, newText: string) => void;
 }
 
 export const CanvasComponentItem = React.memo(function CanvasComponentItem({
@@ -104,6 +112,8 @@ export const CanvasComponentItem = React.memo(function CanvasComponentItem({
   minRowHeight,
   positionMode = "grid",
   columnWidth,
+  liveTextEditingPaths,
+  onInlineEdit,
 }: ICanvasComponentItem) {
   const isLocked = comp.locked === true;
 
@@ -153,6 +163,76 @@ export const CanvasComponentItem = React.memo(function CanvasComponentItem({
     onSelect(comp.id, e.ctrlKey || e.metaKey || e.shiftKey);
   }, [comp.id, onSelect]);
 
+  // V4-F8: 内联文本编辑状态
+  const [isInlineEditing, setIsInlineEditing] = useState(false);
+  const inlineEditRef = useRef<HTMLDivElement | null>(null);
+  const inlineEditPropRef = useRef<string | null>(null);
+  const inlineEditOriginalText = useRef<string>("");
+
+  const enterInlineEditing = useCallback(() => {
+    if (!liveTextEditingPaths || liveTextEditingPaths.length === 0 || !onInlineEdit) return;
+    const propPath = liveTextEditingPaths[0]!;
+    const currentProps = (comp.node.props ?? {}) as Record<string, unknown>;
+    inlineEditOriginalText.current = String(currentProps[propPath] ?? "");
+    inlineEditPropRef.current = propPath;
+    setIsInlineEditing(true);
+  }, [liveTextEditingPaths, onInlineEdit, comp.node.props]);
+
+  const saveInlineEdit = useCallback(() => {
+    if (!isInlineEditing || !inlineEditPropRef.current || !onInlineEdit) {
+      setIsInlineEditing(false);
+      return;
+    }
+    const el = inlineEditRef.current;
+    const newText = el?.innerText ?? inlineEditOriginalText.current;
+    onInlineEdit(comp.id, inlineEditPropRef.current, newText);
+    setIsInlineEditing(false);
+    inlineEditPropRef.current = null;
+  }, [isInlineEditing, onInlineEdit, comp.id]);
+
+  const cancelInlineEdit = useCallback(() => {
+    setIsInlineEditing(false);
+    inlineEditPropRef.current = null;
+  }, []);
+
+  const handleInlineKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (e.key === "Escape") {
+      e.preventDefault();
+      e.stopPropagation();
+      cancelInlineEdit();
+    } else if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      e.stopPropagation();
+      saveInlineEdit();
+    }
+  }, [cancelInlineEdit, saveInlineEdit]);
+
+  const handleDoubleClickWithInline = useCallback((e: RMouseEvent) => {
+    if (liveTextEditingPaths && liveTextEditingPaths.length > 0 && onInlineEdit) {
+      e.stopPropagation();
+      // 先选中组件
+      onSelect(comp.id, false);
+      // 进入内联编辑
+      enterInlineEditing();
+    } else {
+      onDoubleClick?.(e);
+    }
+  }, [liveTextEditingPaths, onInlineEdit, onSelect, comp.id, enterInlineEditing, onDoubleClick]);
+
+  // 进入内联编辑后自动 focus
+  React.useEffect(() => {
+    if (isInlineEditing && inlineEditRef.current) {
+      const el = inlineEditRef.current;
+      el.focus();
+      // 选中所有文本
+      const range = document.createRange();
+      range.selectNodeContents(el);
+      const sel = window.getSelection();
+      sel?.removeAllRanges();
+      sel?.addRange(range);
+    }
+  }, [isInlineEditing]);
+
   return (
     // ---- 外层容器 div ----
     // mergedRef: 同时注册到拖拽源和放置目标系统
@@ -198,17 +278,24 @@ export const CanvasComponentItem = React.memo(function CanvasComponentItem({
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
       onClick={handleClick}
-      onDoubleClick={onDoubleClick}
-      {...listeners}
+      onDoubleClick={handleDoubleClickWithInline}
+      {...(isInlineEditing ? {} : listeners)}
       {...attributes}
     >
       {/* ---- 内容门控层 ---- */}
       {/* 按住 Ctrl 时允许点击事件穿透到子组件（用于编辑内部元素）      */}
       {/* 否则拦截所有指针事件，保证拖拽和选中行为不受干扰              */}
+      {/* V4-F8: 内联编辑时启用 pointerEvents + contentEditable        */}
       <div
-        className="h-full w-full"
-        style={{ pointerEvents: ctrlDown ? "auto" : "none" } as CSSProperties}
+        ref={isInlineEditing ? inlineEditRef : undefined}
+        className={cn("h-full w-full", isInlineEditing && "outline-none ring-2 ring-blue-400 rounded")}
+        style={{ pointerEvents: ctrlDown || isInlineEditing ? "auto" : "none" } as CSSProperties}
+        contentEditable={isInlineEditing ? "plaintext-only" : undefined}
+        suppressContentEditableWarning={isInlineEditing}
         data-ctrl-gate="true"
+        data-live-editing={isInlineEditing ? "true" : undefined}
+        onBlur={isInlineEditing ? saveInlineEdit : undefined}
+        onKeyDown={isInlineEditing ? handleInlineKeyDown : undefined}
       >
         {/* 提供子节点选中上下文，让内部组件能向画布报告选中事件 */}
         <SelectChildContext.Provider value={onSelectChild ?? null}>

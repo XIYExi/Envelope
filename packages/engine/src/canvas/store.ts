@@ -181,7 +181,7 @@ export const useCanvasStore = create<CanvasState & CanvasActions>((set, get) => 
 // ========== 重新导出工具函数（供外部使用，保持兼容） ==========
 export {
   generateId, isAutoName, cloneNodeWithNewIds,
-  createComponentNode,
+  createComponentNode, resolveInitialProps,
 } from "./store/tree-ops";
 
 // 向后兼容：代理 findNodeLocation 到 NodeManager

@@ -30,6 +30,7 @@ import { computeAlignGuides, SmartGuideOverlay } from "./smart-guides";
 import { MarqueeOverlay } from "./marquee-overlay";
 import { BemTools } from "./bem-tools";
 import { useCanvasStore } from "./store";
+import { getMaterialRegistry } from "../shared/canvas-utils";
 
 /** 采集 DOM 元素矩形并上报 store，坐标归一化到 canvas-grid 局部未缩放空间 */
 function collectDomRects(gridContainer: HTMLElement, zoom: number): Array<{ id: string; rect: { top: number; left: number; width: number; height: number; bottom: number; right: number } }> {
@@ -129,6 +130,8 @@ export interface CanvasRendererProps {
   isDragging?: boolean;
   /** 是否正在缩放中 */
   isResizing?: boolean;
+  /** V4-F8: 内联编辑保存回调 */
+  onInlineEdit?: (compId: string, propPath: string, newText: string) => void;
 }
 
 /**
@@ -144,6 +147,7 @@ export const CanvasRenderer = forwardRef<HTMLDivElement, CanvasRendererProps>(
     pageBackground, pagePadding, pageMaxWidth, minRowHeight, dragAlignInfo,
     positionMode = "grid",
     onDeleteComponent, onCopyComponent, onLockToggle, dropTarget, onResizeStart, onResizeEnd, isDragging, isResizing,
+    onInlineEdit,
   }, ref) {
     const activeNodeId = activeNodeIdProp ?? null;
     const containerRef = useRef<HTMLDivElement>(null);
@@ -478,6 +482,11 @@ export const CanvasRenderer = forwardRef<HTMLDivElement, CanvasRendererProps>(
                       minRowHeight={minRowHeight}
                       positionMode={positionMode}
                       columnWidth={columnWidth}
+                      liveTextEditingPaths={(() => {
+                        const def = getMaterialRegistry()?.get(comp.node.type);
+                        return def?.liveTextEditing?.paths;
+                      })()}
+                      onInlineEdit={onInlineEdit}
                     />
                   );
                 })}

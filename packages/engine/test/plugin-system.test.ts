@@ -9,8 +9,10 @@
  */
 
 import { describe, it, expect, vi } from 'vitest';
-import { PluginManager } from '../src/plugin-system';
+import { PluginManager, HotkeyManager, CommandManager } from '../src/plugin-system';
 import type { PluginCreator, SkeletonSlot } from '../src/plugin-system';
+import { createModuleEventBus } from '../src/event-bus';
+import type { EditorEventMap } from '../src/event-bus';
 
 describe('PluginManager', () => {
   it('V4-D1: register 添加插件后可从 getPlugin 获取', () => {
@@ -158,6 +160,59 @@ describe('PluginManager', () => {
     expect(true).toBe(true);
   });
 
+  // ========== V4-D5: Skeleton 插槽扩展（6 个） ==========
+
+  it('V4-D5: Skeleton 支持 6 个插槽（left-nav/left-panel/main-area/right-panel/toolbar/bottom-area）', () => {
+    const pm = new PluginManager();
+    const skeleton = pm.getSkeleton();
+
+    const allSlots: SkeletonSlot[] = ['left-nav', 'left-panel', 'main-area', 'right-panel', 'toolbar', 'bottom-area'];
+    for (const slot of allSlots) {
+      skeleton.register(slot, { name: `test-${slot}`, label: `Test ${slot}`, component: () => null });
+      const items = skeleton.getItems(slot);
+      expect(items).toHaveLength(1);
+      expect(items[0]!.name).toBe(`test-${slot}`);
+    }
+  });
+
+  it('V4-D5: left-panel 插槽 register/getItems 往返正确', () => {
+    const pm = new PluginManager();
+    const skeleton = pm.getSkeleton();
+
+    skeleton.register('left-panel', { name: 'material', label: 'Material', component: () => null, priority: 1 });
+    skeleton.register('left-panel', { name: 'tree', label: 'Tree', component: () => null, priority: 2 });
+
+    const items = skeleton.getItems('left-panel');
+    expect(items).toHaveLength(2);
+    expect(items[0]!.name).toBe('material');
+  });
+
+  it('V4-D5: right-panel 插槽 register/getItems 往返正确', () => {
+    const pm = new PluginManager();
+    const skeleton = pm.getSkeleton();
+
+    skeleton.register('right-panel', { name: 'property', label: 'Property', component: () => null });
+
+    const items = skeleton.getItems('right-panel');
+    expect(items).toHaveLength(1);
+    expect(items[0]!.name).toBe('property');
+  });
+
+  it('V4-D5: bottom-area 插槽初始为空', () => {
+    const pm = new PluginManager();
+    const skeleton = pm.getSkeleton();
+    expect(skeleton.getItems('bottom-area')).toEqual([]);
+  });
+
+  it('V4-D5: 新插槽 unregister 正常工作', () => {
+    const pm = new PluginManager();
+    const skeleton = pm.getSkeleton();
+
+    skeleton.register('right-panel', { name: 'prop', label: 'Prop', component: () => null });
+    skeleton.unregister('right-panel', 'prop');
+    expect(skeleton.getItems('right-panel')).toHaveLength(0);
+  });
+
   it('destroy 后再次 init 可重新初始化', async () => {
     const pm = new PluginManager();
     const initFn = vi.fn();
@@ -204,5 +259,160 @@ describe('PluginManager', () => {
 
     await expect(pm.init()).rejects.toThrow('fail');
     expect(order).toEqual(['good']);
+  });
+
+  // ========== V4-D4: PluginContext 包含 skeleton/event/hotkey/logger/command ==========
+
+  it('V4-D4: PluginContext 包含全部 5 个 API（skeleton/event/hotkey/logger/command）', async () => {
+    const bus = createModuleEventBus<EditorEventMap>('Test');
+    const pm = new PluginManager(bus);
+    let capturedCtx: Record<string, unknown> | null = null;
+
+    const creator: PluginCreator = (ctx) => {
+      capturedCtx = ctx as unknown as Record<string, unknown>;
+      return { init: () => {} };
+    };
+    pm.register('test', creator, { name: 'test' });
+    await pm.init();
+
+    expect(capturedCtx).not.toBeNull();
+    expect(capturedCtx!['pluginName']).toBe('test');
+    expect(capturedCtx!['skeleton']).toBeDefined();
+    expect(capturedCtx!['event']).toBeDefined();
+    expect(capturedCtx!['hotkey']).toBeDefined();
+    expect(capturedCtx!['command']).toBeDefined();
+    expect(capturedCtx!['logger']).toBeDefined();
+
+    await pm.destroy();
+  });
+
+  it('V4-D4: PluginContext.event 是注入的 EventBus 实例', async () => {
+    const bus = createModuleEventBus<EditorEventMap>('Test');
+    const pm = new PluginManager(bus);
+    let eventRef: unknown = null;
+
+    const creator: PluginCreator = (ctx) => {
+      eventRef = ctx.event;
+      return { init: () => {} };
+    };
+    pm.register('test', creator, { name: 'test' });
+    await pm.init();
+
+    expect(eventRef).toBe(bus);
+    await pm.destroy();
+  });
+
+  it('V4-D4: 无 eventBus 传入时降级为内部创建', async () => {
+    const pm = new PluginManager();
+    let hasEvent = false;
+    const creator: PluginCreator = (ctx) => {
+      hasEvent = !!ctx.event;
+      return { init: () => {} };
+    };
+    pm.register('test', creator, { name: 'test' });
+    await pm.init();
+    expect(hasEvent).toBe(true);
+    await pm.destroy();
+  });
+
+  it('V4-D4: destroy 清理所有 HotkeyManager 和 CommandManager', async () => {
+    const pm = new PluginManager();
+    const creator: PluginCreator = () => ({ init: () => {} });
+    pm.register('a', creator, { name: 'a' });
+    pm.register('b', creator, { name: 'b' });
+    await pm.init();
+
+    // 内部 hotkeyManagers/commandManagers 各有 2 个
+    const hkCount = (pm as any).hotkeyManagers.length;
+    const cmdCount = (pm as any).commandManagers.length;
+    expect(hkCount).toBe(2);
+    expect(cmdCount).toBe(2);
+
+    await pm.destroy();
+    expect((pm as any).hotkeyManagers.length).toBe(0);
+    expect((pm as any).commandManagers.length).toBe(0);
+  });
+});
+
+// ========== V4-D4: HotkeyManager 单测 ==========
+
+describe('HotkeyManager', () => {
+  it('bind 返回 dispose 函数，调用后取消绑定', () => {
+    const hk = new HotkeyManager();
+    const handler = vi.fn();
+    const dispose = hk.bind('ctrl+s', handler);
+
+    expect(typeof dispose).toBe('function');
+    dispose();
+    hk.destroy();
+  });
+
+  it('destroy 后不再触发回调', () => {
+    const hk = new HotkeyManager();
+    const handler = vi.fn();
+    hk.bind('ctrl+k', handler);
+    hk.destroy();
+
+    // destroy 后 active=false，即使有事件也不会触发
+    expect((hk as any).active).toBe(false);
+    expect((hk as any).bindings.length).toBe(0);
+  });
+});
+
+// ========== V4-D4: CommandManager 单测 ==========
+
+describe('CommandManager', () => {
+  it('registerCommand + executeCommand 正常工作', () => {
+    const cmd = new CommandManager('myPlugin');
+    const handler = vi.fn();
+    cmd.registerCommand({ name: 'greet', description: 'say hi', handler });
+    cmd.executeCommand('greet', { name: 'world' });
+
+    expect(handler).toHaveBeenCalledWith({ name: 'world' });
+    cmd.destroy();
+  });
+
+  it('命令名自动加 pluginName 前缀存储', () => {
+    const cmd = new CommandManager('myPlugin');
+    cmd.registerCommand({ name: 'foo', handler: () => {} });
+    const list = cmd.listCommands();
+    expect(list).toHaveLength(1);
+    expect(list[0]!.name).toBe('myPlugin:foo');
+    cmd.destroy();
+  });
+
+  it('executeCommand 支持全限定名（含冒号）', () => {
+    const cmd = new CommandManager('myPlugin');
+    const handler = vi.fn();
+    cmd.registerCommand({ name: 'bar', handler });
+    cmd.executeCommand('myPlugin:bar', {});
+    expect(handler).toHaveBeenCalledOnce();
+    cmd.destroy();
+  });
+
+  it('executeCommand 未注册命令时 warn 不抛错', () => {
+    const cmd = new CommandManager('myPlugin');
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    cmd.executeCommand('nonexistent', {});
+    expect(warnSpy).toHaveBeenCalled();
+    warnSpy.mockRestore();
+    cmd.destroy();
+  });
+
+  it('registerCommand 返回 dispose，调用后命令被移除', () => {
+    const cmd = new CommandManager('myPlugin');
+    const handler = vi.fn();
+    const dispose = cmd.registerCommand({ name: 'temp', handler });
+    dispose();
+    cmd.executeCommand('temp', {});
+    expect(handler).not.toHaveBeenCalled();
+    cmd.destroy();
+  });
+
+  it('destroy 后命令清空', () => {
+    const cmd = new CommandManager('myPlugin');
+    cmd.registerCommand({ name: 'x', handler: () => {} });
+    cmd.destroy();
+    expect(cmd.listCommands()).toHaveLength(0);
   });
 });

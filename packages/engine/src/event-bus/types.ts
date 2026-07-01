@@ -15,6 +15,7 @@ export interface EditorEventMap {
   'material:register': { types: string[] };
   'editor:save': { pageId: string };
   'panel:resize': { side: 'left' | 'right'; width: number };
+  [key: string]: unknown;
 }
 
 export type EventHandler<T = unknown> = (payload: T) => void;

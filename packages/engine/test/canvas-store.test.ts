@@ -12,7 +12,7 @@
  * - 这里不测试 React 视图层，只测试 Zustand store 的纯状态与 action 逻辑
  */
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { createCanvasComponent, createComponentNode, useCanvasStore } from "../src/canvas/store";
+import { createCanvasComponent, createComponentNode, resolveInitialProps, useCanvasStore } from "../src/canvas/store";
 import type { CanvasComponent, CanvasSnapshot } from "../src/canvas/types";
 
 /**
@@ -370,5 +370,103 @@ describe("canvas/store", () => {
     useCanvasStore.getState().moveNode(b.id, { parentId: root.id, index: 3 });
     const children = useCanvasStore.getState().components[0]!.node.children ?? [];
     expect(children.map((x) => x.id)).toEqual([a.id, c.id, b.id]);
+  });
+});
+
+// ========== V4-F10: resolveInitialProps (snippet 优先) ==========
+
+describe("resolveInitialProps", () => {
+  it("无 snippets 时 fallback 到 defaultProps", () => {
+    const result = resolveInitialProps({ defaultProps: { label: "Default" } });
+    expect(result.props).toEqual({ label: "Default" });
+    expect(result.children).toBeUndefined();
+  });
+
+  it("有 snippets 时优先使用 snippets[0].props", () => {
+    const result = resolveInitialProps({
+      defaultProps: { label: "Default", variant: "default" },
+      snippets: [{ title: "Primary", props: { variant: "primary" } }],
+    });
+    expect(result.props).toEqual({ label: "Default", variant: "primary" });
+    expect(result.children).toBeUndefined();
+  });
+
+  it("snippets props 与 defaultProps 合并（snippet 覆盖同名 key）", () => {
+    const result = resolveInitialProps({
+      defaultProps: { a: 1, b: 2, c: 3 },
+      snippets: [{ props: { b: 20, d: 4 } }],
+    });
+    expect(result.props).toEqual({ a: 1, b: 20, c: 3, d: 4 });
+  });
+
+  it("snippets 含 children 时返回 ComponentNode 数组", () => {
+    const result = resolveInitialProps({
+      snippets: [{
+        props: { direction: "vertical" },
+        children: [{ type: "Text", text: "Hello" }],
+      }],
+    });
+    expect(result.props).toEqual({ direction: "vertical" });
+    expect(result.children).toBeDefined();
+    expect(result.children!.length).toBe(1);
+    expect(result.children![0]!.type).toBe("Text");
+  });
+
+  it("snippets 为空数组时 fallback 到 defaultProps", () => {
+    const result = resolveInitialProps({
+      defaultProps: { label: "Fallback" },
+      snippets: [],
+    });
+    expect(result.props).toEqual({ label: "Fallback" });
+    expect(result.children).toBeUndefined();
+  });
+
+  it("material 为 undefined 时返回空 props", () => {
+    const result = resolveInitialProps(undefined);
+    expect(result.props).toEqual({});
+    expect(result.children).toBeUndefined();
+  });
+});
+
+// ========== V4-F8: liveTextEditing 物料配置 ==========
+
+describe("liveTextEditing (material schema)", () => {
+  it("materialDefinitionSchema 接受 liveTextEditing 字段", async () => {
+    const { materialDefinitionSchema } = await import("@envelope/materials");
+    const valid = materialDefinitionSchema.safeParse({
+      name: "TestText",
+      displayName: "TestText",
+      category: "display",
+      icon: "Type",
+      liveTextEditing: { paths: ["text", "label"] },
+    });
+    expect(valid.success).toBe(true);
+  });
+
+  it("liveTextEditing.paths 为字符串数组", async () => {
+    const { materialDefinitionSchema } = await import("@envelope/materials");
+    const valid = materialDefinitionSchema.safeParse({
+      name: "T",
+      displayName: "T",
+      category: "display",
+      liveTextEditing: { paths: ["text"] },
+    });
+    expect(valid.success).toBe(true);
+    if (valid.success) {
+      expect(valid.data.liveTextEditing?.paths).toEqual(["text"]);
+    }
+  });
+
+  it("liveTextEditing 为可选字段，不传也能通过", async () => {
+    const { materialDefinitionSchema } = await import("@envelope/materials");
+    const valid = materialDefinitionSchema.safeParse({
+      name: "NoLiveText",
+      displayName: "NoLiveText",
+      category: "display",
+    });
+    expect(valid.success).toBe(true);
+    if (valid.success) {
+      expect(valid.data.liveTextEditing).toBeUndefined();
+    }
   });
 });

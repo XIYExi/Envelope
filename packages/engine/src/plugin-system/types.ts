@@ -7,18 +7,29 @@
  */
 
 import type { ComponentType } from "react";
+import type { EventBus, EditorEventMap } from "../event-bus";
 
 /**
  * 骨架插槽名称
  * 编辑器布局中允许插件注册的区域
+ *
+ * 对齐 lowcode-engine 10 area 子集（D18 决策）：
+ * @reference lowcode-engine-main/packages/editor-skeleton/src/skeleton.ts:65-137
+ * @reference lowcode-engine-main/packages/types/src/shell/type/widget-config-area.ts
  */
 export type SkeletonSlot =
-  /** 左侧导航栏（模式切换项） */
+  /** 左侧导航栏（模式切换项，如 pages/datamodel/routing） */
   | "left-nav"
-  /** 主内容区（编辑器面板，如数据模型、路由等） */
+  /** 左侧面板区（物料面板/组件树面板，导航栏右侧的面板内容） */
+  | "left-panel"
+  /** 主内容区（编辑器面板，如画布、数据模型编辑器、流程编辑器等） */
   | "main-area"
+  /** 右侧面板区（属性面板/配置面板） */
+  | "right-panel"
   /** 顶部工具栏 */
-  | "toolbar";
+  | "toolbar"
+  /** 底部面板区（预留，如终端/日志/输出面板） */
+  | "bottom-area";
 
 /**
  * 插件配置对象
@@ -77,14 +88,57 @@ export interface SkeletonItem {
 }
 
 /**
+ * 快捷键 API
+ *
+ * 对齐 lowcode-engine IPublicApiHotkey 的最小子集。
+ * @reference lowcode-engine-main/packages/types/src/shell/api/hotkey.ts
+ */
+export interface HotkeyAPI {
+  /**
+   * 绑定快捷键组合
+   * @param combos - 键组合字符串，如 "ctrl+s"、"shift+tab"
+   * @param callback - 触发回调
+   * @returns 取消绑定函数（Disposable 模式）
+   */
+  bind(combos: string, callback: (e: KeyboardEvent) => void): () => void;
+}
+
+/**
+ * 命令 API
+ *
+ * 对齐 lowcode-engine IPublicApiCommand 的最小子集。
+ * 命令名自动加 pluginName 前缀以防冲突（对齐 commandScope 模式）。
+ * @reference lowcode-engine-main/packages/types/src/shell/api/command.ts
+ * @reference lowcode-engine-main/packages/editor-core/src/command.ts:19-31
+ */
+export interface CommandAPI {
+  /** 注册命令（名称自动加 pluginName 前缀） */
+  registerCommand(command: { name: string; description?: string; parameters?: { name: string; propType: string }[]; handler: (args: Record<string, unknown>) => void }): () => void;
+  /** 执行命令 */
+  executeCommand(name: string, args?: Record<string, unknown>): void;
+  /** 列出所有已注册命令 */
+  listCommands(): { name: string; description?: string }[];
+}
+
+/**
  * 插件上下文
- * 传递给插件创建函数的上下文对象，提供骨架/事件/日志等 API
+ * 传递给插件创建函数的上下文对象，提供骨架/事件/快捷键/日志/命令 API
+ *
+ * 对齐 lowcode-engine IPublicModelPluginContext（19 属性子集）。
+ * @reference lowcode-engine-main/packages/types/src/shell/model/plugin-context.ts:20-124
+ * @reference lowcode-engine-main/packages/engine/src/engine-core.ts:140-165 pluginContextApiAssembler
  */
 export interface PluginContext {
   /** 当前插件名称 */
   pluginName: string;
   /** 骨架 API，用于注册面板和 UI 组件 */
   skeleton: SkeletonAPI;
+  /** 事件总线 API，用于插件间通信（对齐 lowcode context.event） */
+  event: EventBus<EditorEventMap>;
+  /** 快捷键 API，bind 返回 Disposable（对齐 lowcode context.hotkey） */
+  hotkey: HotkeyAPI;
+  /** 命令 API，命令名自动加 pluginName 前缀（对齐 lowcode context.command） */
+  command: CommandAPI;
   /** 日志工具，提供带插件前缀的日志输出 */
   logger: {
     /** 信息日志 */

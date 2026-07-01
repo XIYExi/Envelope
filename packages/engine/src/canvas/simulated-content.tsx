@@ -22,7 +22,7 @@ import {
   renderButton, renderInput, renderTextarea, renderLabel, renderCheckbox,
   renderRadioGroup, renderSwitch, renderSelect, renderSlider, renderToggle,
   renderToggleGroup, renderAvatar, renderBadge, renderSkeleton, renderAlert,
-  renderProgress, renderBreadcrumb, renderPagination,
+  renderProgress, renderBreadcrumb, renderPagination, renderText,
 } from "./simulated-components-form";
 
 import {
@@ -125,6 +125,7 @@ export function UnifiedSimulatedContent({ comp, variant = "root", onSelectChild 
     case "Progress": return renderProgress(props);
     case "Breadcrumb": return renderBreadcrumb(props);
     case "Pagination": return renderPagination(props);
+    case "Text": return renderText(props);
 
     // 布局/容器组件
     case "Card": return renderCard(props);

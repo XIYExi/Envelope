@@ -106,6 +106,9 @@ export class Dragon {
   /** 当前 DropLocation（dragMove 更新，dragEnd 清空，对齐 lowcode Designer._dropLocation） */
   private _currentDropLocation: DropLocation | null = null;
 
+  /** tree-drop 落点（来自 component-tree-panel 的 useDndMonitor；canvas locate 优先） */
+  private _treeDropTarget: { parentId: string | null; index: number } | null = null;
+
   constructor(opts?: { scroller?: CanvasScroller; detecting?: Detecting }) {
     this.scroller = opts?.scroller ?? new CanvasScroller();
     this.detecting = opts?.detecting ?? new Detecting();
@@ -138,6 +141,17 @@ export class Dragon {
   removeSensor(sensor: DragSensor): void {
     const i = this.sensors.indexOf(sensor);
     if (i > -1) this.sensors.splice(i, 1);
+  }
+
+  /**
+   * 注册 tree-drop 落点
+   *
+   * 由 component-tree-panel 在 useDndMonitor.onDragMove 中调用。
+   * 仅当 Dragon 未通过 canvas locate 产生 dropLocation（鼠标不在画布上）时才生效。
+   * onDragEnd 时自动清空。
+   */
+  registerTreeDrop(target: { parentId: string | null; index: number } | null): void {
+    this._treeDropTarget = target;
   }
 
   // ========== 拖拽生命周期 ==========
@@ -257,6 +271,7 @@ export class Dragon {
     this._dragData = undefined;
     this._dragObject = null;
     this._currentDropLocation = null;
+    this._treeDropTarget = null;
     this.scroller.cancel();
     this.detecting.reset();
   }
@@ -385,10 +400,11 @@ export class Dragon {
    * 将 DropTargetInfo（渲染对象）转换为 DropLocation（语义对象）
    *
    * 对齐 lowcode-engine DropLocation(target, detail, event, source)。
-   * 当 dropTarget 为 null 时（鼠标不在任何容器内），返回 null。
+   * 优先使用 canvas Location 引擎产出的 dropTarget；
+   * 若无 canvas 结果则回退到 tree-drop 落点（来自 component-tree-panel）。
+   * 两者都无结果时返回 null。
    */
   private toDropLocation(dropTarget: DropTargetInfo | null, globalX: number, globalY: number): DropLocation | null {
-    if (!dropTarget) return null;
     if (!this._dragObject) return null;
 
     const locateEvent: LocateEvent = {
@@ -398,20 +414,38 @@ export class Dragon {
       dragObject: this._dragObject,
     };
 
-    return {
-      targetContainerId: dropTarget.containerId ?? null,
-      detail: {
-        type: "Children",
-        index: dropTarget.index ?? 0,
-        nearNodeId: dropTarget.nearNodeId,
-        insertType: dropTarget.type,
-        isVertical: dropTarget.isVertical,
-        valid: dropTarget.valid ?? true,
-        rect: dropTarget.rect,
-      },
-      event: locateEvent,
-      // 本轮固定 canvas source；未来 tree/outline sensor 时由 sensor 自身设置
-      source: "canvas" satisfies DropLocationSource,
-    };
+    // 优先使用 canvas Location 引擎产出的 dropTarget
+    if (dropTarget) {
+      return {
+        targetContainerId: dropTarget.containerId ?? null,
+        detail: {
+          type: "Children",
+          index: dropTarget.index ?? 0,
+          nearNodeId: dropTarget.nearNodeId,
+          insertType: dropTarget.type,
+          isVertical: dropTarget.isVertical,
+          valid: dropTarget.valid ?? true,
+          rect: dropTarget.rect,
+        },
+        event: locateEvent,
+        source: "canvas" satisfies DropLocationSource,
+      };
+    }
+
+    // 回退到 tree-drop 落点（component-tree-panel 通过 registerTreeDrop 同步）
+    if (this._treeDropTarget) {
+      return {
+        targetContainerId: this._treeDropTarget.parentId,
+        detail: {
+          type: "Children",
+          index: this._treeDropTarget.index,
+          valid: true,
+        },
+        event: locateEvent,
+        source: "tree" satisfies DropLocationSource,
+      };
+    }
+
+    return null;
   }
 }

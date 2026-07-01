@@ -14,6 +14,9 @@ export const alertMaterial: MaterialDefinition = {
   },
   supportsChildren: true,
   isContainer: true,
+  liveTextEditing: {
+    paths: ["titleText", "descriptionText"],
+  },
   editableProps: [
     {
       key: "variant",

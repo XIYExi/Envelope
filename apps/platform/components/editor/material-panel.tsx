@@ -14,6 +14,8 @@ import type { ComponentType } from "react";
 import { useDraggable } from "@dnd-kit/core";
 import { createDefaultRegistry } from "@envelope/materials";
 import { createMaterialDragItem } from "@envelope/engine";
+import type { Dragon, EventBus } from "@envelope/engine";
+import type { EditorEventMap } from "@envelope/engine";
 import type { ComponentCategory, MaterialDefinition } from "@envelope/materials";
 import * as LucideIcons from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -122,6 +124,10 @@ interface MaterialPanelProps {
   collapsed: boolean;
   /** 点击添加（非拖拽） */
   onAddMaterial?: (name: string) => void;
+  /** Dragon 拖拽引擎实例（传递给 ComponentTreePanel 用于 tree-drop 落点同步） */
+  dragon?: Dragon | null;
+  /** 编辑器事件总线（传递给 ComponentTreePanel 用于 canvas:select 订阅） */
+  editorBus?: EventBus<EditorEventMap> | null;
 }
 
 /**
@@ -132,7 +138,7 @@ interface MaterialPanelProps {
  * 每个分类标签右侧显示该分类下的组件数量。
  * 空分类显示 "Coming soon" 占位文字。
  */
-export function MaterialPanel({ collapsed, onAddMaterial }: MaterialPanelProps) {
+export function MaterialPanel({ collapsed, onAddMaterial, dragon, editorBus }: MaterialPanelProps) {
   const [panelTab, setPanelTab] = useState<string>("palette");
   const [activeTab, setActiveTab] = useState<string>("layout");
 
@@ -319,7 +325,7 @@ export function MaterialPanel({ collapsed, onAddMaterial }: MaterialPanelProps) 
         </TabsContent>
 
         <TabsContent value="tree" className="flex min-h-0 flex-1 flex-col p-0">
-          <ComponentTreePanel />
+          <ComponentTreePanel dragon={dragon ?? null} editorBus={editorBus ?? null} />
         </TabsContent>
       </Tabs>
     </div>

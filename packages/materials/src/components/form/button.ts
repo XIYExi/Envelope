@@ -44,6 +44,12 @@ export const buttonMaterial: MaterialDefinition = {
   icon: "SquareMousePointer",
   supportsChildren: true,
   bindableEvents: ["onClick"],
+  liveTextEditing: {
+    paths: ["label"],
+  },
+  defaultProps: {
+    label: "Button",
+  },
   editableProps: [
     // ========== 行为配置 ==========
     {

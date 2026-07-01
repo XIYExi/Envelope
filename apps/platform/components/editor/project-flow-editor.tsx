@@ -7,6 +7,12 @@ import { useProjectFlowsStore } from "@/stores/project-flows";
 import { useProjectModelsStore } from "@/stores/project-models";
 import type { ProjectFlow } from "@/lib/supabase/types";
 import { FlowEditor, jsonToYamlFile, yamlToJson, type FlowDefinition, type DataModelSchema } from "@envelope/flow";
+import type { EventBus, EditorEventMap } from "@envelope/engine";
+
+interface ProjectFlowEditorProps {
+  /** V4-E4: 编辑器事件总线，用于 emit flow:execute/flow:complete 事件 */
+  editorBus?: EventBus<EditorEventMap> | null;
+}
 
 function toFlowDefinition(flow: ProjectFlow): FlowDefinition | null {
   const text = (flow.yaml_content ?? "").trim();
@@ -16,7 +22,7 @@ function toFlowDefinition(flow: ProjectFlow): FlowDefinition | null {
   return parsed.data;
 }
 
-export function ProjectFlowEditor() {
+export function ProjectFlowEditor({ editorBus }: ProjectFlowEditorProps = {}) {
   const searchParams = useSearchParams();
   const projectId = searchParams.get("project");
 
@@ -155,6 +161,12 @@ export function ProjectFlowEditor() {
               description: def.description ?? "",
               yaml_content: jsonToYamlFile(def),
             });
+          }}
+          onFlowExecute={(flowId, inputData) => {
+            editorBus?.emit('flow:execute', { flowId, triggerData: inputData });
+          }}
+          onFlowComplete={(flowId, result) => {
+            editorBus?.emit('flow:complete', { flowId, result });
           }}
         />
       </div>

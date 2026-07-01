@@ -88,6 +88,42 @@ export class EventBus<T extends Record<string, unknown>> {
   }
 
   /**
+   * 带命名空间前缀的 emit
+   *
+   * 对齐 lowcode-engine `Designer.postEvent(event, ...args)` →
+   * `this.editor.eventBus.emit(\`designer.${event}\`, ...args)` 的命名空间模式。
+   *
+   * 若实例有 namespace，自动拼接 `${namespace}.${String(type)}` 作为实际事件名；
+   * 若无 namespace，降级为普通 emit（透传 type）。
+   *
+   * @reference lowcode-engine-main/packages/designer/src/designer/designer.ts:303-304
+   */
+  prefixedEmit<K extends keyof T>(type: K, payload: T[K]): void {
+    if (this.config.namespace) {
+      const fullKey = `${this.config.namespace}.${String(type)}` as unknown as K;
+      this.emit(fullKey, payload);
+    } else {
+      this.emit(type, payload);
+    }
+  }
+
+  /**
+   * 带命名空间前缀的 on
+   *
+   * 与 prefixedEmit 配对使用，自动拼接 `${namespace}.${String(type)}` 作为实际事件名。
+   * 若无 namespace，降级为普通 on。
+   *
+   * @returns 取消订阅函数
+   */
+  prefixedOn<K extends keyof T>(type: K, handler: (payload: T[K]) => void): () => void {
+    if (this.config.namespace) {
+      const fullKey = `${this.config.namespace}.${String(type)}` as unknown as K;
+      return this.on(fullKey, handler);
+    }
+    return this.on(type, handler);
+  }
+
+  /**
    * 当前注册的事件类型集合（仅用于调试/测试）
    */
   get eventTypes(): string[] {

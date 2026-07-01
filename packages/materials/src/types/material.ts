@@ -266,6 +266,20 @@ export const materialDefinitionSchema = z.object({
     /** 预设的子组件模板，拖入画布时自动展开 */
     children: z.array(z.record(z.unknown())).optional(),
   })).optional(),
+
+  /**
+   * 内联文本编辑配置
+   *
+   * 声明组件支持双击画布直接编辑的 prop 路径列表。
+   * 双击时，对应 DOM 元素变为 contentEditable，blur 后保存到 node.props[path]。
+   *
+   * @reference lowcode-engine: types/src/shell/type/advanced.ts liveTextEditing
+   * @reference lowcode-engine: types/src/shell/type/metadata.ts IPublicTypeLiveTextEditingConfig
+   */
+  liveTextEditing: z.object({
+    /** 可编辑的 prop 路径列表，如 ["label", "text"] */
+    paths: z.array(z.string()),
+  }).optional(),
 });
 
 /**

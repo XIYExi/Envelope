@@ -1,4 +1,6 @@
 export { PluginManager } from "./plugin-manager";
+export { HotkeyManager } from "./hotkey";
+export { CommandManager } from "./command";
 export type {
   PluginConfig,
   PluginMeta,
@@ -8,4 +10,6 @@ export type {
   SkeletonSlot,
   SkeletonItem,
   InternalPlugin,
+  HotkeyAPI,
+  CommandAPI,
 } from "./types";

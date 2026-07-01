@@ -9,17 +9,24 @@
  * @date 2026-06-30
  */
 
-import type { PluginCreator } from "@envelope/engine";
+import type { PluginCreator, EventBus, EditorEventMap } from "@envelope/engine";
 import { ProjectFlowEditor } from "./project-flow-editor";
 
 /**
  * 流程编辑器插件创建函数
+ *
+ * options.editorBus 传入编辑器事件总线，
+ * 供 ProjectFlowEditor emit flow:execute/flow:complete 事件（V4-E4）。
  */
-export const FlowPlugin: PluginCreator = (ctx) => {
+export const FlowPlugin: PluginCreator = (ctx, options) => {
+  const editorBus = options?.editorBus as EventBus<EditorEventMap> | null | undefined;
+
+  const FlowEditorWrapper = () => <ProjectFlowEditor editorBus={editorBus ?? null} />;
+
   ctx.skeleton.register('main-area', {
     name: 'flows',
     label: '流程',
-    component: ProjectFlowEditor,
+    component: FlowEditorWrapper,
     priority: 30,
   });
 

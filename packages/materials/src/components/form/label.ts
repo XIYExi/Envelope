@@ -15,6 +15,12 @@ export const labelMaterial: MaterialDefinition = {
   category: "form",
   icon: "Baseline",
   supportsChildren: true,
+  liveTextEditing: {
+    paths: ["label"],
+  },
+  defaultProps: {
+    label: "Label",
+  },
   editableProps: [
     // 行为配置
     {

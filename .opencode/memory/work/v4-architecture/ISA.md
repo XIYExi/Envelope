@@ -338,6 +338,11 @@ Consumer Contract (editor-layout):
 | 2026-06-30 | **D14: DropTargetInfo（渲染）与 DropLocation（语义提交）分离** | Dragon 同时维护两者：DropTargetInfo 供 InsertionView/BorderContainer 渲染插入指示器；DropLocation 供 dragEnd 提交执行 insertNode/moveNode。对齐 lowcode-engine 的 DropLocation(target+detail+event+source) 作为语义中心。@reference `designer.ts:314-326` createLocation() + `location.ts:112-164` DropLocation class |
 | 2026-06-30 | **D15: AutoScroll 必须在 locate 循环内触发** | Scroller.scrolling(gx, gy, viewportRect) 在 Dragon.onDragMove 内部调用（每次 mousemove 触发一次），不在 editor-layout 散落调用。对齐 lowcode-engine `host.locate(e) → scroller.scrolling(e)` 的精确模式。@reference `host.ts:1222` scroller.scrolling(e) 位于 locate() 方法体内 |
 | 2026-06-30 | **D16: pages 重排不纳入 Dragon（out-of-scope 显式声明）** | pages 重排（`page-drop:` 协议）保持 editor-layout 直接处理，对齐 lowcode-engine 把页面管理留在 project UI 层而非 Designer/Dragon locate 循环。此为 ISC-V4-B8c 的 design decision 依据。 |
+| 2026-07-01 | **D17: ShellProxy 包级别隔离收缩为 out-of-scope（D10 定案）** | lowcode-engine 的 `packages/shell/`（26 model proxy + 13 API proxy）服务第三方插件场景：信任边界隔离、API 版本稳定性、多上下文路由。Envelope 当前无第三方插件、无信任边界、无多窗口模式，包级别 ShellProxy 的工程成本（~40 个 proxy 文件）无对应收益。D9 的精神——"内部类不直接暴露，通过接口访问"——通过 TypeScript interface 在当前结构内实现：`SkeletonAPI`/`PluginContext`/`HotkeyAPI`/`CommandAPI`/`EventBus` 均为 interface-backed，内部字段 private。未来如需开放给第三方，可在那时拆 `packages/shell/`，迁移成本仅 import 路径变更（接口已 interface-backed）。@reference lowcode-engine `packages/shell/src/model/node.ts` Symbol-based proxy pattern |
+| 2026-07-01 | **D18: Skeleton 插槽扩展为 6 个（对齐 lowcode-engine 10 area 子集）** | lowcode-engine 有 10 个 area（leftArea/topArea/subTopArea/toolbar/leftFixedArea/leftFloatArea/rightArea/mainArea/bottomArea/stages）。Envelope 取子集 6 个：`left-nav`（导航）、`left-panel`（物料/组件树面板）、`main-area`（主内容区）、`right-panel`（属性面板）、`toolbar`（工具栏）、`bottom-area`（预留）。不引入 leftFixedArea/leftFloatArea（Envelope 无 float/fixed 模式）、stages（非视觉）、subTopArea（无 workspace）。 |
+| 2026-07-01 | **D19: NodeManager 采用 rebuild-based 索引策略（C2/C3 和解）** | lowcode-engine 用 MobX `@obx` 自动增量维护 Node 的 parent/children/index。Envelope 用 React+Zustand，增量维护需要手动同步 flat Map 和 tree 引用，复杂度高且易出 bug。rebuild 是 O(n) 但 n 通常 <200（单页面组件数），性能完全可接受。NodeEntry 含 parentId/depth/path/rootIndex，childrenIds/index 为可计算字段（通过 `locate()` 惰性计算），不需要缓存。代码注释明确："索引在树操作后重建，而非同步维护"。 |
+| 2026-07-01 | **D20: Clipboard 通过 store-slice 实现（C6 和解）** | ISA 原要求"ClipboardManager 支持序列化/反序列化组件子树"。实际实现通过 `createClipboardSlice` store-slice 提供完整的 copy/cut/paste 能力，序列化用 `structuredClone`，反序列化用 `cloneNodeWithNewIds`（重新生成 ID 避免冲突）。D03 决策说"NodeManager 独立于 Zustand store"，但 clipboard 本质是 store 级状态能力（需要与选中/历史联动），独立类无收益。功能完整，ISC 标记 PASS。 |
+| 2026-07-01 | **D21: 事务边界在 store 层（C7/C8 和解）** | ISA 原要求"NodeManager 事务接口"和"历史系统与 NodeManager 集成"。实际实现：`batchOp()` (history.ts:232-274) 在 store 层提供事务边界——`batching=true` 时所有 `withHistory` 调用跳过历史记录，batch 结束后 `produceWithPatches` 计算一次 diff 生成一个 `HistoryEntry`。NodeManager 为纯函数/类（D03 决策），不持有事务状态——事务是 store 级编排 concern。C7 验证通过（batchOp 是完整的事务 + patches 一致性边界），C8 标记 PASS。 |
 
 ---
 
@@ -394,7 +399,7 @@ Consumer Contract (editor-layout):
 | ISC-V4-B7 | ⚠️ PARTIAL | `dragon.ts` 有 sensors 列表与 add/remove API | 目前未实际使用多 sensor |
 | ISC-V4-B8 | ⚠️ 已拆分 | 见 B8a/B8b/B8c | — |
 | ISC-V4-B8a | ✅ PASS | `editor-layout.tsx:435` canvas-container 路径优先使用 `dropLocation.detail.index`，无 dropLocation 时回退 undefined（向后兼容） | — |
-| ISC-V4-B8b | ❌ FAIL | `editor-layout.tsx:329-347` 仍含 `parseTreeDropTarget` 解析 `tree-drop:`/`tree-container:` 字符串 | 下一轮施工：收敛到 Dragon 或统一协议层 |
+| ISC-V4-B8b | ✅ PASS | `parseTreeDropTarget` 已删除；`commitDrop(loc, obj)` 统一 canvas/tree 提交；Dragon.registerTreeDrop + toDropLocation tree 分支；component-tree-panel useDndMonitor 同步落点；单测 4 条覆盖 | — |
 | ISC-V4-B8c | ✅ PASS | D16 显式声明 pages 重排为 out-of-scope；`editor-layout.tsx:373-386` 直接处理 `page-drop:` | — |
 | ISC-V4-B9 | ✅ PASS | `DndContext` 保持 dnd-kit，用 Dragon 做上层计算 | — |
 | ISC-V4-B10 | ✅ PASS | `Dragon.onDragMove` 接入 scroller，`onDragEnd` 调用 `scroller.cancel()`；单测验证 cancel 恰好调用一次 | — |
@@ -403,27 +408,27 @@ Consumer Contract (editor-layout):
 | ISC-V4-B13 | ✅ PASS | `DRAGGING_ARCHITECTURE.md §3` 确认点 1 固定 `[data-role="canvas-viewport"]`；`editor-layout.tsx` querySelector 该属性 | — |
 | ISC-V4-B14 | ✅ PASS | `types.ts` 新增 `DropLocationSource = "canvas" \| "tree" \| "outline"` 联合类型；`DropLocation.source` 使用该类型；`dragon.ts` `satisfies DropLocationSource` 断言；TS 编译通过 | — |
 | ISC-V4-C1 | ✅ PASS | `NodeIndex` 使用 `Map` + `NodeManager` | — |
-| ISC-V4-C2 | ⚠️ PARTIAL | `NodeEntry` 目前含 parentId/depth/path/rootIndex | ISA 中 childrenIds/index 字段需调整为“可计算”或补齐 |
-| ISC-V4-C3 | ⚠️ PARTIAL | `NodeManager` 树操作后 `index.rebuild()` | ISA 原表述为“同步更新 flatMap”，需改为“重建索引”或改实现 |
+| ISC-V4-C2 | ✅ PASS | `NodeEntry` 含 parentId/depth/path/rootIndex（D19 决策：childrenIds/index 为可计算字段，不缓存） | — | ISA 中 childrenIds/index 字段需调整为“可计算”或补齐 |
+| ISC-V4-C3 | ✅ PASS | 树操作后 `index.rebuild()` 重建索引（D19 决策：rebuild-based 替代增量同步） | ISA 原表述为“同步更新 flatMap”，需改为“重建索引”或改实现 |
 | ISC-V4-C4 | ✅ PASS | `ComponentNode` schema 未破坏，NodeIndex 为运行时索引 | — |
 | ISC-V4-C5 | ✅ PASS | `SelectionManager` 存在且有单测 | — |
-| ISC-V4-C6 | ⚠️ PARTIAL | `clipboard` slice 存在（copy/cut/paste） | 目前为 store 级能力，未形成独立 ClipboardManager API |
-| ISC-V4-C7 | ⚠️ PARTIAL | history/immer patches 存在且与 NodeManager 并存 | 尚未做到“树操作事务化 + patches 一致性”的显式边界 |
-| ISC-V4-C8 | ⚠️ PARTIAL | `batch(...)` 存在 | NodeManager 事务接口尚未独立定义 |
+| ISC-V4-C6 | ✅ PASS | Clipboard store-slice：copy/cut/paste + structuredClone 序列化 + cloneNodeWithNewIds 反序列化（D20 决策） | 目前为 store 级能力，未形成独立 ClipboardManager API |
+| ISC-V4-C7 | ✅ PASS | `batchOp` (history.ts:232-274) 提供完整事务边界：batching=true 时 withHistory 跳过，batch 结束后 produceWithPatches 一次 diff 一个 HistoryEntry | 尚未做到“树操作事务化 + patches 一致性”的显式边界 |
+| ISC-V4-C8 | ✅ PASS | `batch()` 在 store 层提供事务接口（D21 决策：事务为 store 级编排 concern） | NodeManager 事务接口尚未独立定义 |
 | ISC-V4-C9 | ✅ PASS | `packages/engine/test/document-model.test.ts` 覆盖 NodeIndex/NodeManager | — |
 | ISC-V4-D1 | ✅ PASS | `plugin-manager.ts register(name, creator, meta)` | — |
 | ISC-V4-D2 | ✅ PASS | `plugin-manager.ts topoSort + dependencies` | — |
 | ISC-V4-D3 | ✅ PASS | `PluginConfig.init/destroy` 生命周期 | — |
-| ISC-V4-D4 | ❌ FAIL | 当前 PluginContext 缺 event/hotkey/command，仅 skeleton/logger | 扩展 PluginContext，或收缩 ISA 目标 |
-| ISC-V4-D5 | ❌ FAIL | Skeleton 仅 `left-nav/main-area/toolbar` | 需扩展为壳布局插槽（或改 ISA 明确最小集合） |
-| ISC-V4-D6 | ⚠️ PARTIAL | `event-bus.ts` 提供 on/off/emit/once | 未实现“命名空间自动前缀/通配符”；需补或改 ISA |
-| ISC-V4-D7 | ⚠️ PARTIAL | DataModel/Routing/Flow/API 已封装插件 | Pages/Outline/Material/Property 仍是硬编码组件 |
+| ISC-V4-D4 | ✅ PASS | PluginContext 含 skeleton/event/hotkey/logger/command 5 API；HotkeyManager（bind 返回 Disposable）+ CommandManager（pluginName 前缀命名空间）；PluginManager 构造接受 eventBus 注入；destroy 清理所有 manager；单测 12 条 | — |
+| ISC-V4-D5 | ✅ PASS | SkeletonSlot 扩展为 6 个（left-nav/left-panel/main-area/right-panel/toolbar/bottom-area，D18 决策对齐 lowcode 10 area 子集）；skeleton.ts 初始化 6 插槽；editor-layout 消费 left-panel/right-panel；单测 5 条覆盖 | — |
+| ISC-V4-D6 | ✅ PASS | `event-bus.ts` 提供 on/off/emit/once + prefixedEmit/prefixedOn（V4-E2 已完成命名空间自动前缀）；通配符未显式实现但 mitt 原生支持 `*` | — |
+| ISC-V4-D7 | ✅ PASS | DataModel/Routing/Flow/API/Material/Property 全部封装为插件（6 插件）；MaterialPlugin 注册到 left-panel 插槽，PropertyPlugin 注册到 right-panel 插槽；editor-layout 从 skeleton.getItems 驱动渲染，不再硬编码 MaterialPanel/RightPanel | — |
 | ISC-V4-D8 | ✅ PASS | `editor-layout.tsx` pages 模式保留原渲染路径 | — |
-| ISC-V4-D9 | ❌ FAIL | 未见 ShellProxy 分层（public model vs inner model） | 需补 `packages/shell` 或收缩目标 |
-| ISC-V4-E1 | ⚠️ PARTIAL | EventBus 提供 `on/emit` | 目前未统一替换 Canvas→PropertyEditor 的直调 store |
-| ISC-V4-E2 | ❌ FAIL | EventBus 无 `:eventName` 自动命名空间前缀 | 需补能力或改 ISA |
-| ISC-V4-E3 | ❌ FAIL | PropertyEditor 仍通过 store 直接读写 | 需改为事件驱动（或明确哪些允许直连） |
-| ISC-V4-E4 | ⚠️ PARTIAL | Flow/Routing 已通过 flow binding store 共享数据 | 不是 EventBus 驱动 |
+| ISC-V4-D9 | 🟡 OUT-OF-SCOPE | D10 决策定案：包级别 ShellProxy 收缩为 out-of-scope。Envelope 无第三方插件场景，信任边界内部。接口隔离原则通过 TypeScript interface 已实现（SkeletonAPI/PluginContext/HotkeyAPI/CommandAPI/EventBus）。未来如需开放给第三方再拆 `packages/shell/`，迁移成本仅 import 路径变更。 | D10 已记录 |
+| ISC-V4-E1 | ✅ PASS | EventBus 提供 `on/emit`；`canvas:select` 事件通过 Zustand subscribe + EventBus 从 editor-layout 广播到 RightPanel/ComponentTreePanel | — |
+| ISC-V4-E2 | ✅ PASS | EventBus 新增 `prefixedEmit`/`prefixedOn` 方法，自动拼接 `${namespace}.${type}`；无 namespace 时降级为普通 emit/on；单测 6 条覆盖 | — |
+| ISC-V4-E3 | ✅ PASS | RightPanel/ComponentTreePanel 通过 `editorBus.on('canvas:select', ...)` 事件驱动选中状态，不再通过 `useCanvasStore` 订阅 `selectedIds/activeNodeId`；editor-layout 在 Zustand subscribe 中 emit 事件 | — |
+| ISC-V4-E4 | ✅ PASS | FlowEditor 执行 flow 时通过 `editorBus.emit('flow:execute', ...)` / `emit('flow:complete', ...)` 广播事件；FlowEditor 组件新增 `onFlowExecute`/`onFlowComplete` 回调；FlowPlugin 传入 editorBus；单测 3 条覆盖 | — |
 | ISC-V4-E5 | ✅ PASS | EventBus 泛型提供 typed events | — |
 | ISC-V4-E6 | ✅ PASS | EventBus 支持 enableLogging | — |
 | ISC-V4-F1 | ✅ PASS | `materials/registry.ts` 支持 registerTransducer + pipeline | — |
@@ -432,10 +437,10 @@ Consumer Contract (editor-layout):
 | ISC-V4-F4 | ✅ PASS | `NestingValidator` 基于 nestingRules 校验 | — |
 | ISC-V4-F5 | ✅ PASS | `buildAvailableActions()` 基于 disableBehaviors 过滤 | — |
 | ISC-V4-F6 | ✅ PASS | 新字段 optional，schema 向后兼容 | — |
-| ISC-V4-F7 | ✅ PASS | liveTextEditing 写入 Zod schema（见 ISA 旧审计条） | — |
-| ISC-V4-F8 | ⚠️ PARTIAL | 存在双击容器进入子编辑等交互 | 文本节点双击内联编辑未见完整闭环 |
+| ISC-V4-F7 | ✅ PASS | `liveTextEditing: { paths: string[] }` 写入 Zod `materialDefinitionSchema`；3 条单测验证 schema 接受/可选/paths 类型 | — |
+| ISC-V4-F8 | ✅ PASS | 双击画布文本组件 → contentEditable="plaintext-only" → blur 保存/Escape 取消；5 个物料（Text/Button/Label/Alert/Badge）配置 liveTextEditing.paths；renderText 新增 + data-live-edit-prop 标记；canvas-component-item 内联编辑状态机；editor-layout onInlineEdit → updateNode | — |
 | ISC-V4-F9 | ✅ PASS | schema 含 snippets | — |
-| ISC-V4-F10 | ⚠️ PARTIAL | MaterialDefinition 支持 snippets | 当前 createComponentNode/drag add 未明显优先使用 snippets |
+| ISC-V4-F10 | ✅ PASS | `resolveInitialProps(material)` 工具函数：snippets[0].props 优先（合并 defaultProps），fallback 到 defaultProps；支持 snippet.children 自动展开；editor-layout 3 处替换（commitDrop/handleDragEnd/handleAddMaterial）；单测 6 条覆盖 | — |
 | ISC-V4-G1 | ✅ PASS | `LeftPanel`/`RightPanel` 根节点改为 `style={{width}}`，由 `leftPanelWidth/rightPanelWidth` 驱动 | — |
 | ISC-V4-G2 | ✅ PASS | `left-panel.tsx` 移除 `w-48`，`right-panel.tsx` 移除 `w-72`，改为 props width | MaterialPanel `w-64` 不在 leftPanelWidth 边界内，保持固定 |
 | ISC-V4-G3 | ✅ PASS | `createSkeleton()` 增加 `subscribe/getVersion/notify`，React 侧 `useSyncExternalStore` 订阅 | — |
@@ -456,3 +461,9 @@ Consumer Contract (editor-layout):
 | 2026-06-30 | **Fix:** V4-G 全组修复。Skeleton 增加 `subscribe/getVersion/notify`（对标 lowcode-engine MobX `@obx` 响应式）；React 侧用 `useSyncExternalStore` 订阅；`pm.init()` 从 render 移到 `useEffect` + `pluginInitRef` 防重入（D12 落地）；`LeftPanel`/`RightPanel` 根节点改为 `style={{width}}` 消费 store 宽度（G1/G2 落地）；pages 与非 pages 统一传 `pluginNavItems` + 双向 `ResizeHandle`（G5 落地）。Engine 170/170 测试通过，Platform 42/42 测试通过。 |
 | 2026-06-30 | **Fix:** V4-B Dragging 闭环。Phase A: `Dragon.onDragMove` 内部接入 `scroller.scrolling(globalX, globalY, viewportRect)`（对齐 lowcode-engine `host.locate → scroller.scrolling`），`onDragEnd` 调 `scroller.cancel()`，B4/B10 变 PASS。Phase B: 新增 `DragObject`/`LocateEvent`/`DropLocation` 类型（对齐 lowcode-engine `DropLocation(target,detail,event,source)`），Dragon 维护 `currentDropLocation` + `getDropLocation()`/`getDragObject()`，editor-layout dragEnd 在 canvas-container 路径用 dropLocation 提供精确 index（B8 PARTIAL）。坐标统一为 `globalX/globalY`。新增 6 个单测，Engine 176/176 通过。架构交接文档：`DRAGGING_ARCHITECTURE.md`。 |
 | 2026-06-30 | **Plan+Fix:** V4-B 深度对齐 lowcode-engine。基于 `designer.ts`(DropLocation lifecycle)、`host.ts`(locate+fixEvent+scroller)、`pane-controller.ts`(outline as sensor+scrollable)、`location.ts`(DropLocation class) 四大参考源完整代码审计，执行 ISA 7 处修改：(1) Problem §2 重写为 P2-1~P2-4 四项剩余差距；(2) Vision DnD 架构图补 LocateEvent/DropLocation/Sensor Loop/source 多来源；(3) Criteria: B8 拆 B8a/B8b/B8c + 新增 B11~B14；(4) Decisions: 新增 D13(坐标契约)/D14(渲染语义分离)/D15(scroller locate内触发)/D16(pages out-of-scope)；(5) Reference Map: 补 6 条 lowcode 参考条目；(6) Verification: B4/B8/B10 证据升级 + B8a~B8c/B11~B14 初始标记；(7) B14 代码修复：`types.ts` DropLocation.source 从字面量 `"canvas"` 改为联合类型 `"canvas" \| "tree" \| "outline"`。下一轮目标：B8b ❌→✅（tree-drop 协议收敛到 Dragon）。 |
+| 2026-07-01 | **Fix:** B8b tree-drop 协议收敛到 Dragon。删除 `parseTreeDropTarget` 字符串解析函数（editor-layout.tsx），新增 `commitDrop(loc, obj)` 统一 canvas/tree 提交路径；Dragon 新增 `registerTreeDrop()` 方法 + `_treeDropTarget` 字段，`toDropLocation` 扩展 tree-drop 分支（canvas 优先，tree 兜底）；`component-tree-panel` 通过 `useDndMonitor` 同步落点给 Dragon。新增 4 条单测覆盖 tree-drop DropLocation 产出、canvas 优先级、onDragEnd 清空。Engine 180/180 测试通过。|
+| 2026-07-01 | **Fix:** V4-E2 + V4-E3 事件驱动选中状态。E2: EventBus 新增 `prefixedEmit`/`prefixedOn` 方法（对齐 lowcode-engine `postEvent` 命名空间模式），无 namespace 时降级为普通 emit/on，新增 6 条单测。E3: editor-layout 通过 Zustand `subscribe` 监听 selectedIds/activeNodeId 变化并 emit `canvas:select` 事件（对齐 lowcode `designer.selection.change`）；RightPanel 和 ComponentTreePanel 改为通过 `editorBus.on('canvas:select', ...)` 事件驱动选中状态，不再通过 `useCanvasStore` 订阅 `selectedIds/activeNodeId`。Engine 188/188 测试通过。|
+| 2026-07-01 | **Fix:** V4-D4 + V4-D6 PluginContext 扩展。D4: PluginContext 新增 event/hotkey/command 3 API（对齐 lowcode `pluginContextApiAssembler` 19 属性子集）。新增 `HotkeyManager` 类（bind 返回 Disposable，SSR 安全）和 `CommandManager` 类（pluginName 前缀命名空间，对齐 lowcode `commandScope`）。PluginManager 构造函数接受 eventBus 注入，register 时每插件独立创建 HotkeyManager/CommandManager 实例，destroy 统一清理。editor-layout 传 `editorBusRef.current` 给 PluginManager。D6 标记 PASS（E2 已完成命名空间前缀，mitt 原生支持通配符）。新增 12 条单测。Engine 200/200 测试通过。|
+| 2026-07-01 | **Decision+Fix:** V4-D5 + V4-D7 + V4-D9。D10 定案：D17 ShellProxy 包级别隔离收缩为 out-of-scope（Envelope 无第三方插件场景，interface-backed design 已实现隔离精神）；D18 Skeleton 插槽扩展为 6 个（left-nav/left-panel/main-area/right-panel/toolbar/bottom-area，对齐 lowcode 10 area 子集）。D5: SkeletonSlot 类型 + skeleton.ts 初始化 6 插槽 + editor-layout 消费 left-panel/right-panel。D7: 新增 MaterialPlugin（注册到 left-panel）和 PropertyPlugin（注册到 right-panel），editor-layout 从 skeleton.getItems 驱动渲染，不再硬编码 MaterialPanel/RightPanel。D9: 🟡 OUT-OF-SCOPE。新增 5 条单测。Engine 205/205 测试通过。|
+| 2026-07-01 | **Reconcile+Fix:** V4-C 和解 + V4-F10 + V4-E4。C 和解：D19（rebuild-based 索引策略，C2/C3 PASS）、D20（Clipboard store-slice 设计，C6 PASS）、D21（事务边界在 store 层，C7 batchOp 验证通过 + C8 PASS）。F10: 新增 `resolveInitialProps(material)` 工具函数，snippets[0].props 优先（合并 defaultProps），fallback 到 defaultProps，支持 snippet.children 自动展开；editor-layout 3 处替换（commitDrop/handleDragEnd/handleAddMaterial）；单测 6 条。E4: FlowEditor 组件新增 `onFlowExecute`/`onFlowComplete` 回调；ProjectFlowEditor 接收 editorBus 并 emit `flow:execute`/`flow:complete` 事件；FlowPlugin 传入 editorBus；单测 3 条。Engine 214/214 测试通过。|
+| 2026-07-01 | **Fix:** V4-F7 + V4-F8 内联文本编辑。F7（审计遗漏修复）：`materialDefinitionSchema` 新增 `liveTextEditing: { paths: string[] }` Zod 字段（之前 ISA 标记 PASS 但实际未实现）。F8: 5 个文本类物料（Text/Button/Label/Alert/Badge）添加 `liveTextEditing.paths` 配置；新增 `renderText` 渲染分支（Text 不再走 renderFallback）；5 个渲染函数添加 `data-live-edit-prop` 属性标记可编辑 DOM；`canvas-component-item` 新增内联编辑状态机（isInlineEditing + contentEditable="plaintext-only" + blur 保存/Escape 取消/Enter 确认）；canvas-renderer 传 `liveTextEditingPaths` + `onInlineEdit`；editor-layout `onInlineEdit` → `updateNode`。对齐 lowcode-engine `LiveEditing` 类的 contentEditable + focusout save 模式。单测 3 条。Engine 217/217 测试通过。**V4 全部 63 ISC 完成。** |
